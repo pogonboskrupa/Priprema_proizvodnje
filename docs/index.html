@@ -1,0 +1,963 @@
+<title>Šumska Priprema</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap">
+<style>
+:root {
+  --bg:        #f0f4f1;
+  --surface:   #ffffff;
+  --surface2:  #f6f9f7;
+  --border:    #ccd8d0;
+  --text:      #1c2e22;
+  --muted:     #5e7a68;
+  --accent:    #26613e;
+  --acc-h:     #1d4d31;
+  --acc-bg:    #e4f0e8;
+  --amber:     #b05a14;
+  --amb-bg:    #faeee4;
+  --danger:    #b92b20;
+  --dan-bg:    #fcecea;
+  --r:         7px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:       #0d1910;
+    --surface:  #162119;
+    --surface2: #1d2d21;
+    --border:   #263829;
+    --text:     #cde2d2;
+    --muted:    #6a8f76;
+    --accent:   #4a9e6a;
+    --acc-h:    #5ab87a;
+    --acc-bg:   #192e1f;
+    --amber:    #d97833;
+    --amb-bg:   #2a1808;
+    --danger:   #e05c4e;
+    --dan-bg:   #2a0f0e;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:       #0d1910;
+  --surface:  #162119;
+  --surface2: #1d2d21;
+  --border:   #263829;
+  --text:     #cde2d2;
+  --muted:    #6a8f76;
+  --accent:   #4a9e6a;
+  --acc-h:    #5ab87a;
+  --acc-bg:   #192e1f;
+  --amber:    #d97833;
+  --amb-bg:   #2a1808;
+  --danger:   #e05c4e;
+  --dan-bg:   #2a0f0e;
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; }
+html { height: 100%; }
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding-inline: 0;
+  padding-block: 0;
+}
+
+/* ── Header ── */
+.hdr {
+  position: sticky;
+  top: env(safe-area-inset-top, 0);
+  background: var(--accent);
+  color: #fff;
+  z-index: 50;
+  padding: 0 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.hdr-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 10px;
+}
+.hdr-logo {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -.2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.hdr-logo svg { width: 20px; height: 20px; flex-shrink: 0; fill: currentColor; }
+.hdr-nav {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hdr-nav::-webkit-scrollbar { display: none; }
+.tab-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.7);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 8px 14px;
+  border-radius: var(--r) var(--r) 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s, color .12s;
+}
+.tab-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
+.tab-btn.on { color: var(--accent); background: var(--bg); font-weight: 600; }
+
+/* ── Layout ── */
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 20px;
+}
+.tab-pane { display: none; }
+.tab-pane.on { display: block; }
+
+.pg-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.2px;
+  margin-bottom: 16px;
+}
+
+/* ── Card ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.card-hd {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-hd .sub { font-weight: 400; color: var(--muted); font-size: 12px; }
+
+/* ── Stats ── */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  border-left: 3px solid var(--border);
+}
+.stat.g { border-left-color: var(--accent); }
+.stat.a { border-left-color: var(--amber); }
+.stat-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 3px;
+}
+.stat-val {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.stat-unit { font-size: 11px; color: var(--muted); margin-left: 2px; }
+
+/* ── Table ── */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+  padding: 9px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  background: var(--surface2);
+}
+td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface2); }
+tbody tr.dim td { opacity: .4; }
+th.r, td.r { text-align: right; }
+.mono { font-family: 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
+.fw6 { font-weight: 600; }
+.c-acc { color: var(--accent); }
+.c-amb { color: var(--amber); }
+.c-mut { color: var(--muted); }
+
+/* ── Progress ── */
+.prog-wrap { display: flex; align-items: center; gap: 8px; min-width: 130px; }
+.prog-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+.prog-fill.mid { background: var(--amber); }
+.prog-fill.done { background: var(--accent); }
+.prog-pct { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); width: 36px; text-align: right; flex-shrink: 0; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bdg-d { background: var(--acc-bg); color: var(--accent); }
+.bdg-v { background: var(--amb-bg); color: var(--amber); }
+.bdg-o { background: var(--acc-bg); color: var(--accent); }
+
+/* ── Forms ── */
+.form-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.frow { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.fg { display: flex; flex-direction: column; gap: 4px; }
+label.lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+input, select, textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .12s, box-shadow .12s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--acc-bg);
+}
+textarea { resize: none; }
+
+/* ── Radio vrsta ── */
+.vrsta-grp { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.vrsta-opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color .12s, background .12s, color .12s;
+  user-select: none;
+}
+.vrsta-opt input[type=radio] { display: none; }
+.vrsta-opt.on-d { border-color: var(--accent); background: var(--acc-bg); color: var(--accent); }
+.vrsta-opt.on-v { border-color: var(--amber); background: var(--amb-bg); color: var(--amber); }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+}
+.btn-p { background: var(--accent); color: #fff; }
+.btn-p:hover { background: var(--acc-h); }
+.btn-p:disabled { opacity: .5; cursor: not-allowed; }
+.btn-o { background: none; color: var(--muted); border: 1px solid var(--border); }
+.btn-o:hover { background: var(--surface2); color: var(--text); }
+.btn-t { background: none; border: none; font-size: 12px; padding: 3px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; }
+.btn-te { color: var(--accent); }
+.btn-te:hover { background: var(--acc-bg); }
+.btn-td { color: var(--danger); }
+.btn-td:hover { background: var(--dan-bg); }
+
+/* ── Period bar ── */
+.pbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.pbtn {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.pbtn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.pbtn.on-b { background: var(--text); color: var(--bg); border-color: var(--text); }
+.pbar-sep { color: var(--border); }
+.pbar-range { margin-left: auto; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+/* ── Unos layout ── */
+.unos-lay { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(70px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 9px 18px;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 200;
+  pointer-events: none;
+  transition: transform .22s ease;
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+.empty { text-align: center; padding: 28px 16px; color: var(--muted); }
+
+@media (max-width: 680px) {
+  .unos-lay { grid-template-columns: 1fr; }
+  .wrap { padding-inline: 14px; }
+  .stat-val { font-size: 18px; }
+}
+</style>
+
+<!-- Header -->
+<header class="hdr">
+  <div class="hdr-top">
+    <div class="hdr-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2 8.5 8H5l3.5 3.5-1.5 5.5L12 14l5 3-1.5-5.5L19 8h-3.5Z"/></svg>
+      Šumska Priprema Proizvodnje
+    </div>
+  </div>
+  <nav class="hdr-nav">
+    <button class="tab-btn on" data-tab="unos">Unos rada</button>
+    <button class="tab-btn" data-tab="izvj">Izvještaji</button>
+    <button class="tab-btn" data-tab="odjeli">Odjeli</button>
+    <button class="tab-btn" data-tab="inz">Inžinjeri</button>
+  </nav>
+</header>
+
+<div class="wrap">
+
+  <!-- ── UNOS RADA ── -->
+  <div class="tab-pane on" id="tab-unos">
+    <p class="pg-title">Unos rada</p>
+    <div class="unos-lay">
+
+      <!-- Forma -->
+      <div class="card">
+        <div class="card-hd" id="unos-hd">Novi unos</div>
+        <div class="form-body">
+          <div class="fg">
+            <label class="lbl">Datum</label>
+            <input type="date" id="f-dat">
+          </div>
+          <div class="fg">
+            <label class="lbl">Vrsta rada</label>
+            <div class="vrsta-grp">
+              <label class="vrsta-opt on-d" id="vl-d" onclick="pickVrsta('D')">
+                <input type="radio" name="vrsta" value="D" checked> 🌳 Doznaka
+              </label>
+              <label class="vrsta-opt" id="vl-v" onclick="pickVrsta('V')">
+                <input type="radio" name="vrsta" value="V"> 🛤️ Vlake
+              </label>
+            </div>
+          </div>
+          <div class="fg">
+            <label class="lbl">Odjel</label>
+            <select id="f-od" onchange="refilterInz()"><option value="">Svi odjeli</option></select>
+          </div>
+          <div class="fg">
+            <label class="lbl">Inžinjer</label>
+            <select id="f-inz"><option value="">Odaberi inžinjera…</option></select>
+          </div>
+          <div id="fld-d">
+            <div class="frow">
+              <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="f-st" min="1" placeholder="120"></div>
+              <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="f-ha" step="0.01" placeholder="15.50"></div>
+            </div>
+          </div>
+          <div id="fld-v" hidden>
+            <div class="fg"><label class="lbl">Kilometri vlaka (km)</label><input type="number" id="f-km" step="0.01" placeholder="3.20"></div>
+          </div>
+          <div class="fg">
+            <label class="lbl">Napomena (opciono)</label>
+            <textarea id="f-nap" rows="2"></textarea>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-p" style="flex:1" onclick="saveUnos()">Sačuvaj unos</button>
+            <button class="btn btn-o" id="unos-otk" hidden onclick="cancelUnos()">Odustani</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lista unosa -->
+      <div class="card">
+        <div class="card-hd">Unosi <span class="sub" id="unosi-cnt"></span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>Datum</th><th>Inžinjer</th><th>Odjel</th><th>Vrsta</th><th class="r">Količina</th><th></th>
+            </tr></thead>
+            <tbody id="tb-unosi"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── IZVJEŠTAJI ── -->
+  <div class="tab-pane" id="tab-izvj">
+    <p class="pg-title">Izvještaji</p>
+    <div class="pbar">
+      <button class="pbtn" data-per="sed" onclick="setPer(this)">Sedmično</button>
+      <button class="pbtn on" data-per="mj" onclick="setPer(this)">Mjesečno</button>
+      <button class="pbtn" data-per="god" onclick="setPer(this)">Godišnje</button>
+      <span class="pbar-sep">|</span>
+      <button class="pbtn on-b" data-gr="od" onclick="setGr(this)">🗺️ Po odjelu</button>
+      <button class="pbtn" data-gr="inz" onclick="setGr(this)">👷 Po inžinjeru</button>
+      <span class="pbar-range" id="p-range"></span>
+    </div>
+    <div class="stat-row" id="izvj-stats"></div>
+    <div class="card">
+      <div class="card-hd" id="izvj-hd">Pregled po odjelima</div>
+      <div class="tbl-wrap"><table><thead id="izvj-thead"></thead><tbody id="tb-izvj"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- ── ODJELI ── -->
+  <div class="tab-pane" id="tab-odjeli">
+    <p class="pg-title">Šumski odjeli</p>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd" id="od-hd">Novi odjel</div>
+      <div class="form-body">
+        <div class="frow">
+          <div class="fg"><label class="lbl">Broj</label><input id="o-br" placeholder="001"></div>
+          <div class="fg"><label class="lbl">Naziv</label><input id="o-naz" placeholder="Gornji lug"></div>
+          <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" placeholder="250.50"></div>
+          <div class="fg" style="justify-content:flex-end;flex-direction:row;align-items:flex-end;gap:6px">
+            <button class="btn btn-p" onclick="saveOdjel()">Sačuvaj</button>
+            <button class="btn btn-o" id="od-otk" hidden onclick="cancelOd()">Odustani</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>Br.</th><th>Naziv</th><th class="r">Površina (ha)</th><th class="r">Obrađeno (ha)</th>
+            <th class="r">Preostalo (ha)</th><th>Napredak</th><th></th>
+          </tr></thead>
+          <tbody id="tb-odjeli"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INŽINJERI ── -->
+  <div class="tab-pane" id="tab-inz">
+    <p class="pg-title">Inžinjeri</p>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-hd" id="inz-hd">Novi inžinjer</div>
+      <div class="form-body">
+        <div class="frow">
+          <div class="fg"><label class="lbl">Ime</label><input id="i-ime" placeholder="Amir"></div>
+          <div class="fg"><label class="lbl">Prezime</label><input id="i-prez" placeholder="Hodžić"></div>
+          <div class="fg">
+            <label class="lbl">Odjel</label>
+            <select id="i-od"><option value="">Odaberi odjel…</option></select>
+          </div>
+          <div class="fg" style="justify-content:flex-end;flex-direction:row;align-items:flex-end;gap:6px">
+            <button class="btn btn-p" onclick="saveInz()">Sačuvaj</button>
+            <button class="btn btn-o" id="inz-otk" hidden onclick="cancelInz()">Odustani</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Prezime i ime</th><th>Odjel</th><th class="r">Unosa ukupno</th><th></th></tr></thead>
+          <tbody id="tb-inz"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Storage ──────────────────────────────────────────────
+const KEY = 'spp_v1';
+function loadDB() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
+}
+function saveDB() {
+  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {}
+}
+function uid(arr) { return arr.length ? Math.max(...arr.map(x=>x.id)) + 1 : 1; }
+
+let db = loadDB();
+
+if (!db) {
+  const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
+  const iso = (day) => new Date(y, mo, day).toISOString().slice(0,10);
+  db = {
+    odjeli: [
+      { id:1, br:'001', naz:'Gornji lug',    pov:250.5  },
+      { id:2, br:'002', naz:'Bukova greda',  pov:180.0  },
+      { id:3, br:'003', naz:'Crna rijeka',   pov:320.75 },
+    ],
+    inzinjeri: [
+      { id:1, ime:'Amir',  prez:'Hodžić',  odId:1 },
+      { id:2, ime:'Emir',  prez:'Bašić',   odId:1 },
+      { id:3, ime:'Sanel', prez:'Kovač',   odId:2 },
+      { id:4, ime:'Tarik', prez:'Mušović', odId:3 },
+    ],
+    unosi: [
+      { id:1, dat:iso(3),  vr:'D', inId:1, odId:1, st:120, ha:15.5, km:null },
+      { id:2, dat:iso(5),  vr:'D', inId:1, odId:1, st:85,  ha:10.0, km:null },
+      { id:3, dat:iso(7),  vr:'V', inId:2, odId:1, st:null, ha:null, km:3.2 },
+      { id:4, dat:iso(10), vr:'D', inId:3, odId:2, st:200, ha:25.0, km:null },
+      { id:5, dat:iso(12), vr:'V', inId:3, odId:2, st:null, ha:null, km:1.8 },
+      { id:6, dat:iso(15), vr:'D', inId:4, odId:3, st:310, ha:40.0, km:null },
+      { id:7, dat:iso(17), vr:'D', inId:2, odId:1, st:90,  ha:12.0, km:null },
+    ]
+  };
+  saveDB();
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function od(id) { return db.odjeli.find(o=>o.id===id); }
+function inz(id) { return db.inzinjeri.find(i=>i.id===id); }
+
+function fDate(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}.${m}.${y}.`;
+}
+function fN(n, dec=2) {
+  if (n == null || n === 0) return '–';
+  return Number(n).toFixed(dec).replace('.',',');
+}
+function fI(n) { return n ? n.toLocaleString('bs') : '–'; }
+
+function odObr(odId) {
+  return db.unosi.filter(u=>u.odId===odId&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
+}
+
+function progressHtml(pct) {
+  const cls = pct>=100?'done':pct>=60?'mid':'';
+  return `<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${cls}" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div><span class="prog-pct">${pct.toFixed(1)}%</span></div>`;
+}
+
+// ── Tabs ─────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+    this.classList.add('on');
+    document.getElementById('tab-'+this.dataset.tab).classList.add('on');
+    if (this.dataset.tab === 'izvj') renderIzvj();
+  });
+});
+
+// ── Toast ─────────────────────────────────────────────────
+let _tt;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+// ── Odjeli ───────────────────────────────────────────────
+let edOd = null;
+
+function renderOdjeli() {
+  const tb = document.getElementById('tb-odjeli');
+  if (!db.odjeli.length) { tb.innerHTML = `<tr><td colspan="7" class="empty">Nema odjela.</td></tr>`; return; }
+
+  tb.innerHTML = [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o => {
+    const obr = odObr(o.id);
+    const pr  = Math.max(o.pov - obr, 0);
+    const pct = Math.min((obr/o.pov)*100, 100);
+    const prTd = pr<=0 ? `<span class="c-acc fw6">✓ Završeno</span>` : `<span class="mono">${fN(pr)}</span>`;
+    return `<tr>
+      <td class="mono fw6">${o.br}</td>
+      <td>${o.naz}</td>
+      <td class="r mono">${fN(o.pov)}</td>
+      <td class="r mono c-acc fw6">${obr>0?fN(obr):'–'}</td>
+      <td class="r">${prTd}</td>
+      <td>${progressHtml(pct)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-t btn-te" onclick="editOd(${o.id})">Uredi</button>
+        <button class="btn-t btn-td" onclick="delOd(${o.id})">Obriši</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Populate selects
+  ['f-od','i-od'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const cur = sel.value;
+    const ph = id==='f-od' ? '<option value="">Svi odjeli</option>' : '<option value="">Odaberi odjel…</option>';
+    sel.innerHTML = ph + [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>
+      `<option value="${o.id}">${o.br} – ${o.naz}</option>`
+    ).join('');
+    if (cur) sel.value = cur;
+  });
+}
+
+function saveOdjel() {
+  const br  = document.getElementById('o-br').value.trim();
+  const naz = document.getElementById('o-naz').value.trim();
+  const pov = parseFloat(document.getElementById('o-pov').value);
+  if (!br||!naz||isNaN(pov)||pov<=0) { toast('Popunite sva polja!'); return; }
+
+  if (edOd) {
+    const o = db.odjeli.find(x=>x.id===edOd);
+    Object.assign(o,{br,naz,pov});
+    edOd=null; document.getElementById('od-hd').textContent='Novi odjel';
+    document.getElementById('od-otk').hidden=true;
+  } else {
+    if (db.odjeli.some(o=>o.br===br)) { toast('Taj broj odjela već postoji!'); return; }
+    db.odjeli.push({id:uid(db.odjeli),br,naz,pov});
+  }
+  saveDB(); clearOdF(); renderOdjeli(); renderUnosi(); toast('Odjel sačuvan');
+}
+
+function editOd(id) {
+  const o=db.odjeli.find(x=>x.id===id);
+  document.getElementById('o-br').value=o.br;
+  document.getElementById('o-naz').value=o.naz;
+  document.getElementById('o-pov').value=o.pov;
+  edOd=id; document.getElementById('od-hd').textContent='Uredi odjel';
+  document.getElementById('od-otk').hidden=false;
+}
+function cancelOd() { edOd=null; clearOdF(); document.getElementById('od-hd').textContent='Novi odjel'; document.getElementById('od-otk').hidden=true; }
+function clearOdF() { ['o-br','o-naz','o-pov'].forEach(id=>document.getElementById(id).value=''); }
+
+function delOd(id) {
+  if (!confirm('Obrisati odjel? Svi vezani unosi i inžinjeri će biti obrisani!')) return;
+  db.odjeli=db.odjeli.filter(o=>o.id!==id);
+  db.inzinjeri=db.inzinjeri.filter(i=>i.odId!==id);
+  db.unosi=db.unosi.filter(u=>u.odId!==id);
+  saveDB(); renderOdjeli(); renderInz(); renderUnosi(); toast('Odjel obrisan');
+}
+
+// ── Inžinjeri ─────────────────────────────────────────────
+let edInz = null;
+
+function renderInz() {
+  const tb = document.getElementById('tb-inz');
+  if (!db.inzinjeri.length) { tb.innerHTML=`<tr><td colspan="4" class="empty">Nema inžinjera.</td></tr>`; return; }
+
+  tb.innerHTML = [...db.inzinjeri].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
+    const o = od(i.odId);
+    const cnt = db.unosi.filter(u=>u.inId===i.id).length;
+    return `<tr>
+      <td class="fw6">${i.prez} ${i.ime}</td>
+      <td>${o?`<span class="badge bdg-o">${o.br} – ${o.naz}</span>`:'–'}</td>
+      <td class="r mono">${cnt}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-t btn-te" onclick="editInz(${i.id})">Uredi</button>
+        <button class="btn-t btn-td" onclick="delInz(${i.id})">Obriši</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function saveInz() {
+  const ime  = document.getElementById('i-ime').value.trim();
+  const prez = document.getElementById('i-prez').value.trim();
+  const odId = parseInt(document.getElementById('i-od').value);
+  if (!ime||!prez||!odId) { toast('Popunite sva polja!'); return; }
+
+  if (edInz) {
+    Object.assign(db.inzinjeri.find(x=>x.id===edInz),{ime,prez,odId});
+    edInz=null; document.getElementById('inz-hd').textContent='Novi inžinjer';
+    document.getElementById('inz-otk').hidden=true;
+  } else {
+    db.inzinjeri.push({id:uid(db.inzinjeri),ime,prez,odId});
+  }
+  saveDB(); clearInzF(); renderInz(); refilterInz(); toast('Inžinjer sačuvan');
+}
+
+function editInz(id) {
+  const i=db.inzinjeri.find(x=>x.id===id);
+  document.getElementById('i-ime').value=i.ime;
+  document.getElementById('i-prez').value=i.prez;
+  document.getElementById('i-od').value=i.odId;
+  edInz=id; document.getElementById('inz-hd').textContent='Uredi inžinjera';
+  document.getElementById('inz-otk').hidden=false;
+}
+function cancelInz() { edInz=null; clearInzF(); document.getElementById('inz-hd').textContent='Novi inžinjer'; document.getElementById('inz-otk').hidden=true; }
+function clearInzF() { ['i-ime','i-prez'].forEach(id=>document.getElementById(id).value=''); document.getElementById('i-od').value=''; }
+
+function delInz(id) {
+  if (!confirm('Obrisati inžinjera?')) return;
+  db.inzinjeri=db.inzinjeri.filter(i=>i.id!==id);
+  db.unosi=db.unosi.filter(u=>u.inId!==id);
+  saveDB(); renderInz(); renderUnosi(); toast('Inžinjer obrisan');
+}
+
+// ── Unos rada ─────────────────────────────────────────────
+let edUn = null, curVr = 'D';
+
+function pickVrsta(v) {
+  curVr = v;
+  document.getElementById('vl-d').className = 'vrsta-opt' + (v==='D'?' on-d':'');
+  document.getElementById('vl-v').className = 'vrsta-opt' + (v==='V'?' on-v':'');
+  document.getElementById('fld-d').hidden = v!=='D';
+  document.getElementById('fld-v').hidden = v!=='V';
+}
+
+function refilterInz() {
+  const odId = parseInt(document.getElementById('f-od').value)||0;
+  const sel = document.getElementById('f-inz');
+  const cur = sel.value;
+  const list = odId ? db.inzinjeri.filter(i=>i.odId===odId) : db.inzinjeri;
+  sel.innerHTML = '<option value="">Odaberi inžinjera…</option>' +
+    [...list].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
+      const o=od(i.odId);
+      return `<option value="${i.id}">${i.prez} ${i.ime}${o?' ('+o.br+')':''}`;
+    }).join('');
+  if (cur) sel.value=cur;
+}
+
+function saveUnos() {
+  const dat  = document.getElementById('f-dat').value;
+  const inId = parseInt(document.getElementById('f-inz').value);
+  if (!dat) { toast('Unesite datum!'); return; }
+  if (!inId) { toast('Odaberite inžinjera!'); return; }
+
+  const iz = inz(inId);
+  const odId = parseInt(document.getElementById('f-od').value)||iz?.odId||0;
+  if (!odId) { toast('Odredite odjel!'); return; }
+
+  let st=null, ha=null, km=null;
+  if (curVr==='D') {
+    st = parseInt(document.getElementById('f-st').value)||null;
+    ha = parseFloat(document.getElementById('f-ha').value)||null;
+    if (!st||!ha) { toast('Unesite broj stabala i hektare!'); return; }
+  } else {
+    km = parseFloat(document.getElementById('f-km').value)||null;
+    if (!km) { toast('Unesite kilometre!'); return; }
+  }
+  const nap = document.getElementById('f-nap').value.trim()||null;
+
+  if (edUn) {
+    Object.assign(db.unosi.find(x=>x.id===edUn),{dat,vr:curVr,inId,odId,st,ha,km,nap});
+    edUn=null; document.getElementById('unos-hd').textContent='Novi unos';
+    document.getElementById('unos-otk').hidden=true;
+  } else {
+    db.unosi.push({id:uid(db.unosi),dat,vr:curVr,inId,odId,st,ha,km,nap});
+  }
+  saveDB(); clearUnosF(); renderUnosi(); renderOdjeli(); toast('Unos sačuvan ✓');
+}
+
+function editUnos(id) {
+  const u=db.unosi.find(x=>x.id===id);
+  document.getElementById('f-dat').value=u.dat;
+  document.getElementById('f-od').value=u.odId;
+  refilterInz();
+  document.getElementById('f-inz').value=u.inId;
+  pickVrsta(u.vr);
+  document.getElementById('f-st').value=u.st||'';
+  document.getElementById('f-ha').value=u.ha||'';
+  document.getElementById('f-km').value=u.km||'';
+  document.getElementById('f-nap').value=u.nap||'';
+  edUn=id; document.getElementById('unos-hd').textContent='Uredi unos';
+  document.getElementById('unos-otk').hidden=false;
+}
+function cancelUnos() { edUn=null; clearUnosF(); document.getElementById('unos-hd').textContent='Novi unos'; document.getElementById('unos-otk').hidden=true; }
+function clearUnosF() {
+  document.getElementById('f-dat').value=new Date().toISOString().slice(0,10);
+  ['f-inz','f-od'].forEach(id=>document.getElementById(id).value='');
+  ['f-st','f-ha','f-km','f-nap'].forEach(id=>document.getElementById(id).value='');
+}
+
+function delUnos(id) {
+  if (!confirm('Obrisati unos?')) return;
+  db.unosi=db.unosi.filter(u=>u.id!==id);
+  saveDB(); renderUnosi(); renderOdjeli(); toast('Unos obrisan');
+}
+
+function renderUnosi() {
+  const tb = document.getElementById('tb-unosi');
+  const sorted = [...db.unosi].sort((a,b)=>b.dat.localeCompare(a.dat));
+  document.getElementById('unosi-cnt').textContent = sorted.length + ' unosa';
+
+  if (!sorted.length) { tb.innerHTML=`<tr><td colspan="6" class="empty">Nema unosa.</td></tr>`; return; }
+
+  tb.innerHTML = sorted.map(u=>{
+    const i=inz(u.inId), o=od(u.odId);
+    const kol = u.vr==='D'
+      ? `<span class="mono">${fI(u.st)} st / ${fN(u.ha)} ha</span>`
+      : `<span class="mono c-amb">${fN(u.km)} km</span>`;
+    return `<tr>
+      <td class="mono" style="font-size:12px">${fDate(u.dat)}</td>
+      <td class="fw6">${i?i.prez+' '+i.ime:'–'}</td>
+      <td>${o?`<span class="badge bdg-o">${o.br}</span>`:'–'}</td>
+      <td><span class="badge ${u.vr==='D'?'bdg-d':'bdg-v'}">${u.vr==='D'?'🌳 Doznaka':'🛤️ Vlake'}</span></td>
+      <td class="r">${kol}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-t btn-te" onclick="editUnos(${u.id})">Uredi</button>
+        <button class="btn-t btn-td" onclick="delUnos(${u.id})">Obriši</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Izvještaji ────────────────────────────────────────────
+let curPer = 'mj', curGr = 'od';
+
+function getPer() {
+  const now = new Date();
+  if (curPer==='sed') {
+    const day = now.getDay()||7;
+    const od1 = new Date(now); od1.setDate(now.getDate()-day+1); od1.setHours(0,0,0,0);
+    const do1 = new Date(od1); do1.setDate(od1.getDate()+6); do1.setHours(23,59,59,999);
+    return {od:od1,do:do1};
+  }
+  if (curPer==='mj') {
+    return { od:new Date(now.getFullYear(),now.getMonth(),1), do:new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999) };
+  }
+  return { od:new Date(now.getFullYear(),0,1), do:new Date(now.getFullYear(),11,31,23,59,59,999) };
+}
+
+function inPer(iso, per) {
+  const d=new Date(iso); return d>=per.od && d<=per.do;
+}
+
+function setPer(btn) {
+  curPer=btn.dataset.per;
+  document.querySelectorAll('.pbtn[data-per]').forEach(b=>b.classList.toggle('on', b===btn));
+  renderIzvj();
+}
+function setGr(btn) {
+  curGr=btn.dataset.gr;
+  document.querySelectorAll('.pbtn[data-gr]').forEach(b=>b.classList.toggle('on-b', b===btn));
+  renderIzvj();
+}
+
+function renderIzvj() {
+  const per = getPer();
+  const fil = db.unosi.filter(u=>inPer(u.dat,per));
+
+  const fmt = d=>d.toLocaleDateString('bs-BA',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('p-range').textContent = `${fmt(per.od)} – ${fmt(per.do)}`;
+
+  const doz = fil.filter(u=>u.vr==='D');
+  const vl  = fil.filter(u=>u.vr==='V');
+  const ukHa= doz.reduce((s,u)=>s+(u.ha||0),0);
+  const ukSt= doz.reduce((s,u)=>s+(u.st||0),0);
+  const ukKm= vl.reduce((s,u)=>s+(u.km||0),0);
+  const ukPov=db.odjeli.reduce((s,o)=>s+o.pov,0);
+
+  document.getElementById('izvj-stats').innerHTML = `
+    <div class="stat g"><div class="stat-lbl">Obrađeno</div><div class="stat-val">${fN(ukHa)}<span class="stat-unit">ha</span></div></div>
+    <div class="stat"><div class="stat-lbl">Ukupna površina</div><div class="stat-val">${fN(ukPov)}<span class="stat-unit">ha</span></div></div>
+    <div class="stat g"><div class="stat-lbl">Doznačena stabla</div><div class="stat-val">${ukSt?fI(ukSt):'–'}</div></div>
+    <div class="stat a"><div class="stat-lbl">Vlake</div><div class="stat-val">${fN(ukKm)}<span class="stat-unit">km</span></div></div>`;
+
+  if (curGr==='od') renderIzvjOd(fil);
+  else renderIzvjInz(fil);
+}
+
+function renderIzvjOd(fil) {
+  document.getElementById('izvj-hd').textContent = 'Pregled po odjelima';
+  document.getElementById('izvj-thead').innerHTML = `<tr>
+    <th>Odjel</th><th class="r">Površina (ha)</th><th class="r">Obrađeno (ha)</th>
+    <th class="r">Preostalo (ha)</th><th class="r">Stabala</th><th class="r">Vlake (km)</th><th>Napredak</th>
+  </tr>`;
+
+  document.getElementById('tb-izvj').innerHTML = [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
+    const uf=fil.filter(u=>u.odId===o.id);
+    const d=uf.filter(u=>u.vr==='D'), v=uf.filter(u=>u.vr==='V');
+    const ha=d.reduce((s,u)=>s+(u.ha||0),0);
+    const st=d.reduce((s,u)=>s+(u.st||0),0);
+    const km=v.reduce((s,u)=>s+(u.km||0),0);
+    const pr=Math.max(o.pov-ha,0);
+    const pct=Math.min((ha/o.pov)*100,100);
+    return `<tr class="${!uf.length?'dim':''}">
+      <td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td>
+      <td class="r mono">${fN(o.pov)}</td>
+      <td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td>
+      <td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td>
+      <td class="r mono">${fI(st)}</td>
+      <td class="r mono ${km>0?'c-amb':''}">${km>0?fN(km):'–'}</td>
+      <td>${progressHtml(pct)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderIzvjInz(fil) {
+  document.getElementById('izvj-hd').textContent = 'Pregled po inžinjerima';
+  document.getElementById('izvj-thead').innerHTML = `<tr>
+    <th>Inžinjer</th><th>Odjel</th><th class="r">Obrađeno (ha)</th>
+    <th class="r">Stabala</th><th class="r">Vlake (km)</th><th class="r">Unosa</th>
+  </tr>`;
+
+  document.getElementById('tb-izvj').innerHTML = [...db.inzinjeri].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
+    const uf=fil.filter(u=>u.inId===i.id);
+    const d=uf.filter(u=>u.vr==='D'), v=uf.filter(u=>u.vr==='V');
+    const ha=d.reduce((s,u)=>s+(u.ha||0),0);
+    const st=d.reduce((s,u)=>s+(u.st||0),0);
+    const km=v.reduce((s,u)=>s+(u.km||0),0);
+    const o=od(i.odId);
+    return `<tr class="${!uf.length?'dim':''}">
+      <td class="fw6">${i.prez} ${i.ime}</td>
+      <td>${o?`<span class="badge bdg-o">${o.br}</span>`:'–'}</td>
+      <td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td>
+      <td class="r mono">${fI(st)}</td>
+      <td class="r mono ${km>0?'c-amb':''}">${km>0?fN(km):'–'}</td>
+      <td class="r mono c-mut">${uf.length}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Init ──────────────────────────────────────────────────
+document.getElementById('f-dat').value = new Date().toISOString().slice(0,10);
+renderOdjeli(); renderInz(); renderUnosi(); renderIzvj();
+</script>
