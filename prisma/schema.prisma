@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Odjel {
+  id        Int      @id @default(autoincrement())
+  naziv     String
+  broj      String   @unique
+  povrsina  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inzinjeri Inzinjer[]
+  unosi     UnosRada[]
+}
+
+model Inzinjer {
+  id        Int      @id @default(autoincrement())
+  ime       String
+  prezime   String
+  email     String?  @unique
+  odjelId   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  odjel     Odjel    @relation(fields: [odjelId], references: [id])
+  unosi     UnosRada[]
+}
+
+// vrsta: "DOZNAKA" | "VLAKA"
+model UnosRada {
+  id         Int      @id @default(autoincrement())
+  datum      DateTime
+  vrsta      String   // "DOZNAKA" | "VLAKA"
+  inzinjerId Int
+  odjelId    Int
+
+  brojStabala Int?
+  hektari     Float?
+  kilometri   Float?
+
+  napomena    String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  inzinjer   Inzinjer @relation(fields: [inzinjerId], references: [id])
+  odjel      Odjel    @relation(fields: [odjelId], references: [id])
+}
