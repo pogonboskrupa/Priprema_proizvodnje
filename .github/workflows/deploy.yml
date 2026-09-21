@@ -27,19 +27,38 @@ jobs:
 
       - run: npm ci
 
-      # Firebase web config is a public client identifier, not a credential — it ships
-      # in the browser bundle either way. Repo secrets win when set; the literals keep
-      # the deploy working when they are not.
+      # A missing secret would otherwise build an app with a broken Firebase
+      # config and silently replace the working deployment.
+      - name: Provjeri da su Firebase secrets podešeni
+        env:
+          API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+        run: |
+          missing=""
+          for name in API_KEY AUTH_DOMAIN PROJECT_ID STORAGE_BUCKET SENDER_ID APP_ID; do
+            [ -z "${!name}" ] && missing="$missing NEXT_PUBLIC_FIREBASE_$name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Nedostaju GitHub Secrets:$missing"
+            echo "Dodaj ih pojedinačno pod Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          echo "Svi Firebase secrets su podešeni."
+
       - name: Build Next.js static export
         env:
           NEXT_PUBLIC_BASE_PATH: /Priprema_proizvodnje
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCY3NRAt-uW-87pHhW2VXsBW761crGkaaY' }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'priprema-proizvodnje.firebaseapp.com' }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'priprema-proizvodnje' }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'priprema-proizvodnje.firebasestorage.app' }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '61462779381' }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID || '1:61462779381:web:9fe21c0afffbc6001efcbc' }}
-          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || 'G-71E5Q78J1N' }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }}
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v3
