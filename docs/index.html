@@ -857,8 +857,16 @@ function enterApp(){
   document.getElementById('hdr-name').textContent=u.name;
   updateHdrAv();
 
+  // Reset sve admin-only elemente na skriveno (važno kad radnik loguje nakon admina)
+  document.getElementById('tnav-izvj').hidden=false;
+  document.getElementById('tnav-pregled').hidden=true;
+  document.getElementById('tnav-plan').hidden=true;
+  document.getElementById('tnav-real').hidden=true;
+  document.getElementById('sh-wsel').hidden=true;
+  document.getElementById('sec-users').hidden=true;
+  document.getElementById('m-wfg').hidden=true;
+
   if(isAdm()){
-    // Show admin-only tabs, hide worker-only tabs
     document.getElementById('tnav-izvj').hidden=true;
     document.getElementById('tnav-pregled').hidden=false;
     document.getElementById('tnav-plan').hidden=false;
@@ -873,6 +881,12 @@ function enterApp(){
     renderOd();
     renderPlanStats();
   }
+
+  // Resetuj aktivan tab na Šihtaricu pri svakom loginu
+  document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('on'));
+  document.querySelector('.tbtn[data-tab="sh"]').classList.add('on');
+  document.getElementById('tab-sh').classList.add('on');
 
   refreshOdSel();
   renderSh();
