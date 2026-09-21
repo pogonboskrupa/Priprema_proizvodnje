@@ -225,13 +225,37 @@ textarea{resize:none}
 .user-card{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface2)}
 .uc-name{font-weight:600;font-size:13px}
 .uc-role{font-size:10px;color:var(--muted)}
+/* PROFILE */
+.prof-av-wrap{display:flex;align-items:center;gap:16px;padding:14px 14px 10px}
+.prof-av-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;flex-shrink:0;border:3px solid var(--border);overflow:hidden}
+.prof-av-circle img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.prof-av-info{display:flex;flex-direction:column;gap:3px}
+.prof-av-name{font-weight:700;font-size:14px}
+.prof-av-title{font-size:12px;color:var(--muted)}
+.prof-av-btn-lbl{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-top:4px;display:inline-block}
+.prof-form{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.prof-odjeli{padding:0 14px 14px}
+.prof-od-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.od-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--acc-bg);color:var(--accent);border:1px solid rgba(38,97,62,.2)}
+.hdr-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,.35)}
+.hdr-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.uc-top{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.uc-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+.uc-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.uc-acts{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.assign-panel{padding:8px 10px 12px;border:1px solid var(--border);border-top:none;border-radius:0 0 7px 7px;background:var(--surface2);margin-top:-3px;grid-column:1/-1}
+.od-check-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.od-check-lbl{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 9px;border:1px solid var(--border);border-radius:20px;user-select:none;transition:background .1s}
+.od-check-lbl:hover{background:var(--surface)}
+.od-check-lbl.checked{background:var(--acc-bg);border-color:rgba(38,97,62,.3);color:var(--accent)}
+
 
 /* PREGLED / PLAN */
 .sec-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin:20px 0 10px}
 .sec-title:first-child{margin-top:0}
 .inz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:18px}
 .inz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;display:flex;flex-direction:row;align-items:flex-start;gap:11px;box-shadow:var(--sh-sm)}
-.inz-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+.inz-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.5px;overflow:hidden}
 .inz-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .inz-name{font-weight:700;font-size:13px;letter-spacing:.1px}
 .inz-stats{display:flex;flex-wrap:wrap;gap:5px 10px}
@@ -407,6 +431,7 @@ textarea{resize:none}
       <button class="tbtn" data-tab="post">⚙️ Postavke</button>
     </nav>
     <div class="hdr-r">
+      <div class="hdr-av" id="hdr-av"></div>
       <span class="hdr-name" id="hdr-name"></span>
       <button class="btn-out" onclick="logout()">Odjava</button>
     </div>
@@ -565,6 +590,27 @@ textarea{resize:none}
     <div class="tab-pane" id="tab-post">
       <p class="pg-title">Postavke</p>
       <div class="settings-grid">
+      <div class="card">
+          <div class="card-hd">Moj profil</div>
+          <div class="prof-av-wrap">
+            <div class="prof-av-circle" id="prof-av-display"></div>
+            <div class="prof-av-info">
+              <div class="prof-av-name" id="prof-av-name"></div>
+              <div class="prof-av-title" id="prof-av-title-disp"></div>
+              <label class="prof-av-btn-lbl" for="prof-av-input">📷 Promijeni sliku</label>
+              <input type="file" id="prof-av-input" accept="image/*" hidden onchange="profAvUpload(this)">
+            </div>
+          </div>
+          <div class="prof-form">
+            <div class="fg"><label class="lbl">Puno ime i prezime</label><input type="text" id="prof-fullname" maxlength="60"></div>
+            <div class="fg"><label class="lbl">Titula / pozicija</label><input type="text" id="prof-title" maxlength="60"></div>
+            <button class="btn btn-p" onclick="saveProfile()">Sačuvaj profil</button>
+          </div>
+          <div class="prof-odjeli" id="prof-odjeli-sec">
+            <label class="lbl">Dodijeljeni odjeli</label>
+            <div class="prof-od-list" id="prof-od-list"></div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-hd">Promjena PIN-a</div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
@@ -678,9 +724,34 @@ let db;
 try{ db=JSON.parse(localStorage.getItem(KEY))||null; }catch{ db=null; }
 if(!db){ db={users:INIT_USERS,odjeli:INIT_OD,unosi:[]}; lsave(); }
 if(!db.users){ db.users=INIT_USERS; lsave(); }
+// Migrate user schema: add fullName, title, avatar, odjeliIds if missing
+let _migU=false;
+db.users.forEach(u=>{
+  if(u.fullName===undefined){u.fullName=u.name;_migU=true;}
+  if(u.title===undefined){u.title='';_migU=true;}
+  if(u.avatar===undefined){u.avatar='';_migU=true;}
+  if(u.odjeliIds===undefined){u.odjeliIds=[];_migU=true;}
+});
+if(_migU)lsave();
+
 
 function lsave(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch{} }
 function uid(a){ return a.length?Math.max(...a.map(x=>x.id))+1:1; }
+// ── AVATAR HELPERS ────────────────────────────────────────────────────────
+const AV_COLORS=['#26613e','#b05a14','#2563eb','#6d28d9','#0f766e','#be185d','#b45309','#0369a1','#15803d'];
+function avColor(uid_){ return AV_COLORS[((uid_||1)-1)%AV_COLORS.length]; }
+function avInitials(name){
+  const parts=(name||'?').trim().split(/\s+/);
+  return parts.length>=2?(parts[0][0]+parts[1][0]).toUpperCase():parts[0].slice(0,2).toUpperCase();
+}
+function avCircleHtml(u,sz=28){
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const fs=Math.round(sz*0.38);
+  if(u.avatar)return`<img src="${u.avatar}" style="width:${sz}px;height:${sz}px;border-radius:50%;object-fit:cover">`;
+  return`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;color:#fff;flex-shrink:0">${init}</div>`;
+}
+
 
 // ── SESSION ───────────────────────────────────────────────────────────────────
 const RKEY='spp_rem';
@@ -784,6 +855,7 @@ function enterApp(){
   document.getElementById('screen-app').hidden=false;
   const u=me();
   document.getElementById('hdr-name').textContent=u.name;
+  updateHdrAv();
 
   if(isAdm()){
     // Show admin-only tabs, hide worker-only tabs
@@ -830,7 +902,7 @@ document.querySelectorAll('.tbtn').forEach(b=>{
     if(this.dataset.tab==='pregled')renderPregled();
     if(this.dataset.tab==='plan'){renderOd();renderPlanStats();}
     if(this.dataset.tab==='real'){renderReal();}
-    if(this.dataset.tab==='post'){if(isAdm())renderUsers();}
+    if(this.dataset.tab==='post'){if(isAdm())renderUsers();renderProfile();}
   });
 });
 
@@ -1033,7 +1105,6 @@ function renderPregled(){
   const mUnosi=db.unosi.filter(u=>u.dat.startsWith(pfx));
 
   // Per-worker cards
-  const AV_COLORS=['#26613e','#b05a14','#2563eb','#6d28d9','#0f766e','#be185d','#b45309','#0369a1','#15803d'];
   const grid=document.getElementById('pr-inz-grid');
   grid.innerHTML=workers.map(w=>{
     const wu=mUnosi.filter(u=>u.uid===w.id);
@@ -1042,13 +1113,12 @@ function renderPregled(){
     const st=doz.reduce((s,u)=>s+(u.st||0),0);
     const km=vl.reduce((s,u)=>s+(u.km||0),0);
     const days=new Set(wu.map(u=>u.dat)).size;
-    const avColor=AV_COLORS[(w.id-1)%AV_COLORS.length];
-    const avInit=w.name.slice(0,1);
-    if(!wu.length) return`<div class="inz-card" style="opacity:.45"><div class="inz-av" style="background:${avColor}">${avInit}</div><div class="inz-body"><div class="inz-name">${w.name}</div><div class="inz-days">— bez unosa —</div></div></div>`;
+    const avHtml=avCircleHtml(w,38);
+    if(!wu.length) return`<div class="inz-card" style="opacity:.45"><div class="inz-av">${avHtml}</div><div class="inz-body"><div class="inz-name">${w.fullName||w.name}</div><div class="inz-days">— bez unosa —</div></div></div>`;
     return`<div class="inz-card">
-      <div class="inz-av" style="background:${avColor}">${avInit}</div>
+      <div class="inz-av">${avHtml}</div>
       <div class="inz-body">
-        <div class="inz-name">${w.name}</div>
+        <div class="inz-name">${w.fullName||w.name}</div>
         <div class="inz-days">🗓️ ${days} radnih dana</div>
         <div class="inz-stats">
           ${ha>0?`<span class="inz-stat"><b>${fN(ha)}</b> ha</span>`:''}
@@ -1454,6 +1524,70 @@ function closeRealModal(){
   edRealId=null;
 }
 
+
+// ── PROFIL ────────────────────────────────────────────────────────────────
+function renderProfile(){
+  const u=me(); if(!u)return;
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const avEl=document.getElementById('prof-av-display');
+  if(!avEl)return;
+  if(u.avatar){
+    avEl.innerHTML=`<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    avEl.style.cssText='';
+  } else {
+    avEl.innerHTML=init;
+    avEl.style.cssText=`background:${col}`;
+  }
+  document.getElementById('prof-av-name').textContent=u.fullName||u.name;
+  document.getElementById('prof-av-title-disp').textContent=u.title||'';
+  document.getElementById('prof-fullname').value=u.fullName||u.name;
+  document.getElementById('prof-title').value=u.title||'';
+  const list=document.getElementById('prof-od-list');
+  const assigned=(u.odjeliIds||[]).map(id=>db.odjeli.find(o=>o.id===id)).filter(Boolean);
+  list.innerHTML=assigned.length
+    ?assigned.map(o=>`<span class="od-chip">${o.br} <b>${o.naz}</b></span>`).join('')
+    :'<span style="font-size:11px;color:var(--muted)">Nije dodijeljeno nijedan odjel.</span>';
+}
+
+function profAvUpload(inp){
+  const f=inp.files[0]; if(!f)return;
+  if(f.size>2*1024*1024){toast('Slika je prevelika (max 2MB)!');return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const u=db.users.find(x=>x.id===ses.uid);
+    if(!u)return;
+    u.avatar=e.target.result; lsave(); renderProfile(); updateHdrAv(); toast('Slika postavljena ✓');
+  };
+  r.readAsDataURL(f);
+}
+
+function saveProfile(){
+  const fn=document.getElementById('prof-fullname').value.trim();
+  const ti=document.getElementById('prof-title').value.trim();
+  if(!fn){toast('Upiši puno ime!');return;}
+  const u=db.users.find(x=>x.id===ses.uid);
+  if(!u)return;
+  u.fullName=fn; u.title=ti; lsave();
+  document.getElementById('prof-av-name').textContent=fn;
+  document.getElementById('prof-av-title-disp').textContent=ti;
+  updateHdrAv(); toast('Profil sačuvan ✓');
+}
+
+function updateHdrAv(){
+  const u=me(); if(!u)return;
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const el=document.getElementById('hdr-av');
+  if(!el)return;
+  if(u.avatar){
+    el.innerHTML=`<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    el.style.background='transparent';
+  } else {
+    el.innerHTML=init;
+    el.style.background=col;
+  }
+}
 // ── POSTAVKE / PIN ────────────────────────────────────────────────────────────
 function changePin(){
   const old=document.getElementById('p-old').value.trim();
@@ -1472,11 +1606,52 @@ function changePin(){
 
 // ── ADMIN: KORISNICI ──────────────────────────────────────────────────────────
 function renderUsers(){
-  document.getElementById('users-list').innerHTML=db.users.map(u=>`
-    <div class="user-card">
-      <div><div class="uc-name">${u.name}</div><div class="uc-role">${u.role==='admin'?'Administrator':'Projektant'}</div></div>
-      <button class="btn-t btn-te" onclick="resetPin(${u.id})" title="Reset PIN">Reset PIN</button>
-    </div>`).join('');
+  const odList=db.odjeli;
+  const rows=db.users.map(u=>{
+    const avHtml=avCircleHtml(u,30);
+    const assigned=(u.odjeliIds||[]).map(id=>odList.find(o=>o.id===id)).filter(Boolean);
+    const chips=assigned.length?assigned.map(o=>`<span class="od-chip" style="font-size:10px;padding:1px 7px">${o.br}</span>`).join(''):'';
+    const odPanel=u.role!=='admin'?`
+    <div id="uod-${u.id}" hidden class="assign-panel">
+      <label class="lbl">Dodijeli odjele radniku</label>
+      <div class="od-check-list">
+        ${odList.map(o=>{const ck=(u.odjeliIds||[]).includes(o.id);return`<label class="od-check-lbl${ck?' checked':''}" onclick="toggleOdForUser(${u.id},${o.id},!${ck})"><input type="checkbox" ${ck?'checked':''} style="width:12px;height:12px;accent-color:var(--accent)">${o.br} ${o.naz}</label>`}).join('')}
+      </div>
+    </div>`:'';
+    return `<div>
+      <div class="user-card" id="uc-${u.id}" style="${u.role!=='admin'?'border-radius:7px 7px 0 0;border-bottom-color:transparent':''}">
+        <div class="uc-top">
+          <div class="uc-av">${avHtml}</div>
+          <div>
+            <div class="uc-name">${u.fullName||u.name}</div>
+            <div class="uc-role">${u.role==='admin'?'Administrator':'Projektant'} ${chips}</div>
+          </div>
+        </div>
+        <div class="uc-acts">
+          ${u.role!=='admin'?`<button class="btn-t btn-te" onclick="toggleAssignOd(${u.id})" title="Dodijeli odjele" style="font-size:10px">Odjeli</button>`:''}
+          <button class="btn-t btn-te" onclick="resetPin(${u.id})" title="Reset PIN" style="font-size:10px">Reset</button>
+        </div>
+      </div>${odPanel}</div>`;
+  });
+  document.getElementById('users-list').innerHTML=rows.join('');
+}
+
+function toggleAssignOd(uid_){
+  const el=document.getElementById('uod-'+uid_);
+  if(el)el.hidden=!el.hidden;
+}
+
+function toggleOdForUser(uid_,odId,shouldCheck){
+  const u=db.users.find(x=>x.id===uid_);
+  if(!u)return;
+  if(!u.odjeliIds)u.odjeliIds=[];
+  if(shouldCheck&&!u.odjeliIds.includes(odId))u.odjeliIds.push(odId);
+  if(!shouldCheck)u.odjeliIds=u.odjeliIds.filter(id=>id!==odId);
+  lsave();
+  renderUsers();
+  const el=document.getElementById('uod-'+uid_);
+  if(el)el.hidden=false;
+  toast(`Odjeli ažurirani ✓`);
 }
 
 function resetPin(id){
