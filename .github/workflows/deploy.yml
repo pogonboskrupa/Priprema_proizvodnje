@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/wizardly-albattani-jvhp2z]
   workflow_dispatch:
 
 permissions:
