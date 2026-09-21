@@ -34,15 +34,21 @@ export default function LoginPage() {
     if (!nameTrimmed) { setErr("Unesi korisničko ime!"); setPin(""); return; }
     if (p.length < 4) { setErr("Unesi 4-cifreni PIN!"); return; }
     setSubmitting(true);
-    const found = await getKorisnikByIme(nameTrimmed);
-    setSubmitting(false);
-    if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
-    if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
-    saveSession(
-      { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, avatar: found.avatar },
-      remember
-    );
-    router.replace("/");
+    try {
+      const found = await getKorisnikByIme(nameTrimmed);
+      setSubmitting(false);
+      if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
+      if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
+      saveSession(
+        { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, avatar: found.avatar },
+        remember
+      );
+      router.replace("/");
+    } catch {
+      setSubmitting(false);
+      setPin("");
+      setErr("Greška pri prijavi. Provjeri internet ili Firebase postavke.");
+    }
   }
 
   const dots = Array.from({ length: 4 }, (_, i) => submitting ? true : pin.length > i);

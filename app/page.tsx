@@ -20,7 +20,7 @@ export default function Home() {
   }, [session, loading]);
 
   useEffect(() => {
-    if (session) getMjesecniRezime().then((r) => setRezime(r as Rezime));
+    if (session) getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
   }, [session]);
 
   if (loading || !session) return null;
