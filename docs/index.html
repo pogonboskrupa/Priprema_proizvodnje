@@ -268,6 +268,70 @@ textarea{resize:none}
   .stat-val{font-size:17px}
   .sh-mlbl{min-width:120px;font-size:12px}
 }
+
+/* PRINT HEADER */
+.print-hd{display:none;flex-direction:column;gap:5px;margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid #26613e}
+.ph-logo{font-size:15px;font-weight:700;color:#1c2e22;letter-spacing:-.2px}
+.ph-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ph-section{font-size:14px;font-weight:700;color:#1c2e22}
+.ph-period{font-size:12px;color:#5e7a68;font-style:italic}
+.ph-date{font-size:10px;color:#5e7a68;font-family:'DM Mono',monospace}
+
+/* PRINT BUTTON */
+.btn-print{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .12s;white-space:nowrap}
+.btn-print:hover{border-color:var(--accent);color:var(--accent);background:var(--acc-bg)}
+
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{margin:1.5cm;size:A4 portrait}
+  #screen-login,#overlay,#overlay2,.toast,.hdr{display:none!important}
+  .print-hd{display:flex!important}
+  .tab-pane{display:none!important}
+  .tab-pane.on{display:block!important}
+  /* hide all interactive elements */
+  .btn-print,.add-day-btn,.btn-t,.btn-out,.modal-x{display:none!important}
+  .sh-topbar .btn-p,.sh-topbar .btn-print{display:none!important}
+  .pbar,.real-filter,.plan-form,#od-otk,.sh-wsel{display:none!important}
+  .pg-title-row .btn-print{display:none!important}
+  /* layout */
+  body{background:#fff!important;color:#111!important;font-size:11pt}
+  .wrap{padding:0!important;max-width:none!important}
+  .card{box-shadow:none!important;border:1px solid #ccc!important;break-inside:avoid;margin-bottom:14px!important}
+  .card-hd{background:#f5f5f5!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* tables */
+  .sh-tbl th,.sh-tbl td,table.dt th,table.dt td{border:1px solid #ddd!important;padding:5px 8px!important;font-size:9pt!important;background:transparent!important}
+  .sh-tbl thead th,table.dt thead th{background:#f0f0f0!important;color:#333!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sh-tbl tr.wk td{background:#fafafa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .sh-tbl tr.tot td{background:#f0f0f0!important;font-weight:700!important;border-top:2px solid #aaa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table.dt tbody tr:hover td{background:transparent!important}
+  /* stats */
+  .stat{border:1px solid #ddd!important;background:#fafafa!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .stat-val{font-size:16pt!important}
+  .stat-row{break-inside:avoid}
+  /* progress bars */
+  .prog-bar,.plan-big-bar,.rc-bar{background:#e0e0e0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .prog-fill,.plan-big-fill{background:#26613e!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rc-fill-c{background:#1a56db!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rc-fill-l{background:#b05a14!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* badges */
+  .badge{border:1px solid currentColor!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .bdg-d{background:#e4f0e8!important;color:#26613e!important}
+  .bdg-v{background:#faeee4!important;color:#b05a14!important}
+  .bdg-tok{background:#e8f0fe!important;color:#1a56db!important}
+  .bdg-zav{background:#e4f0e8!important;color:#1a6635!important}
+  .bdg-plan{background:#f5f5f5!important;color:#5e7a68!important}
+  /* realizacija cards */
+  .real-card{border:1px solid #ccc!important;break-inside:avoid;margin-bottom:10px!important}
+  .real-card.rc-zav{border-left:4px solid #26613e!important}
+  .real-card.rc-tok{border-left:4px solid #1a56db!important}
+  .rc-acts .btn{display:none!important}
+  /* inz cards */
+  .inz-card{border:1px solid #ddd!important;break-inside:avoid}
+  /* plan stats */
+  .plan-yr-stats,.plan-big-prog{break-inside:avoid}
+  /* dim rows still dim */
+  tr.dim td{opacity:.4!important}
+}
 </style>
 
 <!-- LOGIN -->
@@ -324,6 +388,16 @@ textarea{resize:none}
 
   <div class="wrap">
 
+    <!-- PRINT HEADER (only visible on print) -->
+    <div class="print-hd" id="print-hd">
+      <div class="ph-logo">🌲 Priprema Proizvodnje Bos.Krupa</div>
+      <div class="ph-row">
+        <span class="ph-section" id="ph-section"></span>
+        <span class="ph-period" id="ph-period"></span>
+        <span class="ph-date" id="ph-date"></span>
+      </div>
+    </div>
+
     <!-- ŠIHTARICA -->
     <div class="tab-pane on" id="tab-sh">
       <div class="sh-topbar">
@@ -336,7 +410,8 @@ textarea{resize:none}
           <label class="lbl" style="font-size:10px">Radnik:</label>
           <select id="sh-wdd" onchange="renderSh()"></select>
         </div>
-        <button class="btn btn-p" style="margin-left:auto;font-size:12px;padding:6px 11px" onclick="openAdd(null)">+ Unos</button>
+        <button class="btn-print" style="margin-left:auto" onclick="printSh()">🖨️ Printaj</button>
+        <button class="btn btn-p" style="font-size:12px;padding:6px 11px" onclick="openAdd(null)">+ Unos</button>
       </div>
       <div class="card">
         <div class="sh-wrap">
@@ -362,7 +437,10 @@ textarea{resize:none}
 
     <!-- IZVJEŠTAJI -->
     <div class="tab-pane" id="tab-izvj">
-      <p class="pg-title">Izvještaji</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <p class="pg-title" style="margin-bottom:0">Izvještaji</p>
+        <button class="btn-print" onclick="printIzvj()">🖨️ Printaj</button>
+      </div>
       <div class="pbar">
         <button class="pbtn" data-per="sed" onclick="setPer(this)">Sedmično</button>
         <button class="pbtn on" data-per="mj" onclick="setPer(this)">Mjesečno</button>
@@ -387,6 +465,7 @@ textarea{resize:none}
           <span class="sh-mlbl" id="pr-lbl"></span>
           <button class="sh-nbtn" onclick="prNext()">›</button>
         </div>
+        <button class="btn-print" style="margin-left:auto" onclick="printPregled()">🖨️ Printaj</button>
       </div>
       <p class="sec-title">Radnici — mjesečni pregled</p>
       <div class="inz-grid" id="pr-inz-grid"></div>
@@ -406,6 +485,9 @@ textarea{resize:none}
 
     <!-- PLAN 2026 (admin) -->
     <div class="tab-pane" id="tab-plan">
+      <div style="display:flex;align-items:center;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn-print" onclick="printPlan()">🖨️ Printaj plan</button>
+      </div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-hd">Ukupni plan doznake 2026</div>
         <div class="plan-yr-stats" id="plan-yr-stats"></div>
@@ -441,11 +523,14 @@ textarea{resize:none}
     <!-- PLAN REALIZACIJE (admin) -->
     <div class="tab-pane" id="tab-real">
       <div class="stat-row" id="real-stats"></div>
-      <div class="real-filter" id="real-filter">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="real-filter" id="real-filter" style="margin-bottom:0;flex:1">
         <button class="pbtn on" data-rf="sve" onclick="setRF(this)">Sve</button>
         <button class="pbtn" data-rf="plan" onclick="setRF(this)">📋 Plan</button>
         <button class="pbtn" data-rf="u_toku" onclick="setRF(this)">🔵 U toku</button>
         <button class="pbtn" data-rf="zavrseno" onclick="setRF(this)">✅ Završeno</button>
+        </div>
+        <button class="btn-print" onclick="printReal()">🖨️ Printaj</button>
       </div>
       <div class="real-cards" id="real-cards"></div>
     </div>
@@ -1365,6 +1450,40 @@ function resetPin(id){
   const def=u.role==='admin'?'0000':'1234';
   if(!confirm(`Resetovati PIN za ${u.name} na ${def}?`))return;
   u.pin=def; lsave(); toast(`PIN za ${u.name} resetovan na ${def} ✓`);
+}
+
+// ── PRINT ────────────────────────────────────────────────────────────────────
+function setPrintHd(section, period){
+  const now=new Date();
+  const fmt=d=>d.toLocaleDateString('bs-BA',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('ph-section').textContent=section;
+  document.getElementById('ph-period').textContent=period||'';
+  document.getElementById('ph-date').textContent='Printano: '+fmt(now)+' '+now.toLocaleTimeString('bs-BA',{hour:'2-digit',minute:'2-digit'});
+}
+function printSh(){
+  const w=isAdm()?db.users.find(u=>u.id===shUid()):me();
+  setPrintHd('Šihtarica',(w?.name||'')+' — '+MN[shM]+' '+shY);
+  window.print();
+}
+function printIzvj(){
+  const perMap={sed:'Sedmično',mj:'Mjesečno',god:'Godišnje'};
+  const per=getPer();
+  const fmt=d=>d.toLocaleDateString('bs-BA',{day:'2-digit',month:'2-digit',year:'numeric'});
+  setPrintHd('Izvještaji',perMap[curPer]+' ('+fmt(per.od)+' – '+fmt(per.do)+')');
+  window.print();
+}
+function printPregled(){
+  setPrintHd('Pregled radnika',MN[prM]+' '+prY);
+  window.print();
+}
+function printPlan(){
+  setPrintHd('Plan Doznake 2026','');
+  window.print();
+}
+function printReal(){
+  const rfMap={sve:'Svi odjeli',plan:'Plan',u_toku:'U toku',zavrseno:'Završeni'};
+  setPrintHd('Plan Realizacije 2026',rfMap[curRF]||'Svi odjeli');
+  window.print();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
