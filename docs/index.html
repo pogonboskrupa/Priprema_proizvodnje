@@ -854,7 +854,7 @@ function enterApp(){
   document.getElementById('screen-login').hidden=true;
   document.getElementById('screen-app').hidden=false;
   const u=me();
-  document.getElementById('hdr-name').textContent=u.name;
+  document.getElementById('hdr-name').textContent=u.fullName||u.name;
   updateHdrAv();
 
   // Reset sve admin-only elemente na skriveno (važno kad radnik loguje nakon admina)
@@ -1372,6 +1372,8 @@ function delOd(id){
   if(!confirm('Obrisati odjel? Unosi vezani za njega ostat će bez odjela.'))return;
   db.odjeli=db.odjeli.filter(o=>o.id!==id);
   db.unosi.forEach(u=>{if(u.odId===id)u.odId=null;});
+  // Ukloni odjel iz svih dodijeljenih lista radnika
+  db.users.forEach(u=>{if(u.odjeliIds)u.odjeliIds=u.odjeliIds.filter(x=>x!==id);});
   lsave(); renderOd(); refreshOdSel(); renderPlanStats(); toast('Odjel obrisan');
 }
 
@@ -1557,21 +1559,28 @@ function renderProfile(){
   document.getElementById('prof-av-title-disp').textContent=u.title||'';
   document.getElementById('prof-fullname').value=u.fullName||u.name;
   document.getElementById('prof-title').value=u.title||'';
+  // Odjeli section: samo za radnike
+  const odSec=document.getElementById('prof-odjeli-sec');
+  if(isAdm()){ odSec.hidden=true; return; }
+  odSec.hidden=false;
   const list=document.getElementById('prof-od-list');
   const assigned=(u.odjeliIds||[]).map(id=>db.odjeli.find(o=>o.id===id)).filter(Boolean);
   list.innerHTML=assigned.length
     ?assigned.map(o=>`<span class="od-chip">${o.br} <b>${o.naz}</b></span>`).join('')
-    :'<span style="font-size:11px;color:var(--muted)">Nije dodijeljeno nijedan odjel.</span>';
+    :'<span style="font-size:11px;color:var(--muted)">Nema dodijeljenih odjela.</span>';
 }
 
 function profAvUpload(inp){
   const f=inp.files[0]; if(!f)return;
-  if(f.size>2*1024*1024){toast('Slika je prevelika (max 2MB)!');return;}
+  if(f.size>2*1024*1024){toast('Slika je prevelika (max 2MB)!');inp.value='';return;}
   const r=new FileReader();
   r.onload=e=>{
     const u=db.users.find(x=>x.id===ses.uid);
     if(!u)return;
-    u.avatar=e.target.result; lsave(); renderProfile(); updateHdrAv(); toast('Slika postavljena ✓');
+    u.avatar=e.target.result;
+    try{ lsave(); }catch{ toast('Nema prostora za sliku — pokušaj manju sliku'); return; }
+    inp.value=''; // reset da se može ponovo odabrati ista slika
+    renderProfile(); updateHdrAv(); toast('Slika postavljena ✓');
   };
   r.readAsDataURL(f);
 }
