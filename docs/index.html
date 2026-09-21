@@ -14,7 +14,11 @@ html{height:100%}
   --bg:#f0f4f1;--surface:#fff;--surface2:#f6f9f7;--border:#ccd8d0;
   --text:#1c2e22;--muted:#5e7a68;--accent:#26613e;--acc-h:#1d4d31;
   --acc-bg:#e4f0e8;--amber:#b05a14;--amb-bg:#faeee4;
-  --danger:#b92b20;--dan-bg:#fcecea;--wknd:#f7f8f6;--r:7px;
+  --danger:#b92b20;--dan-bg:#fcecea;--wknd:#f7f8f6;
+  --r:10px;--r-sm:6px;--r-lg:18px;
+  --sh-sm:0 1px 4px rgba(0,0,0,.06);
+  --sh-md:0 4px 14px rgba(0,0,0,.09);
+  --sh-lg:0 12px 48px rgba(0,0,0,.16);
 }
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0d1910;--surface:#162119;--surface2:#1d2d21;--border:#263829;
@@ -28,12 +32,12 @@ html{height:100%}
   --acc-bg:#192e1f;--amber:#d97833;--amb-bg:#2a1808;
   --danger:#e05c4e;--dan-bg:#2a0f0e;--wknd:#0f1c12;
 }
-body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5}
+body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 
 /* LOGIN */
 #screen-login{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:16px}
-.lg-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 32px rgba(0,0,0,.1);padding:24px 20px;width:100%;max-width:360px}
-.lg-logo{text-align:center;font-size:19px;font-weight:700;color:var(--accent);margin-bottom:3px;letter-spacing:-.3px}
+.lg-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:28px 22px;width:100%;max-width:360px}
+.lg-logo{text-align:center;font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px;letter-spacing:-.3px}
 .lg-sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:18px}
 .lg-name-wrap{position:relative;margin-bottom:14px}
 .lg-name-wrap input{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:600;font-family:inherit;outline:none;transition:border-color .13s,box-shadow .13s;text-transform:uppercase;letter-spacing:.5px}
@@ -46,7 +50,7 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .ldot.err{background:var(--danger);border-color:var(--danger)}
 .lg-err{text-align:center;color:var(--danger);font-size:12px;min-height:18px;margin-bottom:10px}
 .lg-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.pdbtn{padding:14px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text);cursor:pointer;transition:background .1s;user-select:none}
+.pdbtn{padding:15px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text);cursor:pointer;transition:all .1s;user-select:none;box-shadow:var(--sh-sm)}
 .pdbtn:hover{background:var(--border)}
 .pdbtn:active{transform:scale(.95)}
 .pdbtn.del{font-size:15px;color:var(--muted)}
@@ -54,15 +58,20 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .pdbtn.ok:hover{background:var(--acc-h)}
 .lg-rem{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
 .lg-rem input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.lg-ver{text-align:center;margin-top:14px;font-size:11px;color:var(--border);letter-spacing:.04em}
+.app-info{margin-top:20px;padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.app-info-name{font-size:12px;font-weight:600;color:var(--muted)}
+.app-info-ver{font-size:11px;font-family:'DM Mono',monospace;color:var(--border);letter-spacing:.06em;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px}
 
 /* HEADER */
-.hdr{position:sticky;top:env(safe-area-inset-top,0);background:var(--accent);color:#fff;z-index:50;padding:0 14px;display:flex;align-items:stretch;gap:0;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hdr{position:sticky;top:env(safe-area-inset-top,0);background:linear-gradient(160deg,var(--acc-h) 0%,var(--accent) 100%);color:#fff;z-index:50;padding:0 14px;display:flex;align-items:stretch;gap:0;box-shadow:0 2px 12px rgba(0,0,0,.28)}
 .hdr-logo{font-weight:700;font-size:13px;padding:11px 14px 11px 0;border-right:1px solid rgba(255,255,255,.2);margin-right:6px;white-space:nowrap;flex-shrink:0;align-self:center}
 .hdr-nav{display:flex;flex:1;overflow-x:auto;scrollbar-width:none}
 .hdr-nav::-webkit-scrollbar{display:none}
-.tbtn{background:none;border:none;color:rgba(255,255,255,.7);font-size:12px;font-weight:500;font-family:inherit;padding:0 12px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;border-radius:var(--r) var(--r) 0 0}
-.tbtn:hover{color:#fff;background:rgba(255,255,255,.1)}
+.tbtn{background:none;border:none;color:rgba(255,255,255,.72);font-size:12px;font-weight:500;font-family:inherit;padding:0 13px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;border-radius:var(--r-sm) var(--r-sm) 0 0;position:relative}
+.tbtn:hover{color:#fff;background:rgba(255,255,255,.12)}
 .tbtn.on{color:var(--accent);background:var(--bg);font-weight:600}
+.tbtn.on::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent)}
 .hdr-r{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:10px;flex-shrink:0}
 .hdr-name{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;white-space:nowrap}
 .btn-out{background:none;border:1px solid rgba(255,255,255,.35);color:rgba(255,255,255,.85);border-radius:6px;padding:4px 9px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap}
@@ -71,11 +80,12 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 /* WRAP */
 .wrap{max-width:1100px;margin:0 auto;padding:18px 14px}
 .tab-pane{display:none}
-.tab-pane.on{display:block}
+.tab-pane.on{display:block;animation:tabIn .17s ease}
+@keyframes tabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .pg-title{font-size:17px;font-weight:700;letter-spacing:-.2px;margin-bottom:14px}
 
 /* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh-sm)}
 .card-hd{padding:11px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .card-hd .sub{font-weight:400;color:var(--muted);font-size:11px}
 
@@ -97,7 +107,9 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .sh-tbl tr.wk td{background:var(--wknd);color:var(--muted)}
 .sh-tbl tr.wk td.dow{color:var(--danger)}
 .sh-tbl tr:last-child td{border-bottom:none}
-.sh-tbl tbody tr:not(.wk):not(.tot):hover td{background:var(--surface2)}
+.sh-tbl tbody tr:not(.wk):not(.tot):not(.today):hover td{background:var(--surface2)}
+.sh-tbl tr.today td{background:var(--acc-bg)!important;border-bottom-color:rgba(38,97,62,.18)!important}
+.sh-tbl tr.today .sdt{font-weight:700;color:var(--accent)}
 .sh-tbl tr.tot td{border-top:2px solid var(--border);background:var(--surface2);font-weight:600;font-size:12px}
 .dow{font-family:'DM Mono',monospace;font-size:11px;width:30px;white-space:nowrap}
 .sdt{font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap}
@@ -112,14 +124,15 @@ th.r,td.r{text-align:right}
 tr.dim td{opacity:.35}
 
 /* STATS */
-.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:13px}
-.stat{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:11px 12px}
-.stat.g{border-left-color:var(--accent)}
-.stat.a{border-left-color:var(--amber)}
-.stat.b{border-left-color:var(--muted)}
-.stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-.stat-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.15}
-.stat-unit{font-size:10px;color:var(--muted);margin-left:2px}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px;box-shadow:var(--sh-sm);position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border);border-radius:3px 3px 0 0}
+.stat.g::before{background:var(--accent)}
+.stat.a::before{background:var(--amber)}
+.stat.b::before{background:var(--muted)}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px}
+.stat-val{font-family:'DM Mono',monospace;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat-unit{font-size:11px;color:var(--muted);margin-left:2px}
 
 /* DATA TABLE */
 .tbl-wrap{overflow-x:auto}
@@ -131,7 +144,7 @@ table.dt tbody tr:hover td{background:var(--surface2)}
 
 /* PROGRESS */
 .prog-wrap{display:flex;align-items:center;gap:7px;min-width:90px}
-.prog-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
 .prog-fill{height:100%;border-radius:3px;background:var(--accent)}
 .prog-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:32px;text-align:right;flex-shrink:0}
 
@@ -156,19 +169,19 @@ table.dt tbody tr:hover td{background:var(--surface2)}
 .pbar-rng{margin-left:auto;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
 
 /* MODAL — desktop */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal{background:var(--surface);border-radius:14px;box-shadow:0 12px 48px rgba(0,0,0,.25);width:100%;max-width:480px;overflow:hidden;animation:mIn .18s ease}
-@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(6px)}to{opacity:1;transform:none}}
+#overlay,#overlay2{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:100%;max-width:480px;overflow:hidden;animation:mIn .18s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:none}}
 .modal-drag{display:none}
 .modal-hd{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px}
-.modal-x{width:28px;height:28px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.modal-x:hover{background:var(--border)}
+.modal-x{width:30px;height:30px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s}
+.modal-x:hover{background:var(--border);color:var(--text)}
 .modal-body{padding:16px;display:flex;flex-direction:column;gap:13px}
 .modal-acts{display:flex;gap:9px;padding:14px 16px;border-top:1px solid var(--border);background:var(--surface)}
 
 /* MODAL — mobile bottom sheet */
 @media(max-width:600px){
-  #overlay{align-items:flex-end;padding:0;background:rgba(0,0,0,.55)}
+  #overlay,#overlay2{align-items:flex-end;padding:0;background:rgba(0,0,0,.55)}
   .modal{max-width:100%;border-radius:18px 18px 0 0;box-shadow:0 -6px 32px rgba(0,0,0,.25);
     max-height:92dvh;display:flex;flex-direction:column;
     animation:sheetIn .25s cubic-bezier(.25,.8,.25,1)}
@@ -199,9 +212,9 @@ textarea{resize:none}
 .vopt.on-v{border-color:var(--amber);background:var(--amb-bg);color:var(--amber)}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:none;transition:background .12s;white-space:nowrap}
-.btn-p{background:var(--accent);color:#fff}
-.btn-p:hover{background:var(--acc-h)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:var(--r-sm);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:none;transition:background .12s,box-shadow .12s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff;box-shadow:0 1px 4px rgba(38,97,62,.3)}
+.btn-p:hover{background:var(--acc-h);box-shadow:0 2px 8px rgba(38,97,62,.35)}
 .btn-o{background:none;color:var(--muted);border:1px solid var(--border)}
 .btn-o:hover{background:var(--surface2);color:var(--text)}
 .btn-t{background:none;border:none;font-size:11px;padding:3px 6px;border-radius:5px;cursor:pointer;font-family:inherit}
@@ -216,17 +229,43 @@ textarea{resize:none}
 .user-card{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface2)}
 .uc-name{font-weight:600;font-size:13px}
 .uc-role{font-size:10px;color:var(--muted)}
+/* PROFILE */
+.prof-av-wrap{display:flex;align-items:center;gap:16px;padding:14px 14px 10px}
+.prof-av-circle{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff;flex-shrink:0;border:3px solid var(--border);overflow:hidden}
+.prof-av-circle img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.prof-av-info{display:flex;flex-direction:column;gap:3px}
+.prof-av-name{font-weight:700;font-size:14px}
+.prof-av-title{font-size:12px;color:var(--muted)}
+.prof-av-btn-lbl{font-size:11px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-top:4px;display:inline-block}
+.prof-form{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.prof-odjeli{padding:0 14px 14px}
+.prof-od-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.od-chip{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;background:var(--acc-bg);color:var(--accent);border:1px solid rgba(38,97,62,.2)}
+.hdr-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,.35)}
+.hdr-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.uc-top{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.uc-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+.uc-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.uc-acts{display:flex;gap:4px;flex-shrink:0;align-items:center}
+.assign-panel{padding:8px 10px 12px;border:1px solid var(--border);border-top:none;border-radius:0 0 7px 7px;background:var(--surface2);margin-top:-3px;grid-column:1/-1}
+.od-check-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.od-check-lbl{display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 9px;border:1px solid var(--border);border-radius:20px;user-select:none;transition:background .1s}
+.od-check-lbl:hover{background:var(--surface)}
+.od-check-lbl.checked{background:var(--acc-bg);border-color:rgba(38,97,62,.3);color:var(--accent)}
+
 
 /* PREGLED / PLAN */
-.sec-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:18px 0 10px}
+.sec-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin:20px 0 10px}
 .sec-title:first-child{margin-top:0}
-.inz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px;margin-bottom:18px}
-.inz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;display:flex;flex-direction:column;gap:5px}
-.inz-name{font-weight:700;font-size:13px;letter-spacing:.2px}
-.inz-stats{display:flex;flex-wrap:wrap;gap:6px 10px}
+.inz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-bottom:18px}
+.inz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:13px 14px;display:flex;flex-direction:row;align-items:flex-start;gap:11px;box-shadow:var(--sh-sm)}
+.inz-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-.5px;overflow:hidden}
+.inz-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.inz-name{font-weight:700;font-size:13px;letter-spacing:.1px}
+.inz-stats{display:flex;flex-wrap:wrap;gap:5px 10px}
 .inz-stat{font-size:11px;color:var(--muted)}
 .inz-stat b{color:var(--text);font-variant-numeric:tabular-nums}
-.inz-days{font-size:10px;background:var(--surface2);border-radius:20px;padding:2px 8px;color:var(--muted);align-self:flex-start;margin-top:2px}
+.inz-days{font-size:10px;background:var(--surface2);border-radius:20px;padding:2px 8px;color:var(--muted);align-self:flex-start}
 .plan-form{padding:14px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--border)}
 .plan-yr-stats{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
 .pys{flex:1;min-width:100px}
@@ -239,8 +278,8 @@ textarea{resize:none}
 
 /* REALIZACIJA KARTICE */
 .real-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
-.real-cards{display:flex;flex-direction:column;gap:10px}
-.real-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.real-cards{display:flex;flex-direction:column;gap:12px}
+.real-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh-sm)}
 .real-card.rc-zav{border-left:4px solid var(--accent)}
 .real-card.rc-tok{border-left:4px solid #1a56db}
 .real-card.rc-plan{border-left:4px solid var(--border)}
@@ -258,7 +297,7 @@ textarea{resize:none}
 .rc-prog{grid-column:1/-1;display:flex;flex-direction:column;gap:4px}
 .rc-prog-row{display:flex;align-items:center;gap:8px}
 .rc-prog-lbl{font-size:11px;color:var(--muted);width:90px;flex-shrink:0}
-.rc-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.rc-bar{flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden}
 .rc-fill-c{height:100%;border-radius:3px;background:#1a56db;transition:width .4s}
 .rc-fill-l{height:100%;border-radius:3px;background:var(--amber);transition:width .4s}
 .rc-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:36px;text-align:right}
@@ -274,7 +313,8 @@ textarea{resize:none}
 /* TOAST */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--text);color:var(--bg);padding:8px 17px;border-radius:30px;font-size:13px;font-weight:500;z-index:200;pointer-events:none;transition:transform .22s ease;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
-.empty{text-align:center;padding:22px 14px;color:var(--muted);font-size:13px}
+.empty{text-align:center;padding:30px 14px;color:var(--muted);font-size:13px;line-height:1.7}
+.empty-ico{display:block;font-size:26px;margin-bottom:6px;opacity:.65}
 
 @media(max-width:600px){
   .wrap{padding:12px 10px}
@@ -379,6 +419,7 @@ textarea{resize:none}
     <label class="lg-rem">
       <input type="checkbox" id="lg-rem"> Zapamti me
     </label>
+    <div class="lg-ver" id="lg-ver"></div>
   </div>
 </div>
 
@@ -395,6 +436,7 @@ textarea{resize:none}
       <button class="tbtn" data-tab="post">⚙️ Postavke</button>
     </nav>
     <div class="hdr-r">
+      <div class="hdr-av" id="hdr-av"></div>
       <span class="hdr-name" id="hdr-name"></span>
       <button class="btn-out" onclick="logout()">Odjava</button>
     </div>
@@ -511,14 +553,14 @@ textarea{resize:none}
         <div class="card-hd" id="plan-form-hd">Dodaj odjel</div>
         <div class="plan-form">
           <div class="frow" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="fg"><label class="lbl">Broj odjela</label><input id="o-br" placeholder="004"></div>
-            <div class="fg"><label class="lbl">Gospodarska jedinica</label><input id="o-gj" placeholder="GJ Kruškovača"></div>
-            <div class="fg"><label class="lbl">Naziv odjela</label><input id="o-naz" placeholder="Naziv odjela"></div>
+            <div class="fg"><label class="lbl">Broj odjela</label><input id="o-br"></div>
+            <div class="fg"><label class="lbl">Gospodarska jedinica</label><input id="o-gj"></div>
+            <div class="fg"><label class="lbl">Naziv odjela</label><input id="o-naz"></div>
           </div>
           <div class="frow" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" placeholder="250.00" inputmode="decimal"></div>
-            <div class="fg"><label class="lbl">Plan m³ četinara</label><input id="o-pcet" type="number" step="1" placeholder="500" inputmode="numeric"></div>
-            <div class="fg"><label class="lbl">Plan m³ lišćara</label><input id="o-plis" type="number" step="1" placeholder="1200" inputmode="numeric"></div>
+            <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" inputmode="decimal"></div>
+            <div class="fg"><label class="lbl">Plan m³ četinara</label><input id="o-pcet" type="number" step="1" inputmode="numeric"></div>
+            <div class="fg"><label class="lbl">Plan m³ lišćara</label><input id="o-plis" type="number" step="1" inputmode="numeric"></div>
           </div>
           <div style="display:flex;gap:7px">
             <button class="btn btn-p" style="flex:1" onclick="saveOd()">Sačuvaj odjel</button>
@@ -553,6 +595,27 @@ textarea{resize:none}
     <div class="tab-pane" id="tab-post">
       <p class="pg-title">Postavke</p>
       <div class="settings-grid">
+      <div class="card">
+          <div class="card-hd">Moj profil</div>
+          <div class="prof-av-wrap">
+            <div class="prof-av-circle" id="prof-av-display"></div>
+            <div class="prof-av-info">
+              <div class="prof-av-name" id="prof-av-name"></div>
+              <div class="prof-av-title" id="prof-av-title-disp"></div>
+              <label class="prof-av-btn-lbl" for="prof-av-input">📷 Promijeni sliku</label>
+              <input type="file" id="prof-av-input" accept="image/*" hidden onchange="profAvUpload(this)">
+            </div>
+          </div>
+          <div class="prof-form">
+            <div class="fg"><label class="lbl">Puno ime i prezime</label><input type="text" id="prof-fullname" maxlength="60"></div>
+            <div class="fg"><label class="lbl">Titula / pozicija</label><input type="text" id="prof-title" maxlength="60"></div>
+            <button class="btn btn-p" onclick="saveProfile()">Sačuvaj profil</button>
+          </div>
+          <div class="prof-odjeli" id="prof-odjeli-sec">
+            <label class="lbl">Dodijeljeni odjeli</label>
+            <div class="prof-od-list" id="prof-od-list"></div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-hd">Promjena PIN-a</div>
           <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
@@ -565,9 +628,28 @@ textarea{resize:none}
       </div>
       <div id="sec-users" hidden style="margin-top:14px">
         <div class="card">
-          <div class="card-hd">Korisnici <span class="sub">— reset PIN-a</span></div>
+          <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Korisnici <span class="sub">— upravljanje radnicima</span></span>
+            <button class="btn btn-p" style="font-size:12px;padding:5px 11px" onclick="toggleAddUser()">+ Novi radnik</button>
+          </div>
+
+          <div id="add-user-form" hidden style="padding:14px 14px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+            <div class="frow">
+              <div class="fg"><label class="lbl">Korisničko ime (za prijavu)</label><input type="text" id="au-name" maxlength="30" autocomplete="off"></div>
+              <div class="fg"><label class="lbl">Puno ime i prezime</label><input type="text" id="au-fullname" maxlength="60" autocomplete="off"></div>
+            </div>
+            <div class="fg"><label class="lbl">Radno mjesto / titula</label><input type="text" id="au-title" maxlength="60" autocomplete="off"></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-p" style="flex:1" onclick="addUser()">Dodaj radnika (PIN: 1234)</button>
+              <button class="btn btn-o" onclick="toggleAddUser()">Odustani</button>
+            </div>
+          </div>
           <div class="users-list" id="users-list"></div>
         </div>
+      </div>
+      <div class="app-info">
+        <span class="app-info-name">🌲 Priprema Proizvodnje Bos. Krupa</span>
+        <span class="app-info-ver" id="app-ver-badge"></span>
       </div>
     </div>
 
@@ -597,12 +679,12 @@ textarea{resize:none}
       <div class="fg"><label class="lbl">Odjel</label><select id="m-od"><option value="">— bez odjela —</option></select></div>
       <div id="m-fd">
         <div class="frow">
-          <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="m-st" min="1" placeholder="120" inputmode="numeric"></div>
-          <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="m-ha" step="0.01" placeholder="15.50" inputmode="decimal"></div>
+          <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="m-st" min="1" inputmode="numeric"></div>
+          <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="m-ha" step="0.01" inputmode="decimal"></div>
         </div>
       </div>
       <div id="m-fv" hidden>
-        <div class="fg"><label class="lbl">Km vlaka</label><input type="number" id="m-km" step="0.01" placeholder="3.20" inputmode="decimal"></div>
+        <div class="fg"><label class="lbl">Km vlaka</label><input type="number" id="m-km" step="0.01" inputmode="decimal"></div>
       </div>
       <div class="fg"><label class="lbl">Napomena (opciono)</label><textarea id="m-nap" rows="2"></textarea></div>
     </div>
@@ -645,6 +727,9 @@ textarea{resize:none}
 <div class="offline-bar" id="offline-bar"></div>
 
 <script>
+// ── VERSION ───────────────────────────────────────────────────────────────────
+const VERSION='1.0.0';
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const KEY='spp_v2', SKEY='spp_ses';
 
@@ -666,9 +751,34 @@ let db;
 try{ db=JSON.parse(localStorage.getItem(KEY))||null; }catch{ db=null; }
 if(!db){ db={users:INIT_USERS,odjeli:INIT_OD,unosi:[]}; lsave(); }
 if(!db.users){ db.users=INIT_USERS; lsave(); }
+// Migrate user schema: add fullName, title, avatar, odjeliIds if missing
+let _migU=false;
+db.users.forEach(u=>{
+  if(u.fullName===undefined){u.fullName=u.name;_migU=true;}
+  if(u.title===undefined){u.title='';_migU=true;}
+  if(u.avatar===undefined){u.avatar='';_migU=true;}
+  if(u.odjeliIds===undefined){u.odjeliIds=[];_migU=true;}
+});
+if(_migU)lsave();
+
 
 function lsave(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch{} }
 function uid(a){ return a.length?Math.max(...a.map(x=>x.id))+1:1; }
+// ── AVATAR HELPERS ────────────────────────────────────────────────────────
+const AV_COLORS=['#26613e','#b05a14','#2563eb','#6d28d9','#0f766e','#be185d','#b45309','#0369a1','#15803d'];
+function avColor(uid_){ return AV_COLORS[((uid_||1)-1)%AV_COLORS.length]; }
+function avInitials(name){
+  const parts=(name||'?').trim().split(/\s+/);
+  return parts.length>=2?(parts[0][0]+parts[1][0]).toUpperCase():parts[0].slice(0,2).toUpperCase();
+}
+function avCircleHtml(u,sz=28){
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const fs=Math.round(sz*0.38);
+  if(u.avatar)return`<img src="${u.avatar}" style="width:${sz}px;height:${sz}px;border-radius:50%;object-fit:cover">`;
+  return`<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-size:${fs}px;font-weight:700;color:#fff;flex-shrink:0">${init}</div>`;
+}
+
 
 // ── SESSION ───────────────────────────────────────────────────────────────────
 const RKEY='spp_rem';
@@ -771,10 +881,19 @@ function enterApp(){
   document.getElementById('screen-login').hidden=true;
   document.getElementById('screen-app').hidden=false;
   const u=me();
-  document.getElementById('hdr-name').textContent=u.name;
+  document.getElementById('hdr-name').textContent=u.fullName||u.name;
+  updateHdrAv();
+
+  // Reset sve admin-only elemente na skriveno (važno kad radnik loguje nakon admina)
+  document.getElementById('tnav-izvj').hidden=false;
+  document.getElementById('tnav-pregled').hidden=true;
+  document.getElementById('tnav-plan').hidden=true;
+  document.getElementById('tnav-real').hidden=true;
+  document.getElementById('sh-wsel').hidden=true;
+  document.getElementById('sec-users').hidden=true;
+  document.getElementById('m-wfg').hidden=true;
 
   if(isAdm()){
-    // Show admin-only tabs, hide worker-only tabs
     document.getElementById('tnav-izvj').hidden=true;
     document.getElementById('tnav-pregled').hidden=false;
     document.getElementById('tnav-plan').hidden=false;
@@ -789,6 +908,12 @@ function enterApp(){
     renderOd();
     renderPlanStats();
   }
+
+  // Resetuj aktivan tab na Šihtaricu pri svakom loginu
+  document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('on'));
+  document.querySelector('.tbtn[data-tab="sh"]').classList.add('on');
+  document.getElementById('tab-sh').classList.add('on');
 
   refreshOdSel();
   renderSh();
@@ -818,7 +943,7 @@ document.querySelectorAll('.tbtn').forEach(b=>{
     if(this.dataset.tab==='pregled')renderPregled();
     if(this.dataset.tab==='plan'){renderOd();renderPlanStats();}
     if(this.dataset.tab==='real'){renderReal();}
-    if(this.dataset.tab==='post'){if(isAdm())renderUsers();}
+    if(this.dataset.tab==='post'){if(isAdm())renderUsers();renderProfile();}
   });
 });
 
@@ -852,7 +977,9 @@ function renderSh(){
     const iso=isoD(shY,shM,d);
     const dn=DN[dow];
     const df=`${String(d).padStart(2,'0')}.${mp}.`;
-    const wc=wk?' class="wk"':'';
+    const isToday=iso===new Date().toISOString().slice(0,10);
+    const rowCls=wk?'wk':isToday?'today':'';
+    const wc=rowCls?` class="${rowCls}"`:'';
 
     if(!dayE.length){
       rows.push(`<tr${wc}>
@@ -1027,14 +1154,18 @@ function renderPregled(){
     const st=doz.reduce((s,u)=>s+(u.st||0),0);
     const km=vl.reduce((s,u)=>s+(u.km||0),0);
     const days=new Set(wu.map(u=>u.dat)).size;
-    if(!wu.length) return`<div class="inz-card" style="opacity:.45"><div class="inz-name">${w.name}</div><div class="inz-days">— bez unosa —</div></div>`;
+    const avHtml=avCircleHtml(w,38);
+    if(!wu.length) return`<div class="inz-card" style="opacity:.45"><div class="inz-av">${avHtml}</div><div class="inz-body"><div class="inz-name">${w.fullName||w.name}</div><div class="inz-days">— bez unosa —</div></div></div>`;
     return`<div class="inz-card">
-      <div class="inz-name">${w.name}</div>
-      <div class="inz-days">🗓️ ${days} radnih dana</div>
-      <div class="inz-stats">
-        ${ha>0?`<span class="inz-stat"><b>${fN(ha)}</b> ha</span>`:''}
-        ${st>0?`<span class="inz-stat"><b>${st.toLocaleString('bs-BA')}</b> stabala</span>`:''}
-        ${km>0?`<span class="inz-stat c-amb"><b>${fN(km)}</b> km vlaka</span>`:''}
+      <div class="inz-av">${avHtml}</div>
+      <div class="inz-body">
+        <div class="inz-name">${w.fullName||w.name}</div>
+        <div class="inz-days">🗓️ ${days} radnih dana</div>
+        <div class="inz-stats">
+          ${ha>0?`<span class="inz-stat"><b>${fN(ha)}</b> ha</span>`:''}
+          ${st>0?`<span class="inz-stat"><b>${st.toLocaleString('bs-BA')}</b> stabala</span>`:''}
+          ${km>0?`<span class="inz-stat c-amb"><b>${fN(km)}</b> km vlaka</span>`:''}
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -1088,7 +1219,7 @@ function renderPregled(){
           <td>${totPlan>0?prog(pct):'–'}</td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="6" class="empty">Nema dodanih odjela — dodaj ih u kartici Plan 2026.</td></tr>';
+    : '<tr><td colspan="6" class="empty"><span class="empty-ico">🗺️</span>Nema dodanih odjela. Dodaj ih u kartici Plan 2026.</td></tr>';
 }
 
 function renderPlanStats(){
@@ -1152,7 +1283,13 @@ function renderIzvj(){
     <div class="stat a"><div class="stat-lbl">Vlake</div><div class="stat-val">${fN(ukKm)}<span class="stat-unit">km</span></div></div>
     <div class="stat b"><div class="stat-lbl">Unosa</div><div class="stat-val">${fil.length}</div></div>`;
 
-  if(!isAdm()||curGr==='inz') renderIzvjInz(fil);
+  // Show group buttons for all users; update labels by role
+  document.getElementById('gr-sep').hidden=false;
+  document.getElementById('gr-inz').hidden=false;
+  document.getElementById('gr-od').hidden=false;
+  document.getElementById('gr-inz').textContent=isAdm()?'👷 Po radniku':'📋 Moji unosi';
+
+  if(curGr==='inz') renderIzvjInz(fil);
   else renderIzvjOd(fil);
 }
 
@@ -1182,15 +1319,36 @@ function renderIzvjInz(fil){
 
 function renderIzvjOd(fil){
   document.getElementById('izvj-hd').textContent='Pregled po odjelu';
-  document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Površina</th><th class="r">Obrađeno</th><th class="r">Preostalo</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th>Napredak</th></tr>';
-  document.getElementById('izvj-tb').innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
-    const uf=fil.filter(u=>u.odId===o.id);
-    const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
-    const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
-    const allHa=db.unosi.filter(u=>u.odId===o.id&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
-    const pr=Math.max(o.pov-allHa,0), pct=Math.min((allHa/o.pov)*100,100);
-    return`<tr class="${!uf.length?'dim':''}"><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono">${fN(o.pov)}</td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td>${prog(pct)}</td></tr>`;
-  }).join('')||'<tr><td colspan="7" class="empty">Nema podataka.</td></tr>';
+
+  if(isAdm()){
+    document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Površina</th><th class="r">Obrađeno</th><th class="r">Preostalo</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th>Napredak</th></tr>';
+    document.getElementById('izvj-tb').innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
+      const uf=fil.filter(u=>u.odId===o.id);
+      const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+      const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
+      const allHa=db.unosi.filter(u=>u.odId===o.id&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
+      const pr=Math.max(o.pov-allHa,0), pct=Math.min((allHa/o.pov)*100,100);
+      return`<tr class="${!uf.length?'dim':''}"><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono">${fN(o.pov)}</td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td>${prog(pct)}</td></tr>`;
+    }).join('')||'<tr><td colspan="7" class="empty">Nema podataka.</td></tr>';
+  } else {
+    // Worker view: odjeli they actually worked in during the period
+    document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Ha doznačeno</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th class="r">Unosa</th></tr>';
+    const workedOdIds=[...new Set(fil.map(u=>u.odId).filter(Boolean))];
+    if(!workedOdIds.length){
+      document.getElementById('izvj-tb').innerHTML='<tr><td colspan="5" class="empty">Nema radnih unosa u ovom periodu.</td></tr>';
+      return;
+    }
+    document.getElementById('izvj-tb').innerHTML=workedOdIds
+      .map(id=>db.odjeli.find(o=>o.id===id))
+      .filter(Boolean)
+      .sort((a,b)=>a.br.localeCompare(b.br))
+      .map(o=>{
+        const uf=fil.filter(u=>u.odId===o.id);
+        const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+        const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
+        return`<tr><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td class="r mono c-mut">${uf.length}</td></tr>`;
+      }).join('');
+  }
 }
 
 // ── PLAN 2026 / ODJELI ────────────────────────────────────────────────────────
@@ -1221,7 +1379,7 @@ function renderOd(){
         <button class="btn-t btn-td" onclick="delOd(${o.id})">Obriši</button>
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="10" class="empty">Nema odjela. Dodaj prvi odjel gore.</td></tr>';
+  }).join('')||'<tr><td colspan="10" class="empty"><span class="empty-ico">➕</span>Nema odjela. Dodaj prvi odjel gore.</td></tr>';
 }
 
 function saveOd(){
@@ -1268,6 +1426,8 @@ function delOd(id){
   if(!confirm('Obrisati odjel? Unosi vezani za njega ostat će bez odjela.'))return;
   db.odjeli=db.odjeli.filter(o=>o.id!==id);
   db.unosi.forEach(u=>{if(u.odId===id)u.odId=null;});
+  // Ukloni odjel iz svih dodijeljenih lista radnika
+  db.users.forEach(u=>{if(u.odjeliIds)u.odjeliIds=u.odjeliIds.filter(x=>x!==id);});
   lsave(); renderOd(); refreshOdSel(); renderPlanStats(); toast('Odjel obrisan');
 }
 
@@ -1302,7 +1462,7 @@ function renderReal(){
     <div class="stat a"><div class="stat-lbl">Real. m³ liš.</div><div class="stat-val">${totRealLis>0?totRealLis.toLocaleString('bs-BA'):'–'}<span class="stat-unit">/${totPlanLis>0?totPlanLis.toLocaleString('bs-BA'):'–'}</span></div></div>`;
 
   if(!fil.length){
-    document.getElementById('real-cards').innerHTML='<div class="empty">Nema odjela u ovom filteru.</div>';
+    document.getElementById('real-cards').innerHTML='<div class="empty"><span class="empty-ico">📋</span>Nema odjela u ovom filteru.</div>';
     return;
   }
 
@@ -1434,6 +1594,77 @@ function closeRealModal(){
   edRealId=null;
 }
 
+
+// ── PROFIL ────────────────────────────────────────────────────────────────
+function renderProfile(){
+  const u=me(); if(!u)return;
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const avEl=document.getElementById('prof-av-display');
+  if(!avEl)return;
+  if(u.avatar){
+    avEl.innerHTML=`<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    avEl.style.cssText='';
+  } else {
+    avEl.innerHTML=init;
+    avEl.style.cssText=`background:${col}`;
+  }
+  document.getElementById('prof-av-name').textContent=u.fullName||u.name;
+  document.getElementById('prof-av-title-disp').textContent=u.title||'';
+  document.getElementById('prof-fullname').value=u.fullName||u.name;
+  document.getElementById('prof-title').value=u.title||'';
+  // Odjeli section: samo za radnike
+  const odSec=document.getElementById('prof-odjeli-sec');
+  if(isAdm()){ odSec.hidden=true; return; }
+  odSec.hidden=false;
+  const list=document.getElementById('prof-od-list');
+  const assigned=(u.odjeliIds||[]).map(id=>db.odjeli.find(o=>o.id===id)).filter(Boolean);
+  list.innerHTML=assigned.length
+    ?assigned.map(o=>`<span class="od-chip">${o.br} <b>${o.naz}</b></span>`).join('')
+    :'<span style="font-size:11px;color:var(--muted)">Nema dodijeljenih odjela.</span>';
+}
+
+function profAvUpload(inp){
+  const f=inp.files[0]; if(!f)return;
+  if(f.size>2*1024*1024){toast('Slika je prevelika (max 2MB)!');inp.value='';return;}
+  const r=new FileReader();
+  r.onload=e=>{
+    const u=db.users.find(x=>x.id===ses.uid);
+    if(!u)return;
+    u.avatar=e.target.result;
+    try{ lsave(); }catch{ toast('Nema prostora za sliku — pokušaj manju sliku'); return; }
+    inp.value=''; // reset da se može ponovo odabrati ista slika
+    renderProfile(); updateHdrAv(); toast('Slika postavljena ✓');
+  };
+  r.readAsDataURL(f);
+}
+
+function saveProfile(){
+  const fn=document.getElementById('prof-fullname').value.trim();
+  const ti=document.getElementById('prof-title').value.trim();
+  if(!fn){toast('Upiši puno ime!');return;}
+  const u=db.users.find(x=>x.id===ses.uid);
+  if(!u)return;
+  u.fullName=fn; u.title=ti; lsave();
+  document.getElementById('prof-av-name').textContent=fn;
+  document.getElementById('prof-av-title-disp').textContent=ti;
+  updateHdrAv(); toast('Profil sačuvan ✓');
+}
+
+function updateHdrAv(){
+  const u=me(); if(!u)return;
+  const col=avColor(u.id);
+  const init=avInitials(u.fullName||u.name);
+  const el=document.getElementById('hdr-av');
+  if(!el)return;
+  if(u.avatar){
+    el.innerHTML=`<img src="${u.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    el.style.background='transparent';
+  } else {
+    el.innerHTML=init;
+    el.style.background=col;
+  }
+}
 // ── POSTAVKE / PIN ────────────────────────────────────────────────────────────
 function changePin(){
   const old=document.getElementById('p-old').value.trim();
@@ -1452,11 +1683,52 @@ function changePin(){
 
 // ── ADMIN: KORISNICI ──────────────────────────────────────────────────────────
 function renderUsers(){
-  document.getElementById('users-list').innerHTML=db.users.map(u=>`
-    <div class="user-card">
-      <div><div class="uc-name">${u.name}</div><div class="uc-role">${u.role==='admin'?'Administrator':'Projektant'}</div></div>
-      <button class="btn-t btn-te" onclick="resetPin(${u.id})" title="Reset PIN">Reset PIN</button>
-    </div>`).join('');
+  const odList=db.odjeli;
+  const rows=db.users.map(u=>{
+    const avHtml=avCircleHtml(u,30);
+    const assigned=(u.odjeliIds||[]).map(id=>odList.find(o=>o.id===id)).filter(Boolean);
+    const chips=assigned.length?assigned.map(o=>`<span class="od-chip" style="font-size:10px;padding:1px 7px">${o.br}</span>`).join(''):'';
+    const odPanel=u.role!=='admin'?`
+    <div id="uod-${u.id}" hidden class="assign-panel">
+      <label class="lbl">Dodijeli odjele radniku</label>
+      <div class="od-check-list">
+        ${odList.map(o=>{const ck=(u.odjeliIds||[]).includes(o.id);return`<label class="od-check-lbl${ck?' checked':''}" onclick="toggleOdForUser(${u.id},${o.id},!${ck})"><input type="checkbox" ${ck?'checked':''} style="width:12px;height:12px;accent-color:var(--accent)">${o.br} ${o.naz}</label>`}).join('')}
+      </div>
+    </div>`:'';
+    return `<div>
+      <div class="user-card" id="uc-${u.id}" style="${u.role!=='admin'?'border-radius:7px 7px 0 0;border-bottom-color:transparent':''}">
+        <div class="uc-top">
+          <div class="uc-av">${avHtml}</div>
+          <div>
+            <div class="uc-name">${u.fullName||u.name}</div>
+            <div class="uc-role">${u.role==='admin'?'Administrator':'Projektant'} ${chips}</div>
+          </div>
+        </div>
+        <div class="uc-acts">
+          ${u.role!=='admin'?`<button class="btn-t btn-te" onclick="toggleAssignOd(${u.id})" title="Dodijeli odjele" style="font-size:10px">Odjeli</button>`:''}
+          <button class="btn-t btn-te" onclick="resetPin(${u.id})" title="Reset PIN" style="font-size:10px">Reset</button>
+        </div>
+      </div>${odPanel}</div>`;
+  });
+  document.getElementById('users-list').innerHTML=rows.join('');
+}
+
+function toggleAssignOd(uid_){
+  const el=document.getElementById('uod-'+uid_);
+  if(el)el.hidden=!el.hidden;
+}
+
+function toggleOdForUser(uid_,odId,shouldCheck){
+  const u=db.users.find(x=>x.id===uid_);
+  if(!u)return;
+  if(!u.odjeliIds)u.odjeliIds=[];
+  if(shouldCheck&&!u.odjeliIds.includes(odId))u.odjeliIds.push(odId);
+  if(!shouldCheck)u.odjeliIds=u.odjeliIds.filter(id=>id!==odId);
+  lsave();
+  renderUsers();
+  const el=document.getElementById('uod-'+uid_);
+  if(el)el.hidden=false;
+  toast(`Odjeli ažurirani ✓`);
 }
 
 function resetPin(id){
@@ -1465,6 +1737,35 @@ function resetPin(id){
   const def=u.role==='admin'?'0000':'1234';
   if(!confirm(`Resetovati PIN za ${u.name} na ${def}?`))return;
   u.pin=def; lsave(); toast(`PIN za ${u.name} resetovan na ${def} ✓`);
+}
+
+function toggleAddUser(){
+  const f=document.getElementById('add-user-form');
+  f.hidden=!f.hidden;
+  if(!f.hidden){
+    document.getElementById('au-name').value='';
+    document.getElementById('au-fullname').value='';
+    document.getElementById('au-title').value='';
+    setTimeout(()=>document.getElementById('au-name').focus(),50);
+  }
+}
+
+function addUser(){
+  const name=document.getElementById('au-name').value.trim();
+  const fullName=document.getElementById('au-fullname').value.trim();
+  const title=document.getElementById('au-title').value.trim();
+  if(!name){toast('Upiši korisničko ime!');return;}
+  if(db.users.some(u=>u.name.toUpperCase()===name.toUpperCase())){toast('Korisnik s tim imenom već postoji!');return;}
+  const newU={id:uid(),name:name.toUpperCase(),fullName:fullName||name,title,pin:'1234',role:'worker',avatar:'',odjeliIds:[]};
+  db.users.push(newU);
+  lsave();
+  renderLgUsers();
+  const workers=db.users.filter(u=>u.role==='worker');
+  document.getElementById('sh-wdd').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('m-wsel').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  renderUsers();
+  document.getElementById('add-user-form').hidden=true;
+  toast(`Radnik ${newU.name} dodan — defaultni PIN: 1234 ✓`);
 }
 
 // ── PRINT ────────────────────────────────────────────────────────────────────
@@ -1560,6 +1861,8 @@ if(!navigator.onLine){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('lg-ver').textContent='v'+VERSION;
+document.getElementById('app-ver-badge').textContent='v'+VERSION;
 renderLgUsers();
 if(ses&&db.users.find(u=>u.id===ses.uid)){
   enterApp();

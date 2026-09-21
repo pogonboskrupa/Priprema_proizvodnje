@@ -1,4 +1,4 @@
-const CACHE = 'ppbk-v3';
+const CACHE = 'ppbk-v4';
 const BASE = '/Priprema_proizvodnje';
 const SHELL = [
   BASE + '/',
