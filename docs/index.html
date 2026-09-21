@@ -1,963 +1,867 @@
 <title>Šumska Priprema</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:ital,wght@0,400;0,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
-:root {
-  --bg:        #f0f4f1;
-  --surface:   #ffffff;
-  --surface2:  #f6f9f7;
-  --border:    #ccd8d0;
-  --text:      #1c2e22;
-  --muted:     #5e7a68;
-  --accent:    #26613e;
-  --acc-h:     #1d4d31;
-  --acc-bg:    #e4f0e8;
-  --amber:     #b05a14;
-  --amb-bg:    #faeee4;
-  --danger:    #b92b20;
-  --dan-bg:    #fcecea;
-  --r:         7px;
+*,*::before,*::after{box-sizing:border-box;margin:0}
+html{height:100%}
+:root{
+  --bg:#f0f4f1;--surface:#fff;--surface2:#f6f9f7;--border:#ccd8d0;
+  --text:#1c2e22;--muted:#5e7a68;--accent:#26613e;--acc-h:#1d4d31;
+  --acc-bg:#e4f0e8;--amber:#b05a14;--amb-bg:#faeee4;
+  --danger:#b92b20;--dan-bg:#fcecea;--wknd:#f7f8f6;--r:7px;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:       #0d1910;
-    --surface:  #162119;
-    --surface2: #1d2d21;
-    --border:   #263829;
-    --text:     #cde2d2;
-    --muted:    #6a8f76;
-    --accent:   #4a9e6a;
-    --acc-h:    #5ab87a;
-    --acc-bg:   #192e1f;
-    --amber:    #d97833;
-    --amb-bg:   #2a1808;
-    --danger:   #e05c4e;
-    --dan-bg:   #2a0f0e;
-  }
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1910;--surface:#162119;--surface2:#1d2d21;--border:#263829;
+  --text:#cde2d2;--muted:#6a8f76;--accent:#4a9e6a;--acc-h:#5ab87a;
+  --acc-bg:#192e1f;--amber:#d97833;--amb-bg:#2a1808;
+  --danger:#e05c4e;--dan-bg:#2a0f0e;--wknd:#0f1c12;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1910;--surface:#162119;--surface2:#1d2d21;--border:#263829;
+  --text:#cde2d2;--muted:#6a8f76;--accent:#4a9e6a;--acc-h:#5ab87a;
+  --acc-bg:#192e1f;--amber:#d97833;--amb-bg:#2a1808;
+  --danger:#e05c4e;--dan-bg:#2a0f0e;--wknd:#0f1c12;
 }
-:root[data-theme="dark"] {
-  --bg:       #0d1910;
-  --surface:  #162119;
-  --surface2: #1d2d21;
-  --border:   #263829;
-  --text:     #cde2d2;
-  --muted:    #6a8f76;
-  --accent:   #4a9e6a;
-  --acc-h:    #5ab87a;
-  --acc-bg:   #192e1f;
-  --amber:    #d97833;
-  --amb-bg:   #2a1808;
-  --danger:   #e05c4e;
-  --dan-bg:   #2a0f0e;
-}
+body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5}
 
-*,*::before,*::after { box-sizing: border-box; margin: 0; }
-html { height: 100%; }
-body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  padding-inline: 0;
-  padding-block: 0;
-}
+/* LOGIN */
+#screen-login{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:16px}
+.lg-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 32px rgba(0,0,0,.1);padding:24px 20px;width:100%;max-width:360px}
+.lg-logo{text-align:center;font-size:19px;font-weight:700;color:var(--accent);margin-bottom:3px;letter-spacing:-.3px}
+.lg-sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:18px}
+.lg-users{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:18px}
+.lgu{padding:9px 4px;border:2px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .13s;letter-spacing:.2px}
+.lgu:hover{border-color:var(--accent);color:var(--accent)}
+.lgu.on{border-color:var(--accent);background:var(--acc-bg);color:var(--accent)}
+.lgu.adm{border-style:dashed;font-size:11px}
+.lg-dots{display:flex;justify-content:center;gap:12px;margin-bottom:6px}
+.ldot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .13s}
+.ldot.on{background:var(--accent);border-color:var(--accent)}
+.ldot.err{background:var(--danger);border-color:var(--danger)}
+.lg-err{text-align:center;color:var(--danger);font-size:12px;min-height:18px;margin-bottom:10px}
+.lg-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.pdbtn{padding:14px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:18px;font-weight:600;font-family:'DM Mono',monospace;color:var(--text);cursor:pointer;transition:background .1s;user-select:none}
+.pdbtn:hover{background:var(--border)}
+.pdbtn:active{transform:scale(.95)}
+.pdbtn.del{font-size:15px;color:var(--muted)}
+.pdbtn.ok{background:var(--accent);color:#fff;border-color:var(--accent);font-family:'Inter',sans-serif;font-size:16px}
+.pdbtn.ok:hover{background:var(--acc-h)}
 
-/* ── Header ── */
-.hdr {
-  position: sticky;
-  top: env(safe-area-inset-top, 0);
-  background: var(--accent);
-  color: #fff;
-  z-index: 50;
-  padding: 0 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,.25);
-}
-.hdr-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-block: 10px;
-}
-.hdr-logo {
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -.2px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-.hdr-logo svg { width: 20px; height: 20px; flex-shrink: 0; fill: currentColor; }
-.hdr-nav {
-  display: flex;
-  gap: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.hdr-nav::-webkit-scrollbar { display: none; }
-.tab-btn {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,.7);
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  padding: 8px 14px;
-  border-radius: var(--r) var(--r) 0 0;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background .12s, color .12s;
-}
-.tab-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
-.tab-btn.on { color: var(--accent); background: var(--bg); font-weight: 600; }
+/* HEADER */
+.hdr{position:sticky;top:env(safe-area-inset-top,0);background:var(--accent);color:#fff;z-index:50;padding:0 14px;display:flex;align-items:stretch;gap:0;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hdr-logo{font-weight:700;font-size:13px;padding:11px 14px 11px 0;border-right:1px solid rgba(255,255,255,.2);margin-right:6px;white-space:nowrap;flex-shrink:0;align-self:center}
+.hdr-nav{display:flex;flex:1;overflow-x:auto;scrollbar-width:none}
+.hdr-nav::-webkit-scrollbar{display:none}
+.tbtn{background:none;border:none;color:rgba(255,255,255,.7);font-size:12px;font-weight:500;font-family:inherit;padding:0 12px;cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;border-radius:var(--r) var(--r) 0 0}
+.tbtn:hover{color:#fff;background:rgba(255,255,255,.1)}
+.tbtn.on{color:var(--accent);background:var(--bg);font-weight:600}
+.hdr-r{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:10px;flex-shrink:0}
+.hdr-name{font-size:12px;font-weight:600;background:rgba(255,255,255,.18);padding:3px 10px;border-radius:20px;white-space:nowrap}
+.btn-out{background:none;border:1px solid rgba(255,255,255,.35);color:rgba(255,255,255,.85);border-radius:6px;padding:4px 9px;font-size:11px;font-family:inherit;cursor:pointer;white-space:nowrap}
+.btn-out:hover{background:rgba(255,255,255,.1)}
 
-/* ── Layout ── */
-.wrap {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-inline: 20px;
-  padding-block: 20px;
-}
-.tab-pane { display: none; }
-.tab-pane.on { display: block; }
+/* WRAP */
+.wrap{max-width:1100px;margin:0 auto;padding:18px 14px}
+.tab-pane{display:none}
+.tab-pane.on{display:block}
+.pg-title{font-size:17px;font-weight:700;letter-spacing:-.2px;margin-bottom:14px}
 
-.pg-title {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -.2px;
-  margin-bottom: 16px;
-}
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card-hd{padding:11px 14px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-hd .sub{font-weight:400;color:var(--muted);font-size:11px}
 
-/* ── Card ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
-}
-.card-hd {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.card-hd .sub { font-weight: 400; color: var(--muted); font-size: 12px; }
+/* ŠIHTARICA */
+.sh-topbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.sh-mnav{display:flex;align-items:center;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:3px}
+.sh-nbtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:none;background:none;border-radius:5px;cursor:pointer;font-size:17px;color:var(--muted);transition:background .1s,color .1s}
+.sh-nbtn:hover{background:var(--surface2);color:var(--text)}
+.sh-mlbl{font-weight:600;font-size:13px;min-width:155px;text-align:center;padding:0 6px}
+.sh-wsel{display:flex;align-items:center;gap:6px}
+.sh-wsel select,.settings-sec select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.sh-wsel select:focus{border-color:var(--accent)}
 
-/* ── Stats ── */
-.stat-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  padding: 12px 14px;
-  border-left: 3px solid var(--border);
-}
-.stat.g { border-left-color: var(--accent); }
-.stat.a { border-left-color: var(--amber); }
-.stat-lbl {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  margin-bottom: 3px;
-}
-.stat-val {
-  font-family: 'DM Mono', monospace;
-  font-size: 22px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.1;
-}
-.stat-unit { font-size: 11px; color: var(--muted); margin-left: 2px; }
+/* ŠIHTARICA TABLE */
+.sh-wrap{overflow-x:auto}
+.sh-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.sh-tbl thead th{padding:7px 9px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);background:var(--surface2);white-space:nowrap}
+.sh-tbl td{padding:6px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+.sh-tbl tr.wk td{background:var(--wknd);color:var(--muted)}
+.sh-tbl tr.wk td.dow{color:var(--danger)}
+.sh-tbl tr:last-child td{border-bottom:none}
+.sh-tbl tbody tr:not(.wk):not(.tot):hover td{background:var(--surface2)}
+.sh-tbl tr.tot td{border-top:2px solid var(--border);background:var(--surface2);font-weight:600;font-size:12px}
+.dow{font-family:'DM Mono',monospace;font-size:11px;width:30px;white-space:nowrap}
+.sdt{font-family:'DM Mono',monospace;font-size:12px;white-space:nowrap}
+th.r,td.r{text-align:right}
+.mono{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums}
+.fw6{font-weight:600}
+.c-acc{color:var(--accent)}
+.c-amb{color:var(--amber)}
+.c-mut{color:var(--muted)}
+.add-day-btn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:4px;background:none;border:1px dashed var(--border);color:var(--muted);font-size:13px;cursor:pointer;transition:all .12s;line-height:1}
+.add-day-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--acc-bg)}
+tr.dim td{opacity:.35}
 
-/* ── Table ── */
-.tbl-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead th {
-  padding: 9px 12px;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  background: var(--surface2);
-}
-td {
-  padding: 9px 12px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-}
-tr:last-child td { border-bottom: none; }
-tbody tr:hover td { background: var(--surface2); }
-tbody tr.dim td { opacity: .4; }
-th.r, td.r { text-align: right; }
-.mono { font-family: 'DM Mono', monospace; font-variant-numeric: tabular-nums; }
-.fw6 { font-weight: 600; }
-.c-acc { color: var(--accent); }
-.c-amb { color: var(--amber); }
-.c-mut { color: var(--muted); }
+/* STATS */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px;margin-bottom:13px}
+.stat{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--r);padding:11px 12px}
+.stat.g{border-left-color:var(--accent)}
+.stat.a{border-left-color:var(--amber)}
+.stat.b{border-left-color:var(--muted)}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.stat-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.15}
+.stat-unit{font-size:10px;color:var(--muted);margin-left:2px}
 
-/* ── Progress ── */
-.prog-wrap { display: flex; align-items: center; gap: 8px; min-width: 130px; }
-.prog-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
-.prog-fill { height: 100%; border-radius: 3px; background: var(--accent); }
-.prog-fill.mid { background: var(--amber); }
-.prog-fill.done { background: var(--accent); }
-.prog-pct { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); width: 36px; text-align: right; flex-shrink: 0; }
+/* DATA TABLE */
+.tbl-wrap{overflow-x:auto}
+table.dt{width:100%;border-collapse:collapse;font-size:13px}
+table.dt thead th{padding:8px 11px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+table.dt td{padding:8px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.dt tr:last-child td{border-bottom:none}
+table.dt tbody tr:hover td{background:var(--surface2)}
 
-/* ── Badges ── */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.bdg-d { background: var(--acc-bg); color: var(--accent); }
-.bdg-v { background: var(--amb-bg); color: var(--amber); }
-.bdg-o { background: var(--acc-bg); color: var(--accent); }
+/* PROGRESS */
+.prog-wrap{display:flex;align-items:center;gap:7px;min-width:90px}
+.prog-bar{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;background:var(--accent)}
+.prog-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:32px;text-align:right;flex-shrink:0}
 
-/* ── Forms ── */
-.form-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.frow { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.fg { display: flex; flex-direction: column; gap: 4px; }
-label.lbl {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .5px;
-}
-input, select, textarea {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
-  outline: none;
-  transition: border-color .12s, box-shadow .12s;
-}
-input:focus, select:focus, textarea:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--acc-bg);
-}
-textarea { resize: none; }
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.bdg-d{background:var(--acc-bg);color:var(--accent)}
+.bdg-v{background:var(--amb-bg);color:var(--amber)}
 
-/* ── Radio vrsta ── */
-.vrsta-grp { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.vrsta-opt {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 8px;
-  border: 2px solid var(--border);
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: border-color .12s, background .12s, color .12s;
-  user-select: none;
-}
-.vrsta-opt input[type=radio] { display: none; }
-.vrsta-opt.on-d { border-color: var(--accent); background: var(--acc-bg); color: var(--accent); }
-.vrsta-opt.on-v { border-color: var(--amber); background: var(--amb-bg); color: var(--amber); }
+/* PERIOD BAR */
+.pbar{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:13px}
+.pbtn{padding:4px 11px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:inherit;transition:all .12s}
+.pbtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pbtn.on-b{background:var(--text);color:var(--bg);border-color:var(--text)}
+.pbar-sep{color:var(--border)}
+.pbar-rng{margin-left:auto;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
 
-/* ── Buttons ── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  transition: background .12s, color .12s;
-  white-space: nowrap;
-}
-.btn-p { background: var(--accent); color: #fff; }
-.btn-p:hover { background: var(--acc-h); }
-.btn-p:disabled { opacity: .5; cursor: not-allowed; }
-.btn-o { background: none; color: var(--muted); border: 1px solid var(--border); }
-.btn-o:hover { background: var(--surface2); color: var(--text); }
-.btn-t { background: none; border: none; font-size: 12px; padding: 3px 7px; border-radius: 5px; cursor: pointer; font-family: inherit; }
-.btn-te { color: var(--accent); }
-.btn-te:hover { background: var(--acc-bg); }
-.btn-td { color: var(--danger); }
-.btn-td:hover { background: var(--dan-bg); }
+/* MODAL */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:var(--surface);border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.2);width:100%;max-width:400px;overflow:hidden}
+.modal-hd{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-weight:600}
+.modal-x{width:26px;height:26px;border-radius:50%;border:none;background:var(--surface2);color:var(--muted);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:var(--border)}
+.modal-body{padding:14px;display:flex;flex-direction:column;gap:11px}
 
-/* ── Period bar ── */
-.pbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-.pbtn {
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-family: inherit;
-  transition: background .12s, color .12s, border-color .12s;
-}
-.pbtn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
-.pbtn.on-b { background: var(--text); color: var(--bg); border-color: var(--text); }
-.pbar-sep { color: var(--border); }
-.pbar-range { margin-left: auto; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+/* FORMS */
+.fg{display:flex;flex-direction:column;gap:4px}
+label.lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+input,select,textarea{padding:7px 9px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .12s,box-shadow .12s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--acc-bg)}
+textarea{resize:none}
+.vrsta-grp{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.vopt{display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:2px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .12s;user-select:none}
+.vopt.on-d{border-color:var(--accent);background:var(--acc-bg);color:var(--accent)}
+.vopt.on-v{border-color:var(--amber);background:var(--amb-bg);color:var(--amber)}
 
-/* ── Unos layout ── */
-.unos-lay { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:6px;font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;border:none;transition:background .12s;white-space:nowrap}
+.btn-p{background:var(--accent);color:#fff}
+.btn-p:hover{background:var(--acc-h)}
+.btn-o{background:none;color:var(--muted);border:1px solid var(--border)}
+.btn-o:hover{background:var(--surface2);color:var(--text)}
+.btn-t{background:none;border:none;font-size:11px;padding:3px 6px;border-radius:5px;cursor:pointer;font-family:inherit}
+.btn-te{color:var(--accent)}
+.btn-te:hover{background:var(--acc-bg)}
+.btn-td{color:var(--danger)}
+.btn-td:hover{background:var(--dan-bg)}
 
-/* ── Toast ── */
-.toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%) translateY(70px);
-  background: var(--text);
-  color: var(--bg);
-  padding: 9px 18px;
-  border-radius: 30px;
-  font-size: 13px;
-  font-weight: 500;
-  z-index: 200;
-  pointer-events: none;
-  transition: transform .22s ease;
-  white-space: nowrap;
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px}
+.users-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px;padding:12px 14px}
+.user-card{display:flex;align-items:center;justify-content:space-between;padding:9px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface2)}
+.uc-name{font-weight:600;font-size:13px}
+.uc-role{font-size:10px;color:var(--muted)}
 
-.empty { text-align: center; padding: 28px 16px; color: var(--muted); }
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--text);color:var(--bg);padding:8px 17px;border-radius:30px;font-size:13px;font-weight:500;z-index:200;pointer-events:none;transition:transform .22s ease;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;padding:22px 14px;color:var(--muted);font-size:13px}
 
-@media (max-width: 680px) {
-  .unos-lay { grid-template-columns: 1fr; }
-  .wrap { padding-inline: 14px; }
-  .stat-val { font-size: 18px; }
+@media(max-width:600px){
+  .wrap{padding:12px 10px}
+  .hdr-logo{display:none}
+  .stat-val{font-size:17px}
+  .sh-mlbl{min-width:120px;font-size:12px}
 }
 </style>
 
-<!-- Header -->
-<header class="hdr">
-  <div class="hdr-top">
-    <div class="hdr-logo">
-      <svg viewBox="0 0 24 24"><path d="M12 2 8.5 8H5l3.5 3.5-1.5 5.5L12 14l5 3-1.5-5.5L19 8h-3.5Z"/></svg>
-      Šumska Priprema Proizvodnje
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="lg-box">
+    <div class="lg-logo">🌲 Šumska Priprema Proizvodnje</div>
+    <p class="lg-sub">Odaberi ime, unesi PIN</p>
+    <div class="lg-users" id="lg-users"></div>
+    <div class="lg-dots">
+      <span class="ldot" id="ld0"></span><span class="ldot" id="ld1"></span>
+      <span class="ldot" id="ld2"></span><span class="ldot" id="ld3"></span>
+    </div>
+    <p class="lg-err" id="lg-err"></p>
+    <div class="lg-pad">
+      <button class="pdbtn" onclick="pk('1')">1</button>
+      <button class="pdbtn" onclick="pk('2')">2</button>
+      <button class="pdbtn" onclick="pk('3')">3</button>
+      <button class="pdbtn" onclick="pk('4')">4</button>
+      <button class="pdbtn" onclick="pk('5')">5</button>
+      <button class="pdbtn" onclick="pk('6')">6</button>
+      <button class="pdbtn" onclick="pk('7')">7</button>
+      <button class="pdbtn" onclick="pk('8')">8</button>
+      <button class="pdbtn" onclick="pk('9')">9</button>
+      <button class="pdbtn del" onclick="pdel()">⌫</button>
+      <button class="pdbtn" onclick="pk('0')">0</button>
+      <button class="pdbtn ok" onclick="pok()">↵</button>
     </div>
   </div>
-  <nav class="hdr-nav">
-    <button class="tab-btn on" data-tab="unos">Unos rada</button>
-    <button class="tab-btn" data-tab="izvj">Izvještaji</button>
-    <button class="tab-btn" data-tab="odjeli">Odjeli</button>
-    <button class="tab-btn" data-tab="inz">Inžinjeri</button>
-  </nav>
-</header>
+</div>
 
-<div class="wrap">
+<!-- APP -->
+<div id="screen-app" hidden>
+  <header class="hdr">
+    <div class="hdr-logo">🌲 Priprema Proizvodnje</div>
+    <nav class="hdr-nav" id="hdr-nav">
+      <button class="tbtn on" data-tab="sh">📋 Šihtarica</button>
+      <button class="tbtn" data-tab="izvj">📊 Izvještaji</button>
+      <button class="tbtn" data-tab="post">⚙️ Postavke</button>
+    </nav>
+    <div class="hdr-r">
+      <span class="hdr-name" id="hdr-name"></span>
+      <button class="btn-out" onclick="logout()">Odjava</button>
+    </div>
+  </header>
 
-  <!-- ── UNOS RADA ── -->
-  <div class="tab-pane on" id="tab-unos">
-    <p class="pg-title">Unos rada</p>
-    <div class="unos-lay">
+  <div class="wrap">
 
-      <!-- Forma -->
-      <div class="card">
-        <div class="card-hd" id="unos-hd">Novi unos</div>
-        <div class="form-body">
-          <div class="fg">
-            <label class="lbl">Datum</label>
-            <input type="date" id="f-dat">
-          </div>
-          <div class="fg">
-            <label class="lbl">Vrsta rada</label>
-            <div class="vrsta-grp">
-              <label class="vrsta-opt on-d" id="vl-d" onclick="pickVrsta('D')">
-                <input type="radio" name="vrsta" value="D" checked> 🌳 Doznaka
-              </label>
-              <label class="vrsta-opt" id="vl-v" onclick="pickVrsta('V')">
-                <input type="radio" name="vrsta" value="V"> 🛤️ Vlake
-              </label>
-            </div>
-          </div>
-          <div class="fg">
-            <label class="lbl">Odjel</label>
-            <select id="f-od" onchange="refilterInz()"><option value="">Svi odjeli</option></select>
-          </div>
-          <div class="fg">
-            <label class="lbl">Inžinjer</label>
-            <select id="f-inz"><option value="">Odaberi inžinjera…</option></select>
-          </div>
-          <div id="fld-d">
-            <div class="frow">
-              <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="f-st" min="1" placeholder="120"></div>
-              <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="f-ha" step="0.01" placeholder="15.50"></div>
-            </div>
-          </div>
-          <div id="fld-v" hidden>
-            <div class="fg"><label class="lbl">Kilometri vlaka (km)</label><input type="number" id="f-km" step="0.01" placeholder="3.20"></div>
-          </div>
-          <div class="fg">
-            <label class="lbl">Napomena (opciono)</label>
-            <textarea id="f-nap" rows="2"></textarea>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-p" style="flex:1" onclick="saveUnos()">Sačuvaj unos</button>
-            <button class="btn btn-o" id="unos-otk" hidden onclick="cancelUnos()">Odustani</button>
-          </div>
+    <!-- ŠIHTARICA -->
+    <div class="tab-pane on" id="tab-sh">
+      <div class="sh-topbar">
+        <div class="sh-mnav">
+          <button class="sh-nbtn" onclick="shPrev()">‹</button>
+          <span class="sh-mlbl" id="sh-lbl"></span>
+          <button class="sh-nbtn" onclick="shNext()">›</button>
         </div>
+        <div class="sh-wsel" id="sh-wsel" hidden>
+          <label class="lbl" style="font-size:10px">Radnik:</label>
+          <select id="sh-wdd" onchange="renderSh()"></select>
+        </div>
+        <button class="btn btn-p" style="margin-left:auto;font-size:12px;padding:6px 11px" onclick="openAdd(null)">+ Unos</button>
       </div>
-
-      <!-- Lista unosa -->
       <div class="card">
-        <div class="card-hd">Unosi <span class="sub" id="unosi-cnt"></span></div>
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr>
-              <th>Datum</th><th>Inžinjer</th><th>Odjel</th><th>Vrsta</th><th class="r">Količina</th><th></th>
-            </tr></thead>
-            <tbody id="tb-unosi"></tbody>
+        <div class="sh-wrap">
+          <table class="sh-tbl">
+            <thead>
+              <tr>
+                <th style="width:32px">Dan</th>
+                <th style="width:65px">Datum</th>
+                <th>Vrsta</th>
+                <th>Odjel</th>
+                <th class="r">Stabala</th>
+                <th class="r">Ha</th>
+                <th class="r">Km vlaka</th>
+                <th>Napomena</th>
+                <th style="width:75px"></th>
+              </tr>
+            </thead>
+            <tbody id="sh-tbody"></tbody>
           </table>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ── IZVJEŠTAJI ── -->
-  <div class="tab-pane" id="tab-izvj">
-    <p class="pg-title">Izvještaji</p>
-    <div class="pbar">
-      <button class="pbtn" data-per="sed" onclick="setPer(this)">Sedmično</button>
-      <button class="pbtn on" data-per="mj" onclick="setPer(this)">Mjesečno</button>
-      <button class="pbtn" data-per="god" onclick="setPer(this)">Godišnje</button>
-      <span class="pbar-sep">|</span>
-      <button class="pbtn on-b" data-gr="od" onclick="setGr(this)">🗺️ Po odjelu</button>
-      <button class="pbtn" data-gr="inz" onclick="setGr(this)">👷 Po inžinjeru</button>
-      <span class="pbar-range" id="p-range"></span>
+    <!-- IZVJEŠTAJI -->
+    <div class="tab-pane" id="tab-izvj">
+      <p class="pg-title">Izvještaji</p>
+      <div class="pbar">
+        <button class="pbtn" data-per="sed" onclick="setPer(this)">Sedmično</button>
+        <button class="pbtn on" data-per="mj" onclick="setPer(this)">Mjesečno</button>
+        <button class="pbtn" data-per="god" onclick="setPer(this)">Godišnje</button>
+        <span class="pbar-sep" id="gr-sep" hidden>|</span>
+        <button class="pbtn on-b" data-gr="inz" onclick="setGr(this)" id="gr-inz" hidden>👷 Po radniku</button>
+        <button class="pbtn" data-gr="od" onclick="setGr(this)" id="gr-od" hidden>🗺️ Po odjelu</button>
+        <span class="pbar-rng" id="p-rng"></span>
+      </div>
+      <div class="stat-row" id="izvj-stats"></div>
+      <div class="card">
+        <div class="card-hd" id="izvj-hd">Pregled</div>
+        <div class="tbl-wrap"><table class="dt"><thead id="izvj-th"></thead><tbody id="izvj-tb"></tbody></table></div>
+      </div>
     </div>
-    <div class="stat-row" id="izvj-stats"></div>
-    <div class="card">
-      <div class="card-hd" id="izvj-hd">Pregled po odjelima</div>
-      <div class="tbl-wrap"><table><thead id="izvj-thead"></thead><tbody id="tb-izvj"></tbody></table></div>
-    </div>
-  </div>
 
-  <!-- ── ODJELI ── -->
-  <div class="tab-pane" id="tab-odjeli">
-    <p class="pg-title">Šumski odjeli</p>
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-hd" id="od-hd">Novi odjel</div>
-      <div class="form-body">
-        <div class="frow">
-          <div class="fg"><label class="lbl">Broj</label><input id="o-br" placeholder="001"></div>
-          <div class="fg"><label class="lbl">Naziv</label><input id="o-naz" placeholder="Gornji lug"></div>
-          <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" placeholder="250.50"></div>
-          <div class="fg" style="justify-content:flex-end;flex-direction:row;align-items:flex-end;gap:6px">
-            <button class="btn btn-p" onclick="saveOdjel()">Sačuvaj</button>
-            <button class="btn btn-o" id="od-otk" hidden onclick="cancelOd()">Odustani</button>
+    <!-- POSTAVKE -->
+    <div class="tab-pane" id="tab-post">
+      <p class="pg-title">Postavke</p>
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-hd">Promjena PIN-a</div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div class="fg"><label class="lbl">Trenutni PIN</label><input type="password" id="p-old" maxlength="4" inputmode="numeric" autocomplete="current-password" placeholder="••••"></div>
+            <div class="fg"><label class="lbl">Novi PIN (4 cifre)</label><input type="password" id="p-new" maxlength="4" inputmode="numeric" autocomplete="new-password" placeholder="••••"></div>
+            <div class="fg"><label class="lbl">Potvrdi novi PIN</label><input type="password" id="p-new2" maxlength="4" inputmode="numeric" autocomplete="new-password" placeholder="••••"></div>
+            <button class="btn btn-p" onclick="changePin()">Sačuvaj PIN</button>
           </div>
+        </div>
+        <div class="card" id="card-odjeli" hidden>
+          <div class="card-hd">Šumski odjeli</div>
+          <div style="padding:12px 14px;display:flex;flex-direction:column;gap:9px">
+            <div class="frow">
+              <div class="fg"><label class="lbl">Broj</label><input id="o-br" placeholder="004"></div>
+              <div class="fg"><label class="lbl">Naziv</label><input id="o-naz" placeholder="Naziv odjela"></div>
+            </div>
+            <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" placeholder="250.00"></div>
+            <div style="display:flex;gap:7px">
+              <button class="btn btn-p" style="flex:1" onclick="saveOd()">Dodaj</button>
+              <button class="btn btn-o" id="od-otk" hidden onclick="cancelOd()">Odustani</button>
+            </div>
+          </div>
+          <div class="tbl-wrap"><table class="dt"><thead><tr><th>Br.</th><th>Naziv</th><th class="r">Ha</th><th></th></tr></thead><tbody id="tb-od"></tbody></table></div>
+        </div>
+      </div>
+      <div id="sec-users" hidden style="margin-top:14px">
+        <div class="card">
+          <div class="card-hd">Korisnici <span class="sub">— reset PIN-a</span></div>
+          <div class="users-list" id="users-list"></div>
         </div>
       </div>
     </div>
-    <div class="card">
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr>
-            <th>Br.</th><th>Naziv</th><th class="r">Površina (ha)</th><th class="r">Obrađeno (ha)</th>
-            <th class="r">Preostalo (ha)</th><th>Napredak</th><th></th>
-          </tr></thead>
-          <tbody id="tb-odjeli"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── INŽINJERI ── -->
-  <div class="tab-pane" id="tab-inz">
-    <p class="pg-title">Inžinjeri</p>
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-hd" id="inz-hd">Novi inžinjer</div>
-      <div class="form-body">
-        <div class="frow">
-          <div class="fg"><label class="lbl">Ime</label><input id="i-ime" placeholder="Amir"></div>
-          <div class="fg"><label class="lbl">Prezime</label><input id="i-prez" placeholder="Hodžić"></div>
-          <div class="fg">
-            <label class="lbl">Odjel</label>
-            <select id="i-od"><option value="">Odaberi odjel…</option></select>
-          </div>
-          <div class="fg" style="justify-content:flex-end;flex-direction:row;align-items:flex-end;gap:6px">
-            <button class="btn btn-p" onclick="saveInz()">Sačuvaj</button>
-            <button class="btn btn-o" id="inz-otk" hidden onclick="cancelInz()">Odustani</button>
-          </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="overlay" hidden>
+  <div class="modal" id="modal">
+    <div class="modal-hd">
+      <span id="m-title">Novi unos</span>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow">
+        <div class="fg"><label class="lbl">Datum</label><input type="date" id="m-dat"></div>
+        <div class="fg" id="m-wfg" hidden><label class="lbl">Radnik</label><select id="m-wsel"></select></div>
+      </div>
+      <div class="fg">
+        <label class="lbl">Vrsta rada</label>
+        <div class="vrsta-grp">
+          <label class="vopt on-d" id="vl-d" onclick="pickVr('D')">🌳 Doznaka</label>
+          <label class="vopt" id="vl-v" onclick="pickVr('V')">🛤️ Vlake</label>
         </div>
       </div>
-    </div>
-    <div class="card">
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Prezime i ime</th><th>Odjel</th><th class="r">Unosa ukupno</th><th></th></tr></thead>
-          <tbody id="tb-inz"></tbody>
-        </table>
+      <div class="fg"><label class="lbl">Odjel</label><select id="m-od"><option value="">— bez odjela —</option></select></div>
+      <div id="m-fd">
+        <div class="frow">
+          <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="m-st" min="1" placeholder="120"></div>
+          <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="m-ha" step="0.01" placeholder="15.50"></div>
+        </div>
+      </div>
+      <div id="m-fv" hidden>
+        <div class="fg"><label class="lbl">Km vlaka</label><input type="number" id="m-km" step="0.01" placeholder="3.20"></div>
+      </div>
+      <div class="fg"><label class="lbl">Napomena (opciono)</label><textarea id="m-nap" rows="2"></textarea></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-p" style="flex:1" onclick="saveModal()">Sačuvaj</button>
+        <button class="btn btn-o" onclick="closeModal()">Odustani</button>
       </div>
     </div>
   </div>
-
-</div><!-- /wrap -->
+</div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ── Storage ──────────────────────────────────────────────
-const KEY = 'spp_v1';
-function loadDB() {
-  try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch { return null; }
-}
-function saveDB() {
-  try { localStorage.setItem(KEY, JSON.stringify(db)); } catch {}
-}
-function uid(arr) { return arr.length ? Math.max(...arr.map(x=>x.id)) + 1 : 1; }
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const KEY='spp_v2', SKEY='spp_ses';
 
-let db = loadDB();
+const INIT_USERS=[
+  {id:1,name:'AZRA',   pin:'1234',role:'worker'},
+  {id:2,name:'NIHAD',  pin:'1234',role:'worker'},
+  {id:3,name:'NAIL',   pin:'1234',role:'worker'},
+  {id:4,name:'JUSUF',  pin:'1234',role:'worker'},
+  {id:5,name:'FARUK',  pin:'1234',role:'worker'},
+  {id:6,name:'ELVIRA', pin:'1234',role:'worker'},
+  {id:7,name:'SAMIR',  pin:'1234',role:'worker'},
+  {id:8,name:'ILFAD',  pin:'1234',role:'worker'},
+  {id:9,name:'ŠEFKIJA',pin:'1234',role:'worker'},
+  {id:10,name:'ADMIN', pin:'0000',role:'admin'},
+];
+const INIT_OD=[
+  {id:1,br:'001',naz:'Gornji lug',  pov:250.5},
+  {id:2,br:'002',naz:'Bukova greda',pov:180.0},
+  {id:3,br:'003',naz:'Crna rijeka', pov:320.75},
+];
 
-if (!db) {
-  const now = new Date(), y = now.getFullYear(), mo = now.getMonth();
-  const iso = (day) => new Date(y, mo, day).toISOString().slice(0,10);
-  db = {
-    odjeli: [
-      { id:1, br:'001', naz:'Gornji lug',    pov:250.5  },
-      { id:2, br:'002', naz:'Bukova greda',  pov:180.0  },
-      { id:3, br:'003', naz:'Crna rijeka',   pov:320.75 },
-    ],
-    inzinjeri: [
-      { id:1, ime:'Amir',  prez:'Hodžić',  odId:1 },
-      { id:2, ime:'Emir',  prez:'Bašić',   odId:1 },
-      { id:3, ime:'Sanel', prez:'Kovač',   odId:2 },
-      { id:4, ime:'Tarik', prez:'Mušović', odId:3 },
-    ],
-    unosi: [
-      { id:1, dat:iso(3),  vr:'D', inId:1, odId:1, st:120, ha:15.5, km:null },
-      { id:2, dat:iso(5),  vr:'D', inId:1, odId:1, st:85,  ha:10.0, km:null },
-      { id:3, dat:iso(7),  vr:'V', inId:2, odId:1, st:null, ha:null, km:3.2 },
-      { id:4, dat:iso(10), vr:'D', inId:3, odId:2, st:200, ha:25.0, km:null },
-      { id:5, dat:iso(12), vr:'V', inId:3, odId:2, st:null, ha:null, km:1.8 },
-      { id:6, dat:iso(15), vr:'D', inId:4, odId:3, st:310, ha:40.0, km:null },
-      { id:7, dat:iso(17), vr:'D', inId:2, odId:1, st:90,  ha:12.0, km:null },
-    ]
-  };
-  saveDB();
-}
+let db;
+try{ db=JSON.parse(localStorage.getItem(KEY))||null; }catch{ db=null; }
+if(!db){ db={users:INIT_USERS,odjeli:INIT_OD,unosi:[]}; lsave(); }
+if(!db.users){ db.users=INIT_USERS; lsave(); }
 
-// ── Helpers ──────────────────────────────────────────────
-function od(id) { return db.odjeli.find(o=>o.id===id); }
-function inz(id) { return db.inzinjeri.find(i=>i.id===id); }
+function lsave(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch{} }
+function uid(a){ return a.length?Math.max(...a.map(x=>x.id))+1:1; }
 
-function fDate(s) {
-  if (!s) return '';
-  const [y,m,d] = s.split('-');
-  return `${d}.${m}.${y}.`;
-}
-function fN(n, dec=2) {
-  if (n == null || n === 0) return '–';
-  return Number(n).toFixed(dec).replace('.',',');
-}
-function fI(n) { return n ? n.toLocaleString('bs') : '–'; }
+// ── SESSION ───────────────────────────────────────────────────────────────────
+let ses=null;
+try{ ses=JSON.parse(sessionStorage.getItem(SKEY))||null; }catch{}
+function ssave(){ try{sessionStorage.setItem(SKEY,JSON.stringify(ses));}catch{} }
+function me(){ return ses?db.users.find(u=>u.id===ses.uid):null; }
+function isAdm(){ return me()?.role==='admin'; }
 
-function odObr(odId) {
-  return db.unosi.filter(u=>u.odId===odId&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
-}
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const MN=['Januar','Februar','Mart','April','Maj','Juni','Juli','August','Septembar','Oktobar','Novembar','Decembar'];
+const DN=['Ned','Pon','Uto','Sri','Čet','Pet','Sub'];
+function getOd(id){ return db.odjeli.find(o=>o.id===id); }
+function isoD(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fDt(s){ if(!s)return''; const[,m,d]=s.split('-'); return`${d}.${m}.`; }
+function fN(n,dc=2){ if(n==null||isNaN(n)||n===0)return'–'; return Number(n).toFixed(dc).replace('.',','); }
+function fI(n){ return(n&&n>0)?n.toLocaleString('bs-BA'):'–'; }
+function prog(pct){ return`<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div><span class="prog-pct">${pct.toFixed(0)}%</span></div>`; }
 
-function progressHtml(pct) {
-  const cls = pct>=100?'done':pct>=60?'mid':'';
-  return `<div class="prog-wrap"><div class="prog-bar"><div class="prog-fill ${cls}" style="width:${Math.min(pct,100).toFixed(1)}%"></div></div><span class="prog-pct">${pct.toFixed(1)}%</span></div>`;
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+let _tt;
+function toast(m){ const e=document.getElementById('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>e.classList.remove('show'),2500); }
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+let lgId=null, lgPin='';
+
+function renderLgUsers(){
+  document.getElementById('lg-users').innerHTML=db.users.map(u=>
+    `<button class="lgu${u.role==='admin'?' adm':''}" id="lgu-${u.id}" onclick="lgSel(${u.id})">${u.name}</button>`
+  ).join('');
 }
 
-// ── Tabs ─────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
-    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));
+function lgSel(id){
+  lgId=id; lgPin='';
+  updDots();
+  document.getElementById('lg-err').textContent='';
+  document.querySelectorAll('.lgu').forEach(b=>b.classList.remove('on'));
+  document.getElementById('lgu-'+id)?.classList.add('on');
+}
+
+function updDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('ld'+i);
+    d.classList.toggle('on',i<lgPin.length);
+    d.classList.remove('err');
+  }
+}
+
+function pk(k){
+  if(!lgId){document.getElementById('lg-err').textContent='Odaberi ime!';return;}
+  if(lgPin.length>=4)return;
+  lgPin+=k; updDots();
+  if(lgPin.length===4) pok();
+}
+function pdel(){ lgPin=lgPin.slice(0,-1); updDots(); document.getElementById('lg-err').textContent=''; }
+function pok(){
+  if(!lgId){document.getElementById('lg-err').textContent='Odaberi ime!';return;}
+  if(lgPin.length<4){document.getElementById('lg-err').textContent='Unesi 4-cifreni PIN!';return;}
+  const u=db.users.find(x=>x.id===lgId);
+  if(u.pin===lgPin){
+    ses={uid:lgId}; ssave(); enterApp();
+  } else {
+    lgPin='';
+    document.getElementById('lg-err').textContent='Pogrešan PIN!';
+    for(let i=0;i<4;i++){const d=document.getElementById('ld'+i);d.classList.remove('on');d.classList.add('err');}
+    setTimeout(()=>{for(let i=0;i<4;i++)document.getElementById('ld'+i)?.classList.remove('err');},650);
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('screen-login').hidden)return;
+  if(e.key>='0'&&e.key<='9')pk(e.key);
+  else if(e.key==='Backspace')pdel();
+  else if(e.key==='Enter')pok();
+});
+
+// ── APP ENTER / LOGOUT ────────────────────────────────────────────────────────
+function enterApp(){
+  document.getElementById('screen-login').hidden=true;
+  document.getElementById('screen-app').hidden=false;
+  const u=me();
+  document.getElementById('hdr-name').textContent=u.name;
+
+  if(isAdm()){
+    document.getElementById('sh-wsel').hidden=false;
+    document.getElementById('gr-sep').hidden=false;
+    document.getElementById('gr-inz').hidden=false;
+    document.getElementById('gr-od').hidden=false;
+    document.getElementById('card-odjeli').hidden=false;
+    document.getElementById('sec-users').hidden=false;
+    document.getElementById('m-wfg').hidden=false;
+    // Populate worker dropdown
+    const dd=document.getElementById('sh-wdd');
+    const workers=db.users.filter(u=>u.role==='worker');
+    dd.innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+    // Populate modal worker select
+    document.getElementById('m-wsel').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+    renderUsers();
+    renderOd();
+  }
+
+  refreshOdSel();
+  renderSh();
+}
+
+function logout(){
+  ses=null;
+  try{sessionStorage.removeItem(SKEY);}catch{}
+  document.getElementById('screen-app').hidden=true;
+  document.getElementById('screen-login').hidden=false;
+  lgId=null; lgPin=''; updDots();
+  document.querySelectorAll('.lgu').forEach(b=>b.classList.remove('on'));
+  document.getElementById('lg-err').textContent='';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tbtn').forEach(b=>{
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.tbtn').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('on'));
     this.classList.add('on');
     document.getElementById('tab-'+this.dataset.tab).classList.add('on');
-    if (this.dataset.tab === 'izvj') renderIzvj();
+    if(this.dataset.tab==='izvj')renderIzvj();
+    if(this.dataset.tab==='post'){renderOd();if(isAdm())renderUsers();}
   });
 });
 
-// ── Toast ─────────────────────────────────────────────────
-let _tt;
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 2400);
+// ── ŠIHTARICA ─────────────────────────────────────────────────────────────────
+let shY=new Date().getFullYear(), shM=new Date().getMonth();
+
+function shPrev(){ shM--; if(shM<0){shM=11;shY--;} renderSh(); }
+function shNext(){ shM++; if(shM>11){shM=0;shY++;} renderSh(); }
+
+function shUid(){
+  if(!isAdm())return ses.uid;
+  return parseInt(document.getElementById('sh-wdd').value)||ses.uid;
 }
 
-// ── Odjeli ───────────────────────────────────────────────
-let edOd = null;
+function renderSh(){
+  const uid_=shUid();
+  const days=new Date(shY,shM+1,0).getDate();
+  const mp=String(shM+1).padStart(2,'0');
+  const pfx=`${shY}-${mp}`;
 
-function renderOdjeli() {
-  const tb = document.getElementById('tb-odjeli');
-  if (!db.odjeli.length) { tb.innerHTML = `<tr><td colspan="7" class="empty">Nema odjela.</td></tr>`; return; }
+  const ents=db.unosi.filter(u=>u.uid===uid_&&u.dat.startsWith(pfx));
+  const byDay={};
+  ents.forEach(u=>{ const d=parseInt(u.dat.split('-')[2]); (byDay[d]||(byDay[d]=[])).push(u); });
 
-  tb.innerHTML = [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o => {
-    const obr = odObr(o.id);
-    const pr  = Math.max(o.pov - obr, 0);
-    const pct = Math.min((obr/o.pov)*100, 100);
-    const prTd = pr<=0 ? `<span class="c-acc fw6">✓ Završeno</span>` : `<span class="mono">${fN(pr)}</span>`;
-    return `<tr>
-      <td class="mono fw6">${o.br}</td>
-      <td>${o.naz}</td>
-      <td class="r mono">${fN(o.pov)}</td>
-      <td class="r mono c-acc fw6">${obr>0?fN(obr):'–'}</td>
-      <td class="r">${prTd}</td>
-      <td>${progressHtml(pct)}</td>
-      <td style="white-space:nowrap">
-        <button class="btn-t btn-te" onclick="editOd(${o.id})">Uredi</button>
-        <button class="btn-t btn-td" onclick="delOd(${o.id})">Obriši</button>
-      </td>
-    </tr>`;
-  }).join('');
+  const rows=[];
+  for(let d=1;d<=days;d++){
+    const dt=new Date(shY,shM,d);
+    const dow=dt.getDay();
+    const wk=dow===0||dow===6;
+    const dayE=byDay[d]||[];
+    const iso=isoD(shY,shM,d);
+    const dn=DN[dow];
+    const df=`${String(d).padStart(2,'0')}.${mp}.`;
+    const wc=wk?' class="wk"':'';
 
-  // Populate selects
-  ['f-od','i-od'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (!sel) return;
-    const cur = sel.value;
-    const ph = id==='f-od' ? '<option value="">Svi odjeli</option>' : '<option value="">Odaberi odjel…</option>';
-    sel.innerHTML = ph + [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>
-      `<option value="${o.id}">${o.br} – ${o.naz}</option>`
-    ).join('');
-    if (cur) sel.value = cur;
+    if(!dayE.length){
+      rows.push(`<tr${wc}>
+        <td class="dow">${dn}</td>
+        <td class="sdt">${df}</td>
+        <td colspan="6" style="color:var(--muted);font-size:12px;font-style:italic">${wk?'vikend':'–'}</td>
+        <td>${wk?'':`<button class="add-day-btn" onclick="openAdd('${iso}')" title="Dodaj unos">+</button>`}</td>
+      </tr>`);
+    } else {
+      dayE.forEach((u,i)=>{
+        const first=i===0;
+        const rs=dayE.length>1?` rowspan="${dayE.length}"` : '';
+        const od=getOd(u.odId);
+        rows.push(`<tr${wc}>
+          ${first?`<td class="dow"${rs}>${dn}</td><td class="sdt"${rs}>${df}</td>`:''}
+          <td><span class="badge ${u.vr==='D'?'bdg-d':'bdg-v'}">${u.vr==='D'?'🌳 Doznaka':'🛤️ Vlake'}</span></td>
+          <td style="font-size:11px;color:var(--muted)">${od?od.br+' '+od.naz:'–'}</td>
+          <td class="r mono">${fI(u.st)}</td>
+          <td class="r mono c-acc">${u.vr==='D'?fN(u.ha):'–'}</td>
+          <td class="r mono c-amb">${u.vr==='V'?fN(u.km):'–'}</td>
+          <td style="font-size:11px;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.nap||''}</td>
+          <td style="white-space:nowrap">
+            <button class="btn-t btn-te" onclick="editU(${u.id})">✏️</button>
+            <button class="btn-t btn-td" onclick="delU(${u.id})">🗑️</button>
+            ${first?`<button class="add-day-btn" onclick="openAdd('${iso}')" title="Još jedan unos">+</button>`:''}
+          </td>
+        </tr>`);
+      });
+    }
+  }
+
+  // Totals
+  const doz=ents.filter(u=>u.vr==='D'), vl=ents.filter(u=>u.vr==='V');
+  const tSt=doz.reduce((s,u)=>s+(u.st||0),0);
+  const tHa=doz.reduce((s,u)=>s+(u.ha||0),0);
+  const tKm=vl.reduce((s,u)=>s+(u.km||0),0);
+  const wDays=new Set(ents.map(u=>u.dat)).size;
+
+  rows.push(`<tr class="tot">
+    <td colspan="2" class="fw6">UKUPNO — ${wDays} radnih dana</td>
+    <td></td><td></td>
+    <td class="r mono fw6">${fI(tSt)}</td>
+    <td class="r mono fw6 c-acc">${tHa>0?fN(tHa):'–'}</td>
+    <td class="r mono fw6 c-amb">${tKm>0?fN(tKm):'–'}</td>
+    <td colspan="2"></td>
+  </tr>`);
+
+  document.getElementById('sh-tbody').innerHTML=rows.join('');
+  document.getElementById('sh-lbl').textContent=`${MN[shM]} ${shY}`;
+}
+
+// ── MODAL / UNOS ──────────────────────────────────────────────────────────────
+let edId=null, mVr='D';
+
+function refreshOdSel(){
+  ['m-od'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="">— bez odjela —</option>'+
+      [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>
+        `<option value="${o.id}">${o.br} – ${o.naz}</option>`
+      ).join('');
+    if(cur)sel.value=cur;
   });
 }
 
-function saveOdjel() {
-  const br  = document.getElementById('o-br').value.trim();
-  const naz = document.getElementById('o-naz').value.trim();
-  const pov = parseFloat(document.getElementById('o-pov').value);
-  if (!br||!naz||isNaN(pov)||pov<=0) { toast('Popunite sva polja!'); return; }
+function openAdd(datePre){
+  edId=null;
+  document.getElementById('m-title').textContent='Novi unos';
+  document.getElementById('m-dat').value=datePre||new Date().toISOString().slice(0,10);
+  pickVr('D');
+  document.getElementById('m-od').value='';
+  document.getElementById('m-st').value='';
+  document.getElementById('m-ha').value='';
+  document.getElementById('m-km').value='';
+  document.getElementById('m-nap').value='';
+  refreshOdSel();
+  if(isAdm()) document.getElementById('m-wsel').value=shUid()||'';
+  document.getElementById('overlay').hidden=false;
+}
 
-  if (edOd) {
-    const o = db.odjeli.find(x=>x.id===edOd);
-    Object.assign(o,{br,naz,pov});
-    edOd=null; document.getElementById('od-hd').textContent='Novi odjel';
-    document.getElementById('od-otk').hidden=true;
+function editU(id){
+  const u=db.unosi.find(x=>x.id===id);
+  if(!u)return;
+  edId=id;
+  document.getElementById('m-title').textContent='Uredi unos';
+  document.getElementById('m-dat').value=u.dat;
+  pickVr(u.vr);
+  refreshOdSel();
+  document.getElementById('m-od').value=u.odId||'';
+  document.getElementById('m-st').value=u.st||'';
+  document.getElementById('m-ha').value=u.ha||'';
+  document.getElementById('m-km').value=u.km||'';
+  document.getElementById('m-nap').value=u.nap||'';
+  if(isAdm()) document.getElementById('m-wsel').value=u.uid;
+  document.getElementById('overlay').hidden=false;
+}
+
+function pickVr(v){
+  mVr=v;
+  document.getElementById('vl-d').className='vopt'+(v==='D'?' on-d':'');
+  document.getElementById('vl-v').className='vopt'+(v==='V'?' on-v':'');
+  document.getElementById('m-fd').hidden=v!=='D';
+  document.getElementById('m-fv').hidden=v!=='V';
+}
+
+function closeModal(){
+  document.getElementById('overlay').hidden=true;
+  edId=null;
+}
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function saveModal(){
+  const dat=document.getElementById('m-dat').value;
+  const odId=parseInt(document.getElementById('m-od').value)||null;
+  const nap=document.getElementById('m-nap').value.trim()||null;
+
+  let uid_;
+  if(isAdm()){
+    uid_=parseInt(document.getElementById('m-wsel').value);
+    if(!uid_){toast('Odaberi radnika!');return;}
+  } else uid_=ses.uid;
+
+  if(!dat){toast('Unesite datum!');return;}
+
+  let st=null,ha=null,km=null;
+  if(mVr==='D'){
+    st=parseInt(document.getElementById('m-st').value)||null;
+    ha=parseFloat(document.getElementById('m-ha').value)||null;
+    if(!st||!ha){toast('Unesi stabala i hektare!');return;}
   } else {
-    if (db.odjeli.some(o=>o.br===br)) { toast('Taj broj odjela već postoji!'); return; }
+    km=parseFloat(document.getElementById('m-km').value)||null;
+    if(!km){toast('Unesi kilometre!');return;}
+  }
+
+  if(edId){
+    Object.assign(db.unosi.find(x=>x.id===edId),{dat,vr:mVr,uid:uid_,odId,st,ha,km,nap});
+  } else {
+    db.unosi.push({id:uid(db.unosi),dat,vr:mVr,uid:uid_,odId,st,ha,km,nap});
+  }
+  lsave(); closeModal(); renderSh();
+  toast(edId?'Unos ažuriran ✓':'Unos sačuvan ✓');
+}
+
+function delU(id){
+  if(!confirm('Obrisati unos?'))return;
+  db.unosi=db.unosi.filter(u=>u.id!==id);
+  lsave(); renderSh(); toast('Unos obrisan');
+}
+
+// ── IZVJEŠTAJI ────────────────────────────────────────────────────────────────
+let curPer='mj', curGr='inz';
+
+function getPer(){
+  const now=new Date();
+  if(curPer==='sed'){
+    const day=now.getDay()||7;
+    const od=new Date(now); od.setDate(now.getDate()-day+1); od.setHours(0,0,0,0);
+    const do_=new Date(od); do_.setDate(od.getDate()+6); do_.setHours(23,59,59,999);
+    return{od,do:do_};
+  }
+  if(curPer==='mj') return{od:new Date(now.getFullYear(),now.getMonth(),1),do:new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999)};
+  return{od:new Date(now.getFullYear(),0,1),do:new Date(now.getFullYear(),11,31,23,59,59,999)};
+}
+function inPer(iso,per){ const d=new Date(iso); return d>=per.od&&d<=per.do; }
+function setPer(b){ curPer=b.dataset.per; document.querySelectorAll('.pbtn[data-per]').forEach(x=>x.classList.toggle('on',x===b)); renderIzvj(); }
+function setGr(b){ curGr=b.dataset.gr; document.querySelectorAll('.pbtn[data-gr]').forEach(x=>x.classList.toggle('on-b',x===b)); renderIzvj(); }
+
+function renderIzvj(){
+  const per=getPer();
+  const fil=isAdm()
+    ?db.unosi.filter(u=>inPer(u.dat,per))
+    :db.unosi.filter(u=>u.uid===ses.uid&&inPer(u.dat,per));
+
+  const fmt=d=>d.toLocaleDateString('bs-BA',{day:'2-digit',month:'2-digit',year:'numeric'});
+  document.getElementById('p-rng').textContent=`${fmt(per.od)} – ${fmt(per.do)}`;
+
+  const doz=fil.filter(u=>u.vr==='D'), vl=fil.filter(u=>u.vr==='V');
+  const ukHa=doz.reduce((s,u)=>s+(u.ha||0),0);
+  const ukSt=doz.reduce((s,u)=>s+(u.st||0),0);
+  const ukKm=vl.reduce((s,u)=>s+(u.km||0),0);
+
+  document.getElementById('izvj-stats').innerHTML=`
+    <div class="stat g"><div class="stat-lbl">Doznačeno</div><div class="stat-val">${fN(ukHa)}<span class="stat-unit">ha</span></div></div>
+    <div class="stat g"><div class="stat-lbl">Stabala</div><div class="stat-val">${ukSt?ukSt.toLocaleString('bs-BA'):'–'}</div></div>
+    <div class="stat a"><div class="stat-lbl">Vlake</div><div class="stat-val">${fN(ukKm)}<span class="stat-unit">km</span></div></div>
+    <div class="stat b"><div class="stat-lbl">Unosa</div><div class="stat-val">${fil.length}</div></div>`;
+
+  if(!isAdm()||curGr==='inz') renderIzvjInz(fil);
+  else renderIzvjOd(fil);
+}
+
+function renderIzvjInz(fil){
+  const adm=isAdm();
+  document.getElementById('izvj-hd').textContent=adm?'Pregled po radniku':'Moji unosi';
+  document.getElementById('izvj-th').innerHTML=adm
+    ?'<tr><th>Radnik</th><th class="r">Ha</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th class="r">Dana</th></tr>'
+    :'<tr><th>Datum</th><th>Vrsta</th><th>Odjel</th><th class="r">Stabala</th><th class="r">Ha</th><th class="r">Km</th><th>Napomena</th></tr>';
+
+  if(adm){
+    document.getElementById('izvj-tb').innerHTML=db.users.filter(u=>u.role==='worker').map(w=>{
+      const uf=fil.filter(u=>u.uid===w.id);
+      const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+      const ha=d.reduce((s,u)=>s+(u.ha||0),0), st=d.reduce((s,u)=>s+(u.st||0),0), km=v.reduce((s,u)=>s+(u.km||0),0);
+      const days=new Set(uf.map(u=>u.dat)).size;
+      return`<tr class="${!uf.length?'dim':''}"><td class="fw6">${w.name}</td><td class="r mono c-acc">${ha>0?fN(ha):'–'}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td class="r mono c-mut">${days||'–'}</td></tr>`;
+    }).join('')||'<tr><td colspan="5" class="empty">Nema podataka.</td></tr>';
+  } else {
+    const sorted=[...fil].sort((a,b)=>a.dat.localeCompare(b.dat));
+    document.getElementById('izvj-tb').innerHTML=sorted.map(u=>{
+      const o=getOd(u.odId);
+      return`<tr><td class="sdt">${fDt(u.dat)}</td><td><span class="badge ${u.vr==='D'?'bdg-d':'bdg-v'}">${u.vr==='D'?'🌳 Doznaka':'🛤️ Vlake'}</span></td><td style="font-size:11px;color:var(--muted)">${o?o.br+' '+o.naz:'–'}</td><td class="r mono">${fI(u.st)}</td><td class="r mono c-acc">${u.vr==='D'?fN(u.ha):'–'}</td><td class="r mono c-amb">${u.vr==='V'?fN(u.km):'–'}</td><td class="c-mut" style="font-size:11px">${u.nap||''}</td></tr>`;
+    }).join('')||'<tr><td colspan="7" class="empty">Nema unosa u ovom periodu.</td></tr>';
+  }
+}
+
+function renderIzvjOd(fil){
+  document.getElementById('izvj-hd').textContent='Pregled po odjelu';
+  document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Površina</th><th class="r">Obrađeno</th><th class="r">Preostalo</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th>Napredak</th></tr>';
+  document.getElementById('izvj-tb').innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
+    const uf=fil.filter(u=>u.odId===o.id);
+    const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+    const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
+    const allHa=db.unosi.filter(u=>u.odId===o.id&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
+    const pr=Math.max(o.pov-allHa,0), pct=Math.min((allHa/o.pov)*100,100);
+    return`<tr class="${!uf.length?'dim':''}"><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono">${fN(o.pov)}</td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td>${prog(pct)}</td></tr>`;
+  }).join('')||'<tr><td colspan="7" class="empty">Nema podataka.</td></tr>';
+}
+
+// ── POSTAVKE / ODJELI ─────────────────────────────────────────────────────────
+let edOd=null;
+
+function renderOd(){
+  const tb=document.getElementById('tb-od');
+  if(!tb)return;
+  tb.innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>
+    `<tr><td class="mono fw6">${o.br}</td><td>${o.naz}</td><td class="r mono">${fN(o.pov)}</td><td style="white-space:nowrap"><button class="btn-t btn-te" onclick="editOd(${o.id})">Uredi</button><button class="btn-t btn-td" onclick="delOd(${o.id})">Obriši</button></td></tr>`
+  ).join('')||'<tr><td colspan="4" class="empty">Nema odjela.</td></tr>';
+}
+
+function saveOd(){
+  const br=document.getElementById('o-br').value.trim();
+  const naz=document.getElementById('o-naz').value.trim();
+  const pov=parseFloat(document.getElementById('o-pov').value);
+  if(!br||!naz||isNaN(pov)||pov<=0){toast('Popuni sva polja!');return;}
+  if(edOd){
+    Object.assign(db.odjeli.find(x=>x.id===edOd),{br,naz,pov});
+    edOd=null; document.getElementById('od-otk').hidden=true;
+  } else {
+    if(db.odjeli.some(o=>o.br===br)){toast('Broj odjela već postoji!');return;}
     db.odjeli.push({id:uid(db.odjeli),br,naz,pov});
   }
-  saveDB(); clearOdF(); renderOdjeli(); renderUnosi(); toast('Odjel sačuvan');
+  lsave();
+  ['o-br','o-naz','o-pov'].forEach(id=>document.getElementById(id).value='');
+  renderOd(); refreshOdSel(); toast('Odjel sačuvan ✓');
 }
-
-function editOd(id) {
-  const o=db.odjeli.find(x=>x.id===id);
-  document.getElementById('o-br').value=o.br;
-  document.getElementById('o-naz').value=o.naz;
-  document.getElementById('o-pov').value=o.pov;
-  edOd=id; document.getElementById('od-hd').textContent='Uredi odjel';
-  document.getElementById('od-otk').hidden=false;
-}
-function cancelOd() { edOd=null; clearOdF(); document.getElementById('od-hd').textContent='Novi odjel'; document.getElementById('od-otk').hidden=true; }
-function clearOdF() { ['o-br','o-naz','o-pov'].forEach(id=>document.getElementById(id).value=''); }
-
-function delOd(id) {
-  if (!confirm('Obrisati odjel? Svi vezani unosi i inžinjeri će biti obrisani!')) return;
+function editOd(id){ const o=db.odjeli.find(x=>x.id===id); document.getElementById('o-br').value=o.br; document.getElementById('o-naz').value=o.naz; document.getElementById('o-pov').value=o.pov; edOd=id; document.getElementById('od-otk').hidden=false; }
+function cancelOd(){ edOd=null; ['o-br','o-naz','o-pov'].forEach(id=>document.getElementById(id).value=''); document.getElementById('od-otk').hidden=true; }
+function delOd(id){
+  if(!confirm('Obrisati odjel?'))return;
   db.odjeli=db.odjeli.filter(o=>o.id!==id);
-  db.inzinjeri=db.inzinjeri.filter(i=>i.odId!==id);
-  db.unosi=db.unosi.filter(u=>u.odId!==id);
-  saveDB(); renderOdjeli(); renderInz(); renderUnosi(); toast('Odjel obrisan');
+  db.unosi.forEach(u=>{if(u.odId===id)u.odId=null;});
+  lsave(); renderOd(); refreshOdSel(); toast('Odjel obrisan');
 }
 
-// ── Inžinjeri ─────────────────────────────────────────────
-let edInz = null;
-
-function renderInz() {
-  const tb = document.getElementById('tb-inz');
-  if (!db.inzinjeri.length) { tb.innerHTML=`<tr><td colspan="4" class="empty">Nema inžinjera.</td></tr>`; return; }
-
-  tb.innerHTML = [...db.inzinjeri].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
-    const o = od(i.odId);
-    const cnt = db.unosi.filter(u=>u.inId===i.id).length;
-    return `<tr>
-      <td class="fw6">${i.prez} ${i.ime}</td>
-      <td>${o?`<span class="badge bdg-o">${o.br} – ${o.naz}</span>`:'–'}</td>
-      <td class="r mono">${cnt}</td>
-      <td style="white-space:nowrap">
-        <button class="btn-t btn-te" onclick="editInz(${i.id})">Uredi</button>
-        <button class="btn-t btn-td" onclick="delInz(${i.id})">Obriši</button>
-      </td>
-    </tr>`;
-  }).join('');
+// ── POSTAVKE / PIN ────────────────────────────────────────────────────────────
+function changePin(){
+  const old=document.getElementById('p-old').value.trim();
+  const n1=document.getElementById('p-new').value.trim();
+  const n2=document.getElementById('p-new2').value.trim();
+  const u=me();
+  if(!old||!n1||!n2){toast('Popuni sva polja!');return;}
+  if(u.pin!==old){toast('Trenutni PIN nije ispravan!');return;}
+  if(!/^\d{4}$/.test(n1)){toast('Novi PIN mora biti 4 cifre!');return;}
+  if(n1!==n2){toast('PIN-ovi se ne poklapaju!');return;}
+  db.users.find(x=>x.id===ses.uid).pin=n1;
+  lsave();
+  ['p-old','p-new','p-new2'].forEach(id=>document.getElementById(id).value='');
+  toast('PIN promijenjen ✓');
 }
 
-function saveInz() {
-  const ime  = document.getElementById('i-ime').value.trim();
-  const prez = document.getElementById('i-prez').value.trim();
-  const odId = parseInt(document.getElementById('i-od').value);
-  if (!ime||!prez||!odId) { toast('Popunite sva polja!'); return; }
-
-  if (edInz) {
-    Object.assign(db.inzinjeri.find(x=>x.id===edInz),{ime,prez,odId});
-    edInz=null; document.getElementById('inz-hd').textContent='Novi inžinjer';
-    document.getElementById('inz-otk').hidden=true;
-  } else {
-    db.inzinjeri.push({id:uid(db.inzinjeri),ime,prez,odId});
-  }
-  saveDB(); clearInzF(); renderInz(); refilterInz(); toast('Inžinjer sačuvan');
+// ── ADMIN: KORISNICI ──────────────────────────────────────────────────────────
+function renderUsers(){
+  document.getElementById('users-list').innerHTML=db.users.map(u=>`
+    <div class="user-card">
+      <div><div class="uc-name">${u.name}</div><div class="uc-role">${u.role==='admin'?'Administrator':'Projektant'}</div></div>
+      <button class="btn-t btn-te" onclick="resetPin(${u.id})" title="Reset PIN">Reset PIN</button>
+    </div>`).join('');
 }
 
-function editInz(id) {
-  const i=db.inzinjeri.find(x=>x.id===id);
-  document.getElementById('i-ime').value=i.ime;
-  document.getElementById('i-prez').value=i.prez;
-  document.getElementById('i-od').value=i.odId;
-  edInz=id; document.getElementById('inz-hd').textContent='Uredi inžinjera';
-  document.getElementById('inz-otk').hidden=false;
-}
-function cancelInz() { edInz=null; clearInzF(); document.getElementById('inz-hd').textContent='Novi inžinjer'; document.getElementById('inz-otk').hidden=true; }
-function clearInzF() { ['i-ime','i-prez'].forEach(id=>document.getElementById(id).value=''); document.getElementById('i-od').value=''; }
-
-function delInz(id) {
-  if (!confirm('Obrisati inžinjera?')) return;
-  db.inzinjeri=db.inzinjeri.filter(i=>i.id!==id);
-  db.unosi=db.unosi.filter(u=>u.inId!==id);
-  saveDB(); renderInz(); renderUnosi(); toast('Inžinjer obrisan');
+function resetPin(id){
+  const u=db.users.find(x=>x.id===id);
+  if(!u)return;
+  const def=u.role==='admin'?'0000':'1234';
+  if(!confirm(`Resetovati PIN za ${u.name} na ${def}?`))return;
+  u.pin=def; lsave(); toast(`PIN za ${u.name} resetovan na ${def} ✓`);
 }
 
-// ── Unos rada ─────────────────────────────────────────────
-let edUn = null, curVr = 'D';
-
-function pickVrsta(v) {
-  curVr = v;
-  document.getElementById('vl-d').className = 'vrsta-opt' + (v==='D'?' on-d':'');
-  document.getElementById('vl-v').className = 'vrsta-opt' + (v==='V'?' on-v':'');
-  document.getElementById('fld-d').hidden = v!=='D';
-  document.getElementById('fld-v').hidden = v!=='V';
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderLgUsers();
+if(ses&&db.users.find(u=>u.id===ses.uid)){
+  enterApp();
+} else {
+  document.getElementById('screen-login').hidden=false;
 }
-
-function refilterInz() {
-  const odId = parseInt(document.getElementById('f-od').value)||0;
-  const sel = document.getElementById('f-inz');
-  const cur = sel.value;
-  const list = odId ? db.inzinjeri.filter(i=>i.odId===odId) : db.inzinjeri;
-  sel.innerHTML = '<option value="">Odaberi inžinjera…</option>' +
-    [...list].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
-      const o=od(i.odId);
-      return `<option value="${i.id}">${i.prez} ${i.ime}${o?' ('+o.br+')':''}`;
-    }).join('');
-  if (cur) sel.value=cur;
-}
-
-function saveUnos() {
-  const dat  = document.getElementById('f-dat').value;
-  const inId = parseInt(document.getElementById('f-inz').value);
-  if (!dat) { toast('Unesite datum!'); return; }
-  if (!inId) { toast('Odaberite inžinjera!'); return; }
-
-  const iz = inz(inId);
-  const odId = parseInt(document.getElementById('f-od').value)||iz?.odId||0;
-  if (!odId) { toast('Odredite odjel!'); return; }
-
-  let st=null, ha=null, km=null;
-  if (curVr==='D') {
-    st = parseInt(document.getElementById('f-st').value)||null;
-    ha = parseFloat(document.getElementById('f-ha').value)||null;
-    if (!st||!ha) { toast('Unesite broj stabala i hektare!'); return; }
-  } else {
-    km = parseFloat(document.getElementById('f-km').value)||null;
-    if (!km) { toast('Unesite kilometre!'); return; }
-  }
-  const nap = document.getElementById('f-nap').value.trim()||null;
-
-  if (edUn) {
-    Object.assign(db.unosi.find(x=>x.id===edUn),{dat,vr:curVr,inId,odId,st,ha,km,nap});
-    edUn=null; document.getElementById('unos-hd').textContent='Novi unos';
-    document.getElementById('unos-otk').hidden=true;
-  } else {
-    db.unosi.push({id:uid(db.unosi),dat,vr:curVr,inId,odId,st,ha,km,nap});
-  }
-  saveDB(); clearUnosF(); renderUnosi(); renderOdjeli(); toast('Unos sačuvan ✓');
-}
-
-function editUnos(id) {
-  const u=db.unosi.find(x=>x.id===id);
-  document.getElementById('f-dat').value=u.dat;
-  document.getElementById('f-od').value=u.odId;
-  refilterInz();
-  document.getElementById('f-inz').value=u.inId;
-  pickVrsta(u.vr);
-  document.getElementById('f-st').value=u.st||'';
-  document.getElementById('f-ha').value=u.ha||'';
-  document.getElementById('f-km').value=u.km||'';
-  document.getElementById('f-nap').value=u.nap||'';
-  edUn=id; document.getElementById('unos-hd').textContent='Uredi unos';
-  document.getElementById('unos-otk').hidden=false;
-}
-function cancelUnos() { edUn=null; clearUnosF(); document.getElementById('unos-hd').textContent='Novi unos'; document.getElementById('unos-otk').hidden=true; }
-function clearUnosF() {
-  document.getElementById('f-dat').value=new Date().toISOString().slice(0,10);
-  ['f-inz','f-od'].forEach(id=>document.getElementById(id).value='');
-  ['f-st','f-ha','f-km','f-nap'].forEach(id=>document.getElementById(id).value='');
-}
-
-function delUnos(id) {
-  if (!confirm('Obrisati unos?')) return;
-  db.unosi=db.unosi.filter(u=>u.id!==id);
-  saveDB(); renderUnosi(); renderOdjeli(); toast('Unos obrisan');
-}
-
-function renderUnosi() {
-  const tb = document.getElementById('tb-unosi');
-  const sorted = [...db.unosi].sort((a,b)=>b.dat.localeCompare(a.dat));
-  document.getElementById('unosi-cnt').textContent = sorted.length + ' unosa';
-
-  if (!sorted.length) { tb.innerHTML=`<tr><td colspan="6" class="empty">Nema unosa.</td></tr>`; return; }
-
-  tb.innerHTML = sorted.map(u=>{
-    const i=inz(u.inId), o=od(u.odId);
-    const kol = u.vr==='D'
-      ? `<span class="mono">${fI(u.st)} st / ${fN(u.ha)} ha</span>`
-      : `<span class="mono c-amb">${fN(u.km)} km</span>`;
-    return `<tr>
-      <td class="mono" style="font-size:12px">${fDate(u.dat)}</td>
-      <td class="fw6">${i?i.prez+' '+i.ime:'–'}</td>
-      <td>${o?`<span class="badge bdg-o">${o.br}</span>`:'–'}</td>
-      <td><span class="badge ${u.vr==='D'?'bdg-d':'bdg-v'}">${u.vr==='D'?'🌳 Doznaka':'🛤️ Vlake'}</span></td>
-      <td class="r">${kol}</td>
-      <td style="white-space:nowrap">
-        <button class="btn-t btn-te" onclick="editUnos(${u.id})">Uredi</button>
-        <button class="btn-t btn-td" onclick="delUnos(${u.id})">Obriši</button>
-      </td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Izvještaji ────────────────────────────────────────────
-let curPer = 'mj', curGr = 'od';
-
-function getPer() {
-  const now = new Date();
-  if (curPer==='sed') {
-    const day = now.getDay()||7;
-    const od1 = new Date(now); od1.setDate(now.getDate()-day+1); od1.setHours(0,0,0,0);
-    const do1 = new Date(od1); do1.setDate(od1.getDate()+6); do1.setHours(23,59,59,999);
-    return {od:od1,do:do1};
-  }
-  if (curPer==='mj') {
-    return { od:new Date(now.getFullYear(),now.getMonth(),1), do:new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59,999) };
-  }
-  return { od:new Date(now.getFullYear(),0,1), do:new Date(now.getFullYear(),11,31,23,59,59,999) };
-}
-
-function inPer(iso, per) {
-  const d=new Date(iso); return d>=per.od && d<=per.do;
-}
-
-function setPer(btn) {
-  curPer=btn.dataset.per;
-  document.querySelectorAll('.pbtn[data-per]').forEach(b=>b.classList.toggle('on', b===btn));
-  renderIzvj();
-}
-function setGr(btn) {
-  curGr=btn.dataset.gr;
-  document.querySelectorAll('.pbtn[data-gr]').forEach(b=>b.classList.toggle('on-b', b===btn));
-  renderIzvj();
-}
-
-function renderIzvj() {
-  const per = getPer();
-  const fil = db.unosi.filter(u=>inPer(u.dat,per));
-
-  const fmt = d=>d.toLocaleDateString('bs-BA',{day:'2-digit',month:'2-digit',year:'numeric'});
-  document.getElementById('p-range').textContent = `${fmt(per.od)} – ${fmt(per.do)}`;
-
-  const doz = fil.filter(u=>u.vr==='D');
-  const vl  = fil.filter(u=>u.vr==='V');
-  const ukHa= doz.reduce((s,u)=>s+(u.ha||0),0);
-  const ukSt= doz.reduce((s,u)=>s+(u.st||0),0);
-  const ukKm= vl.reduce((s,u)=>s+(u.km||0),0);
-  const ukPov=db.odjeli.reduce((s,o)=>s+o.pov,0);
-
-  document.getElementById('izvj-stats').innerHTML = `
-    <div class="stat g"><div class="stat-lbl">Obrađeno</div><div class="stat-val">${fN(ukHa)}<span class="stat-unit">ha</span></div></div>
-    <div class="stat"><div class="stat-lbl">Ukupna površina</div><div class="stat-val">${fN(ukPov)}<span class="stat-unit">ha</span></div></div>
-    <div class="stat g"><div class="stat-lbl">Doznačena stabla</div><div class="stat-val">${ukSt?fI(ukSt):'–'}</div></div>
-    <div class="stat a"><div class="stat-lbl">Vlake</div><div class="stat-val">${fN(ukKm)}<span class="stat-unit">km</span></div></div>`;
-
-  if (curGr==='od') renderIzvjOd(fil);
-  else renderIzvjInz(fil);
-}
-
-function renderIzvjOd(fil) {
-  document.getElementById('izvj-hd').textContent = 'Pregled po odjelima';
-  document.getElementById('izvj-thead').innerHTML = `<tr>
-    <th>Odjel</th><th class="r">Površina (ha)</th><th class="r">Obrađeno (ha)</th>
-    <th class="r">Preostalo (ha)</th><th class="r">Stabala</th><th class="r">Vlake (km)</th><th>Napredak</th>
-  </tr>`;
-
-  document.getElementById('tb-izvj').innerHTML = [...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
-    const uf=fil.filter(u=>u.odId===o.id);
-    const d=uf.filter(u=>u.vr==='D'), v=uf.filter(u=>u.vr==='V');
-    const ha=d.reduce((s,u)=>s+(u.ha||0),0);
-    const st=d.reduce((s,u)=>s+(u.st||0),0);
-    const km=v.reduce((s,u)=>s+(u.km||0),0);
-    const pr=Math.max(o.pov-ha,0);
-    const pct=Math.min((ha/o.pov)*100,100);
-    return `<tr class="${!uf.length?'dim':''}">
-      <td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td>
-      <td class="r mono">${fN(o.pov)}</td>
-      <td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td>
-      <td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td>
-      <td class="r mono">${fI(st)}</td>
-      <td class="r mono ${km>0?'c-amb':''}">${km>0?fN(km):'–'}</td>
-      <td>${progressHtml(pct)}</td>
-    </tr>`;
-  }).join('');
-}
-
-function renderIzvjInz(fil) {
-  document.getElementById('izvj-hd').textContent = 'Pregled po inžinjerima';
-  document.getElementById('izvj-thead').innerHTML = `<tr>
-    <th>Inžinjer</th><th>Odjel</th><th class="r">Obrađeno (ha)</th>
-    <th class="r">Stabala</th><th class="r">Vlake (km)</th><th class="r">Unosa</th>
-  </tr>`;
-
-  document.getElementById('tb-izvj').innerHTML = [...db.inzinjeri].sort((a,b)=>a.prez.localeCompare(b.prez)).map(i=>{
-    const uf=fil.filter(u=>u.inId===i.id);
-    const d=uf.filter(u=>u.vr==='D'), v=uf.filter(u=>u.vr==='V');
-    const ha=d.reduce((s,u)=>s+(u.ha||0),0);
-    const st=d.reduce((s,u)=>s+(u.st||0),0);
-    const km=v.reduce((s,u)=>s+(u.km||0),0);
-    const o=od(i.odId);
-    return `<tr class="${!uf.length?'dim':''}">
-      <td class="fw6">${i.prez} ${i.ime}</td>
-      <td>${o?`<span class="badge bdg-o">${o.br}</span>`:'–'}</td>
-      <td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td>
-      <td class="r mono">${fI(st)}</td>
-      <td class="r mono ${km>0?'c-amb':''}">${km>0?fN(km):'–'}</td>
-      <td class="r mono c-mut">${uf.length}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ── Init ──────────────────────────────────────────────────
-document.getElementById('f-dat').value = new Date().toISOString().slice(0,10);
-renderOdjeli(); renderInz(); renderUnosi(); renderIzvj();
 </script>
