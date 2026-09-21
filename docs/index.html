@@ -29,11 +29,11 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .lg-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 4px 32px rgba(0,0,0,.1);padding:24px 20px;width:100%;max-width:360px}
 .lg-logo{text-align:center;font-size:19px;font-weight:700;color:var(--accent);margin-bottom:3px;letter-spacing:-.3px}
 .lg-sub{text-align:center;color:var(--muted);font-size:12px;margin-bottom:18px}
-.lg-users{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:18px}
-.lgu{padding:9px 4px;border:2px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--muted);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .13s;letter-spacing:.2px}
-.lgu:hover{border-color:var(--accent);color:var(--accent)}
-.lgu.on{border-color:var(--accent);background:var(--acc-bg);color:var(--accent)}
-.lgu.adm{border-style:dashed;font-size:11px}
+.lg-name-wrap{position:relative;margin-bottom:14px}
+.lg-name-wrap input{width:100%;padding:10px 12px;border:2px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:600;font-family:inherit;outline:none;transition:border-color .13s,box-shadow .13s;text-transform:uppercase;letter-spacing:.5px}
+.lg-name-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--acc-bg)}
+.lg-name-wrap input.ok-name{border-color:var(--accent);background:var(--acc-bg)}
+.lg-name-wrap input.err-name{border-color:var(--danger);background:var(--dan-bg)}
 .lg-dots{display:flex;justify-content:center;gap:12px;margin-bottom:6px}
 .ldot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .13s}
 .ldot.on{background:var(--accent);border-color:var(--accent)}
@@ -46,6 +46,8 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .pdbtn.del{font-size:15px;color:var(--muted)}
 .pdbtn.ok{background:var(--accent);color:#fff;border-color:var(--accent);font-family:'Inter',sans-serif;font-size:16px}
 .pdbtn.ok:hover{background:var(--acc-h)}
+.lg-rem{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+.lg-rem input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
 
 /* HEADER */
 .hdr{position:sticky;top:env(safe-area-inset-top,0);background:var(--accent);color:#fff;z-index:50;padding:0 14px;display:flex;align-items:stretch;gap:0;box-shadow:0 2px 8px rgba(0,0,0,.2)}
@@ -196,8 +198,11 @@ textarea{resize:none}
 <div id="screen-login">
   <div class="lg-box">
     <div class="lg-logo">🌲 Šumska Priprema Proizvodnje</div>
-    <p class="lg-sub">Odaberi ime, unesi PIN</p>
-    <div class="lg-users" id="lg-users"></div>
+    <p class="lg-sub">Unesi ime i PIN</p>
+    <datalist id="dl-users"></datalist>
+    <div class="lg-name-wrap">
+      <input type="text" id="lg-name" list="dl-users" placeholder="Tvoje ime…" autocomplete="off" autocorrect="off" spellcheck="false" oninput="lgNameInput()" onchange="lgNameChange()">
+    </div>
     <div class="lg-dots">
       <span class="ldot" id="ld0"></span><span class="ldot" id="ld1"></span>
       <span class="ldot" id="ld2"></span><span class="ldot" id="ld3"></span>
@@ -217,6 +222,9 @@ textarea{resize:none}
       <button class="pdbtn" onclick="pk('0')">0</button>
       <button class="pdbtn ok" onclick="pok()">↵</button>
     </div>
+    <label class="lg-rem">
+      <input type="checkbox" id="lg-rem"> Zapamti me
+    </label>
   </div>
 </div>
 
@@ -403,9 +411,15 @@ function lsave(){ try{localStorage.setItem(KEY,JSON.stringify(db));}catch{} }
 function uid(a){ return a.length?Math.max(...a.map(x=>x.id))+1:1; }
 
 // ── SESSION ───────────────────────────────────────────────────────────────────
+const RKEY='spp_rem';
 let ses=null;
-try{ ses=JSON.parse(sessionStorage.getItem(SKEY))||null; }catch{}
-function ssave(){ try{sessionStorage.setItem(SKEY,JSON.stringify(ses));}catch{} }
+try{ ses=JSON.parse(localStorage.getItem(RKEY))||JSON.parse(sessionStorage.getItem(SKEY))||null; }catch{}
+function ssave(rem){
+  try{
+    if(rem){ localStorage.setItem(RKEY,JSON.stringify(ses)); sessionStorage.removeItem(SKEY); }
+    else{ sessionStorage.setItem(SKEY,JSON.stringify(ses)); localStorage.removeItem(RKEY); }
+  }catch{}
+}
 function me(){ return ses?db.users.find(u=>u.id===ses.uid):null; }
 function isAdm(){ return me()?.role==='admin'; }
 
@@ -427,17 +441,26 @@ function toast(m){ const e=document.getElementById('toast'); e.textContent=m; e.
 let lgId=null, lgPin='';
 
 function renderLgUsers(){
-  document.getElementById('lg-users').innerHTML=db.users.map(u=>
-    `<button class="lgu${u.role==='admin'?' adm':''}" id="lgu-${u.id}" onclick="lgSel(${u.id})">${u.name}</button>`
-  ).join('');
+  const dl=document.getElementById('dl-users');
+  dl.innerHTML=db.users.map(u=>`<option value="${u.name}">`).join('');
 }
 
-function lgSel(id){
-  lgId=id; lgPin='';
-  updDots();
+function lgNameInput(){
+  const inp=document.getElementById('lg-name');
+  const val=inp.value.trim().toUpperCase();
+  const u=db.users.find(x=>x.name===val);
+  inp.classList.remove('ok-name','err-name');
+  if(u){ lgId=u.id; inp.classList.add('ok-name'); }
+  else { lgId=null; }
+  lgPin=''; updDots();
   document.getElementById('lg-err').textContent='';
-  document.querySelectorAll('.lgu').forEach(b=>b.classList.remove('on'));
-  document.getElementById('lgu-'+id)?.classList.add('on');
+}
+
+function lgNameChange(){
+  const inp=document.getElementById('lg-name');
+  const val=inp.value.trim().toUpperCase();
+  const u=db.users.find(x=>x.name===val);
+  if(!u&&val){ inp.classList.add('err-name'); inp.classList.remove('ok-name'); }
 }
 
 function updDots(){
@@ -449,18 +472,23 @@ function updDots(){
 }
 
 function pk(k){
-  if(!lgId){document.getElementById('lg-err').textContent='Odaberi ime!';return;}
+  if(!lgId){
+    document.getElementById('lg-err').textContent='Unesi ispravno ime!';
+    document.getElementById('lg-name').focus();
+    return;
+  }
   if(lgPin.length>=4)return;
   lgPin+=k; updDots();
   if(lgPin.length===4) pok();
 }
 function pdel(){ lgPin=lgPin.slice(0,-1); updDots(); document.getElementById('lg-err').textContent=''; }
 function pok(){
-  if(!lgId){document.getElementById('lg-err').textContent='Odaberi ime!';return;}
+  if(!lgId){document.getElementById('lg-err').textContent='Unesi ispravno ime!';return;}
   if(lgPin.length<4){document.getElementById('lg-err').textContent='Unesi 4-cifreni PIN!';return;}
   const u=db.users.find(x=>x.id===lgId);
+  const rem=document.getElementById('lg-rem').checked;
   if(u.pin===lgPin){
-    ses={uid:lgId}; ssave(); enterApp();
+    ses={uid:lgId}; ssave(rem); enterApp();
   } else {
     lgPin='';
     document.getElementById('lg-err').textContent='Pogrešan PIN!';
@@ -469,11 +497,12 @@ function pok(){
   }
 }
 
-// Keyboard support
+// Keyboard support — brojevi rade samo kad PIN polje aktivno (ne kad je fokus na name inputu)
 document.addEventListener('keydown',e=>{
   if(document.getElementById('screen-login').hidden)return;
-  if(e.key>='0'&&e.key<='9')pk(e.key);
-  else if(e.key==='Backspace')pdel();
+  if(document.activeElement===document.getElementById('lg-name'))return;
+  if(e.key>='0'&&e.key<='9'){e.preventDefault();pk(e.key);}
+  else if(e.key==='Backspace'){e.preventDefault();pdel();}
   else if(e.key==='Enter')pok();
 });
 
@@ -508,12 +537,15 @@ function enterApp(){
 
 function logout(){
   ses=null;
-  try{sessionStorage.removeItem(SKEY);}catch{}
+  try{sessionStorage.removeItem(SKEY);localStorage.removeItem(RKEY);}catch{}
   document.getElementById('screen-app').hidden=true;
   document.getElementById('screen-login').hidden=false;
   lgId=null; lgPin=''; updDots();
-  document.querySelectorAll('.lgu').forEach(b=>b.classList.remove('on'));
+  const inp=document.getElementById('lg-name');
+  inp.value=''; inp.classList.remove('ok-name','err-name');
+  document.getElementById('lg-rem').checked=false;
   document.getElementById('lg-err').textContent='';
+  setTimeout(()=>inp.focus(),100);
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────────────
@@ -864,5 +896,6 @@ if(ses&&db.users.find(u=>u.id===ses.uid)){
   enterApp();
 } else {
   document.getElementById('screen-login').hidden=false;
+  setTimeout(()=>document.getElementById('lg-name').focus(),100);
 }
 </script>
