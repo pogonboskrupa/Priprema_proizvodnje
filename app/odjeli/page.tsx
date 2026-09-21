@@ -31,23 +31,28 @@ export default function OdjeliPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    if (editId) {
-      await updateOdjel(editId, {
-        naziv: form.naziv,
-        broj: form.broj,
-        povrsina: parseFloat(form.povrsina),
-      });
-    } else {
-      await createOdjel({
-        naziv: form.naziv,
-        broj: form.broj,
-        povrsina: parseFloat(form.povrsina),
-      });
+    try {
+      if (editId) {
+        await updateOdjel(editId, {
+          naziv: form.naziv,
+          broj: form.broj,
+          povrsina: parseFloat(form.povrsina),
+        });
+      } else {
+        await createOdjel({
+          naziv: form.naziv,
+          broj: form.broj,
+          povrsina: parseFloat(form.povrsina),
+        });
+      }
+      setForm({ naziv: "", broj: "", povrsina: "" });
+      setEditId(null);
+    } catch {
+      // forma ostaje popunjena da korisnik može ponoviti
+    } finally {
+      setLoading(false);
+      load();
     }
-    setForm({ naziv: "", broj: "", povrsina: "" });
-    setEditId(null);
-    setLoading(false);
-    load();
   }
 
   function startEdit(o: Odjel) {

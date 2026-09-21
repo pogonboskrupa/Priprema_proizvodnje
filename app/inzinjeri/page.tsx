@@ -34,15 +34,20 @@ export default function InzinjeriPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    if (editId) {
-      await updateInzinjer(editId, form);
-    } else {
-      await createInzinjer(form);
+    try {
+      if (editId) {
+        await updateInzinjer(editId, form);
+      } else {
+        await createInzinjer(form);
+      }
+      setForm({ ime: "", prezime: "", email: "", odjelId: "" });
+      setEditId(null);
+    } catch {
+      // forma ostaje popunjena da korisnik može ponoviti
+    } finally {
+      setLoading(false);
+      load();
     }
-    setForm({ ime: "", prezime: "", email: "", odjelId: "" });
-    setEditId(null);
-    setLoading(false);
-    load();
   }
 
   function startEdit(i: Inzinjer) {
