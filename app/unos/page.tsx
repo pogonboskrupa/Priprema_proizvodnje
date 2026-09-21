@@ -112,9 +112,7 @@ export default function UnosPage() {
     });
   }
 
-  const filteredUnosi = filterMjesec
-    ? unosi.filter((u) => u.datum.slice(0, 7) === filterMjesec)
-    : unosi;
+  const filteredUnosi = unosi.filter((u) => u.datum.slice(0, 7) === filterMjesec);
 
   function handleExport() {
     const rows = filteredUnosi.map((u) => ({
