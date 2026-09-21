@@ -1,19 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-
-type Odjel = { id: number; naziv: string; broj: string; povrsina: number };
-type Inzinjer = { id: number; ime: string; prezime: string; odjelId: number; odjel: Odjel };
-type UnosRada = {
-  id: number;
-  datum: string;
-  vrsta: "DOZNAKA" | "VLAKA";
-  inzinjer: Inzinjer;
-  odjel: Odjel;
-  brojStabala: number | null;
-  hektari: number | null;
-  kilometri: number | null;
-  napomena: string | null;
-};
+import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos } from "@/lib/db";
+import type { Odjel, Inzinjer, UnosRada } from "@/lib/types";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -35,11 +23,7 @@ export default function UnosPage() {
   const [msg, setMsg] = useState("");
 
   async function load() {
-    const [od, inz, un] = await Promise.all([
-      fetch("/api/odjeli").then((r) => r.json()),
-      fetch("/api/inzinjeri").then((r) => r.json()),
-      fetch("/api/unosi").then((r) => r.json()),
-    ]);
+    const [od, inz, un] = await Promise.all([getOdjeli(), getInzinjeri(), getUnosi()]);
     setOdjeli(od);
     setInzinjeri(inz);
     setUnosi(un);
@@ -47,13 +31,12 @@ export default function UnosPage() {
 
   useEffect(() => { load(); }, []);
 
-  // Auto-popuni odjel kad se odabere inžinjer
   function handleInzinjerChange(id: string) {
-    const inz = inzinjeri.find((i) => i.id === parseInt(id));
+    const inz = inzinjeri.find((i) => i.id === id);
     setForm((f) => ({
       ...f,
       inzinjerId: id,
-      odjelId: inz ? String(inz.odjelId) : f.odjelId,
+      odjelId: inz ? inz.odjelId : f.odjelId,
     }));
   }
 
@@ -61,12 +44,17 @@ export default function UnosPage() {
     e.preventDefault();
     setLoading(true);
     setMsg("");
-    const res = await fetch("/api/unosi", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    if (res.ok) {
+    try {
+      await createUnos({
+        datum: form.datum,
+        vrsta: form.vrsta,
+        inzinjerId: form.inzinjerId,
+        odjelId: form.odjelId,
+        brojStabala: form.brojStabala ? Number(form.brojStabala) : undefined,
+        hektari: form.hektari ? Number(form.hektari) : undefined,
+        kilometri: form.kilometri ? Number(form.kilometri) : undefined,
+        napomena: form.napomena || undefined,
+      });
       setMsg("Unos je sačuvan!");
       setForm({
         datum: today(),
@@ -79,21 +67,21 @@ export default function UnosPage() {
         napomena: "",
       });
       load();
-    } else {
+    } catch {
       setMsg("Greška pri unosu.");
     }
     setLoading(false);
     setTimeout(() => setMsg(""), 3000);
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: string) {
     if (!confirm("Obrisati unos?")) return;
-    await fetch(`/api/unosi/${id}`, { method: "DELETE" });
+    await deleteUnos(id);
     load();
   }
 
   const filteredInzinjeri = form.odjelId
-    ? inzinjeri.filter((i) => i.odjelId === parseInt(form.odjelId))
+    ? inzinjeri.filter((i) => i.odjelId === form.odjelId)
     : inzinjeri;
 
   return (
@@ -101,7 +89,6 @@ export default function UnosPage() {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Unos rada</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Forma */}
         <div className="lg:col-span-1">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl border p-5 space-y-4">
             <h2 className="font-semibold text-gray-700">Novi unos</h2>
@@ -169,49 +156,41 @@ export default function UnosPage() {
                 <option value="">Odaberi inžinjera...</option>
                 {filteredInzinjeri.map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.prezime} {i.ime} ({i.odjel.broj})
+                    {i.prezime} {i.ime} ({i.odjel?.broj})
                   </option>
                 ))}
               </select>
             </div>
 
             {form.vrsta === "DOZNAKA" ? (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Broj stabala
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      value={form.brojStabala}
-                      onChange={(e) => setForm({ ...form, brojStabala: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Hektari (ha)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      value={form.hektari}
-                      onChange={(e) => setForm({ ...form, hektari: e.target.value })}
-                      required
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Broj stabala</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={form.brojStabala}
+                    onChange={(e) => setForm({ ...form, brojStabala: e.target.value })}
+                    required
+                  />
                 </div>
-              </>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Hektari (ha)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    value={form.hektari}
+                    onChange={(e) => setForm({ ...form, hektari: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
             ) : (
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Kilometri vlaka (km)
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Kilometri vlaka (km)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -225,9 +204,7 @@ export default function UnosPage() {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Napomena (opciono)
-              </label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Napomena (opciono)</label>
               <textarea
                 className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
                 rows={2}
@@ -252,7 +229,6 @@ export default function UnosPage() {
           </form>
         </div>
 
-        {/* Lista unosa */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border overflow-hidden">
             <div className="px-5 py-3 border-b bg-gray-50">
@@ -284,9 +260,9 @@ export default function UnosPage() {
                         {new Date(u.datum).toLocaleDateString("bs-BA")}
                       </td>
                       <td className="px-4 py-2">
-                        {u.inzinjer.prezime} {u.inzinjer.ime}
+                        {u.inzinjer?.prezime} {u.inzinjer?.ime}
                       </td>
-                      <td className="px-4 py-2 text-gray-500 text-xs">{u.odjel.broj}</td>
+                      <td className="px-4 py-2 text-gray-500 text-xs">{u.odjel?.broj}</td>
                       <td className="px-4 py-2">
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${

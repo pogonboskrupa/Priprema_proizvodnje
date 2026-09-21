@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { getIzvjestaj } from "@/lib/db";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
 
 type OdjelRow = {
-  odjel: { id: number; naziv: string; broj: string; povrsina: number };
+  odjel: { id: unknown; naziv: string; broj: string; povrsina: number };
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
@@ -15,7 +16,7 @@ type OdjelRow = {
 };
 
 type InzinjerRow = {
-  inzinjer: { id: number; ime: string; prezime: string; odjel: { naziv: string; broj: string } };
+  inzinjer: { id: unknown; ime: string; prezime: string; odjel: { naziv: string; broj: string } };
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
@@ -38,13 +39,12 @@ export default function IzvjestajiPage() {
 
   async function load(p: Period = period, t: Tip = tip) {
     setLoading(true);
-    const res = await fetch(`/api/izvjestaji?period=${p}&tip=${t}`);
-    const json = await res.json();
-    setData(json);
+    const json = await getIzvjestaj(p, t);
+    setData(json as IzvjestajData);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive_deps
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handlePeriod(p: Period) {
     setPeriod(p);
@@ -63,7 +63,6 @@ export default function IzvjestajiPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Izvještaji</h1>
 
-      {/* Kontrole */}
       <div className="bg-white rounded-xl border p-4 mb-6 flex flex-wrap gap-4">
         <div>
           <span className="block text-xs text-gray-500 mb-1 font-medium">Period</span>
@@ -112,9 +111,7 @@ export default function IzvjestajiPage() {
         )}
       </div>
 
-      {loading && (
-        <div className="text-center py-16 text-gray-400">Učitavam...</div>
-      )}
+      {loading && <div className="text-center py-16 text-gray-400">Učitavam...</div>}
 
       {!loading && data?.tip === "odjel" && (
         <OdjelIzvjestaj rows={data.data as OdjelRow[]} />
@@ -128,15 +125,14 @@ export default function IzvjestajiPage() {
 }
 
 function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
-  const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0);
   const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoPovrsina = rows.reduce((s, r) => s + r.odjel.povrsina, 0);
+  const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0);
 
   return (
     <div className="space-y-4">
-      {/* Summary kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
         <StatCard label="Ukupna površina" value={`${ukupnoPovrsina.toFixed(2)} ha`} color="blue" />
@@ -163,8 +159,8 @@ function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr key={r.odjel.id} className="border-t hover:bg-gray-50">
+              {rows.map((r, idx) => (
+                <tr key={idx} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <span className="font-medium">{r.odjel.broj}</span>
                     <span className="text-gray-500 ml-2 text-xs">{r.odjel.naziv}</span>
@@ -231,9 +227,9 @@ function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r, idx) => (
                 <tr
-                  key={r.inzinjer.id}
+                  key={idx}
                   className={`border-t hover:bg-gray-50 ${r.brojUnosa === 0 ? "opacity-40" : ""}`}
                 >
                   <td className="px-4 py-3 font-medium">
@@ -247,12 +243,8 @@ function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
                   <td className="px-4 py-3 text-right font-semibold text-green-700">
                     {r.ukupnoHektara > 0 ? r.ukupnoHektara.toFixed(2) : "–"}
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    {r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}
-                  </td>
+                  <td className="px-4 py-3 text-right">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
+                  <td className="px-4 py-3 text-right">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
                   <td className="px-4 py-3 text-right text-gray-500">{r.brojUnosa}</td>
                 </tr>
               ))}

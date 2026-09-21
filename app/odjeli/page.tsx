@@ -1,23 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-
-type Odjel = {
-  id: number;
-  naziv: string;
-  broj: string;
-  povrsina: number;
-  _count: { inzinjeri: number; unosi: number };
-};
+import { getOdjeli, createOdjel, updateOdjel, deleteOdjel } from "@/lib/db";
+import type { Odjel } from "@/lib/types";
 
 export default function OdjeliPage() {
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [form, setForm] = useState({ naziv: "", broj: "", povrsina: "" });
-  const [editId, setEditId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    const res = await fetch("/api/odjeli");
-    setOdjeli(await res.json());
+    setOdjeli(await getOdjeli());
   }
 
   useEffect(() => { load(); }, []);
@@ -26,16 +19,16 @@ export default function OdjeliPage() {
     e.preventDefault();
     setLoading(true);
     if (editId) {
-      await fetch(`/api/odjeli/${editId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      await updateOdjel(editId, {
+        naziv: form.naziv,
+        broj: form.broj,
+        povrsina: parseFloat(form.povrsina),
       });
     } else {
-      await fetch("/api/odjeli", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      await createOdjel({
+        naziv: form.naziv,
+        broj: form.broj,
+        povrsina: parseFloat(form.povrsina),
       });
     }
     setForm({ naziv: "", broj: "", povrsina: "" });
@@ -49,9 +42,9 @@ export default function OdjeliPage() {
     setForm({ naziv: o.naziv, broj: o.broj, povrsina: String(o.povrsina) });
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: string) {
     if (!confirm("Obrisati odjel?")) return;
-    await fetch(`/api/odjeli/${id}`, { method: "DELETE" });
+    await deleteOdjel(id);
     load();
   }
 
@@ -140,8 +133,8 @@ export default function OdjeliPage() {
                 <td className="px-4 py-3 font-mono">{o.broj}</td>
                 <td className="px-4 py-3 font-medium">{o.naziv}</td>
                 <td className="px-4 py-3 text-right">{o.povrsina.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-gray-500">{o._count.inzinjeri}</td>
-                <td className="px-4 py-3 text-right text-gray-500">{o._count.unosi}</td>
+                <td className="px-4 py-3 text-right text-gray-500">{o._count?.inzinjeri ?? 0}</td>
+                <td className="px-4 py-3 text-right text-gray-500">{o._count?.unosi ?? 0}</td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={() => startEdit(o)}

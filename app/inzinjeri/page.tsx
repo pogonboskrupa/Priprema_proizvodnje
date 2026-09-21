@@ -1,23 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
-
-type Odjel = { id: number; naziv: string; broj: string };
-type Inzinjer = { id: number; ime: string; prezime: string; email: string | null; odjelId: number; odjel: Odjel };
+import { getInzinjeri, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer } from "@/lib/db";
+import type { Inzinjer, Odjel } from "@/lib/types";
 
 export default function InzinjeriPage() {
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [form, setForm] = useState({ ime: "", prezime: "", email: "", odjelId: "" });
-  const [editId, setEditId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function load() {
-    const [inzRes, odRes] = await Promise.all([
-      fetch("/api/inzinjeri"),
-      fetch("/api/odjeli"),
-    ]);
-    setInzinjeri(await inzRes.json());
-    setOdjeli(await odRes.json());
+    const [inz, od] = await Promise.all([getInzinjeri(), getOdjeli()]);
+    setInzinjeri(inz);
+    setOdjeli(od);
   }
 
   useEffect(() => { load(); }, []);
@@ -26,17 +22,9 @@ export default function InzinjeriPage() {
     e.preventDefault();
     setLoading(true);
     if (editId) {
-      await fetch(`/api/inzinjeri/${editId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      await updateInzinjer(editId, form);
     } else {
-      await fetch("/api/inzinjeri", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      await createInzinjer(form);
     }
     setForm({ ime: "", prezime: "", email: "", odjelId: "" });
     setEditId(null);
@@ -46,12 +34,12 @@ export default function InzinjeriPage() {
 
   function startEdit(i: Inzinjer) {
     setEditId(i.id);
-    setForm({ ime: i.ime, prezime: i.prezime, email: i.email || "", odjelId: String(i.odjelId) });
+    setForm({ ime: i.ime, prezime: i.prezime, email: i.email || "", odjelId: i.odjelId });
   }
 
-  async function handleDelete(id: number) {
+  async function handleDelete(id: string) {
     if (!confirm("Obrisati inžinjera?")) return;
-    await fetch(`/api/inzinjeri/${id}`, { method: "DELETE" });
+    await deleteInzinjer(id);
     load();
   }
 
@@ -150,7 +138,7 @@ export default function InzinjeriPage() {
                 <td className="px-4 py-3 text-gray-500">{i.email || "–"}</td>
                 <td className="px-4 py-3">
                   <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                    {i.odjel.broj} – {i.odjel.naziv}
+                    {i.odjel?.broj} – {i.odjel?.naziv}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
