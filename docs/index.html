@@ -1,4 +1,10 @@
 <title>Priprema Proizvodnje Bos.Krupa</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#26613e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PP BosKrupa">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0}
@@ -256,6 +262,14 @@ textarea{resize:none}
 .rc-fill-c{height:100%;border-radius:3px;background:#1a56db;transition:width .4s}
 .rc-fill-l{height:100%;border-radius:3px;background:var(--amber);transition:width .4s}
 .rc-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:36px;text-align:right}
+
+/* OFFLINE BANNER */
+.offline-bar{position:fixed;bottom:0;left:0;right:0;z-index:300;padding:9px 16px;font-size:13px;font-weight:500;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;transform:translateY(100%);transition:transform .3s ease}
+.offline-bar.show{transform:translateY(0)}
+.offline-bar.offline{background:#b92b20;color:#fff}
+.offline-bar.update{background:#26613e;color:#fff}
+.offline-bar button{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:3px 10px;font-size:12px;font-family:inherit;cursor:pointer}
+.offline-bar button:hover{background:rgba(255,255,255,.3)}
 
 /* TOAST */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--text);color:var(--bg);padding:8px 17px;border-radius:30px;font-size:13px;font-weight:500;z-index:200;pointer-events:none;transition:transform .22s ease;white-space:nowrap}
@@ -628,6 +642,7 @@ textarea{resize:none}
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="offline-bar" id="offline-bar"></div>
 
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -1484,6 +1499,64 @@ function printReal(){
   const rfMap={sve:'Svi odjeli',plan:'Plan',u_toku:'U toku',zavrseno:'Završeni'};
   setPrintHd('Plan Realizacije 2026',rfMap[curRF]||'Svi odjeli');
   window.print();
+}
+
+// ── SERVICE WORKER + OFFLINE ──────────────────────────────────────────────────
+let _swReg = null;
+
+function showBar(type, html){
+  const b = document.getElementById('offline-bar');
+  b.className = 'offline-bar show ' + type;
+  b.innerHTML = html;
+}
+function hideBar(){
+  document.getElementById('offline-bar').classList.remove('show');
+}
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      _swReg = reg;
+
+      // New SW waiting: offer update
+      if(reg.waiting) offerUpdate(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw.addEventListener('statechange', () => {
+          if(nw.state === 'installed' && navigator.serviceWorker.controller)
+            offerUpdate(nw);
+        });
+      });
+    }).catch(()=>{});
+
+    // Reload once the new SW takes control
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if(!refreshing){ refreshing = true; location.reload(); }
+    });
+  });
+}
+
+function offerUpdate(sw){
+  showBar('update',
+    '🔄 Nova verzija aplikacije je dostupna! ' +
+    '<button onclick="applyUpdate()">Ažuriraj</button>'
+  );
+  window._pendingSW = sw;
+}
+function applyUpdate(){
+  if(window._pendingSW){ window._pendingSW.postMessage('SKIP_WAITING'); }
+  hideBar();
+}
+
+// Online / offline status
+window.addEventListener('online',  () => { hideBar(); toast('🟢 Veza uspostavljena'); });
+window.addEventListener('offline', () => {
+  showBar('offline', '📵 Nema interneta — aplikacija radi offline, podaci su sačuvani lokalno');
+});
+// Check on load
+if(!navigator.onLine){
+  showBar('offline', '📵 Nema interneta — aplikacija radi offline, podaci su sačuvani lokalno');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
