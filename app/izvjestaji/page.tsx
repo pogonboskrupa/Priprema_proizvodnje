@@ -51,9 +51,14 @@ export default function IzvjestajiPage() {
 
   async function load(p: Period = period, t: Tip = tip) {
     setLoading(true);
-    const json = await getIzvjestaj(p, t);
-    setData(json as IzvjestajData);
-    setLoading(false);
+    try {
+      const json = await getIzvjestaj(p, t);
+      setData(json as IzvjestajData);
+    } catch {
+      // data ostaje kao prije — korisnik vidi prethodne podatke
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
