@@ -523,14 +523,14 @@ textarea{resize:none}
         <div class="card-hd" id="plan-form-hd">Dodaj odjel</div>
         <div class="plan-form">
           <div class="frow" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="fg"><label class="lbl">Broj odjela</label><input id="o-br" placeholder="004"></div>
-            <div class="fg"><label class="lbl">Gospodarska jedinica</label><input id="o-gj" placeholder="GJ Kruškovača"></div>
-            <div class="fg"><label class="lbl">Naziv odjela</label><input id="o-naz" placeholder="Naziv odjela"></div>
+            <div class="fg"><label class="lbl">Broj odjela</label><input id="o-br"></div>
+            <div class="fg"><label class="lbl">Gospodarska jedinica</label><input id="o-gj"></div>
+            <div class="fg"><label class="lbl">Naziv odjela</label><input id="o-naz"></div>
           </div>
           <div class="frow" style="grid-template-columns:1fr 1fr 1fr">
-            <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" placeholder="250.00" inputmode="decimal"></div>
-            <div class="fg"><label class="lbl">Plan m³ četinara</label><input id="o-pcet" type="number" step="1" placeholder="500" inputmode="numeric"></div>
-            <div class="fg"><label class="lbl">Plan m³ lišćara</label><input id="o-plis" type="number" step="1" placeholder="1200" inputmode="numeric"></div>
+            <div class="fg"><label class="lbl">Površina (ha)</label><input id="o-pov" type="number" step="0.01" inputmode="decimal"></div>
+            <div class="fg"><label class="lbl">Plan m³ četinara</label><input id="o-pcet" type="number" step="1" inputmode="numeric"></div>
+            <div class="fg"><label class="lbl">Plan m³ lišćara</label><input id="o-plis" type="number" step="1" inputmode="numeric"></div>
           </div>
           <div style="display:flex;gap:7px">
             <button class="btn btn-p" style="flex:1" onclick="saveOd()">Sačuvaj odjel</button>
@@ -609,12 +609,12 @@ textarea{resize:none}
       <div class="fg"><label class="lbl">Odjel</label><select id="m-od"><option value="">— bez odjela —</option></select></div>
       <div id="m-fd">
         <div class="frow">
-          <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="m-st" min="1" placeholder="120" inputmode="numeric"></div>
-          <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="m-ha" step="0.01" placeholder="15.50" inputmode="decimal"></div>
+          <div class="fg"><label class="lbl">Broj stabala</label><input type="number" id="m-st" min="1" inputmode="numeric"></div>
+          <div class="fg"><label class="lbl">Hektari (ha)</label><input type="number" id="m-ha" step="0.01" inputmode="decimal"></div>
         </div>
       </div>
       <div id="m-fv" hidden>
-        <div class="fg"><label class="lbl">Km vlaka</label><input type="number" id="m-km" step="0.01" placeholder="3.20" inputmode="decimal"></div>
+        <div class="fg"><label class="lbl">Km vlaka</label><input type="number" id="m-km" step="0.01" inputmode="decimal"></div>
       </div>
       <div class="fg"><label class="lbl">Napomena (opciono)</label><textarea id="m-nap" rows="2"></textarea></div>
     </div>
