@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
   initializeFirestore,
   getFirestore,
@@ -44,6 +45,15 @@ function initDb() {
 }
 
 export const db = initDb();
+
+// Tiha anonimna prijava — Firestore security rules zahtijevaju request.auth != null
+// Korisnik mora omogućiti Anonymous auth u Firebase Console > Authentication
+if (typeof window !== 'undefined') {
+  const auth = getAuth(getApps()[0] ?? initializeApp(firebaseConfig));
+  onAuthStateChanged(auth, (user) => {
+    if (!user) signInAnonymously(auth).catch(() => {});
+  });
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

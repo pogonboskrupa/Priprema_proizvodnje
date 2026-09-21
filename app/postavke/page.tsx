@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
 import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
@@ -17,6 +18,7 @@ export default function PostavkePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
+  const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -80,16 +82,28 @@ export default function PostavkePage() {
     toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
   }
 
-  async function resetPin(k: Korisnik) {
-    if (!confirm(`Resetovati PIN za ${k.ime} na 1234?`)) return;
-    await updateKorisnik(k.id, { pin: "1234" });
-    toast(`PIN za ${k.ime} resetovan na 1234 ✓`);
+  function resetPin(k: Korisnik) {
+    setConfirmState({
+      msg: `Resetovati PIN za ${k.ime} na 1234?`,
+      okLabel: "Resetuj",
+      okColor: "amber",
+      onOk: async () => {
+        setConfirmState(null);
+        await updateKorisnik(k.id, { pin: "1234" });
+        toast(`PIN za ${k.ime} resetovan na 1234 ✓`);
+      },
+    });
   }
 
-  async function handleDelete(k: Korisnik) {
-    if (!confirm(`Obrisati korisnika ${k.ime}?`)) return;
-    await deleteKorisnik(k.id);
-    loadKorisnici();
+  function handleDelete(k: Korisnik) {
+    setConfirmState({
+      msg: `Obrisati korisnika ${k.ime}? Ova akcija je nepovratna.`,
+      onOk: async () => {
+        setConfirmState(null);
+        await deleteKorisnik(k.id);
+        loadKorisnici();
+      },
+    });
   }
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
@@ -267,6 +281,16 @@ export default function PostavkePage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {confirmState && (
+        <ConfirmModal
+          msg={confirmState.msg}
+          okLabel={confirmState.okLabel}
+          okColor={confirmState.okColor}
+          onOk={confirmState.onOk}
+          onCancel={() => setConfirmState(null)}
+        />
       )}
     </div>
   );

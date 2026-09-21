@@ -4,8 +4,23 @@ import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos } from "@/lib
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { exportXlsx } from "@/lib/export";
 
 const today = () => new Date().toISOString().split("T")[0];
+const currentMonth = () => new Date().toISOString().slice(0, 7);
+
+function getMonthOptions() {
+  const opts: { val: string; label: string }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 13; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleString("bs-BA", { month: "long", year: "numeric" });
+    opts.push({ val, label });
+  }
+  return opts;
+}
 
 export default function UnosPage() {
   const { session, loading: authLoading } = useAuth();
@@ -13,6 +28,8 @@ export default function UnosPage() {
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
+  const [filterMjesec, setFilterMjesec] = useState(currentMonth);
+  const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
   const [form, setForm] = useState({
     datum: today(),
     vrsta: "DOZNAKA" as VrstaRada,
@@ -84,10 +101,33 @@ export default function UnosPage() {
     setTimeout(() => setMsg(""), 3000);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Obrisati unos?")) return;
-    await deleteUnos(id);
-    load();
+  function handleDelete(id: string) {
+    setConfirmState({
+      msg: "Obrisati ovaj unos?",
+      onOk: async () => {
+        setConfirmState(null);
+        await deleteUnos(id);
+        load();
+      },
+    });
+  }
+
+  const filteredUnosi = filterMjesec
+    ? unosi.filter((u) => u.datum.slice(0, 7) === filterMjesec)
+    : unosi;
+
+  function handleExport() {
+    const rows = filteredUnosi.map((u) => ({
+      Datum: new Date(u.datum).toLocaleDateString("bs-BA"),
+      Inžinjer: `${u.inzinjer?.prezime ?? ""} ${u.inzinjer?.ime ?? ""}`.trim(),
+      Odjel: u.odjel?.broj ?? "",
+      Vrsta: u.vrsta,
+      "Hektari (ha)": u.hektari ?? "",
+      Stabala: u.brojStabala ?? "",
+      "Vlake (km)": u.kilometri ?? "",
+      Napomena: u.napomena ?? "",
+    }));
+    exportXlsx(rows, `unosi-${filterMjesec}`);
   }
 
   const filteredInzinjeri = form.odjelId
@@ -251,8 +291,24 @@ export default function UnosPage() {
 
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50">
-              <h2 className="font-semibold text-gray-700">Posljednji unosi</h2>
+            <div className="px-5 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-3">
+              <h2 className="font-semibold text-gray-700 mr-auto">Unosi</h2>
+              <select
+                className="border rounded-lg px-2 py-1.5 text-xs"
+                value={filterMjesec}
+                onChange={(e) => setFilterMjesec(e.target.value)}
+              >
+                {getMonthOptions().map((o) => (
+                  <option key={o.val} value={o.val}>{o.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleExport}
+                disabled={filteredUnosi.length === 0}
+                className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800 disabled:opacity-40"
+              >
+                Export XLSX
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -267,14 +323,14 @@ export default function UnosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {unosi.length === 0 && (
+                  {filteredUnosi.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center py-10 text-gray-500">
-                        Nema unosa. Dodajte prvi unos.
+                        {unosi.length === 0 ? "Nema unosa. Dodajte prvi unos." : "Nema unosa za odabrani mjesec."}
                       </td>
                     </tr>
                   )}
-                  {unosi.map((u) => (
+                  {filteredUnosi.map((u) => (
                     <tr key={u.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-2 font-mono text-xs">
                         {new Date(u.datum).toLocaleDateString("bs-BA")}
@@ -318,6 +374,14 @@ export default function UnosPage() {
           </div>
         </div>
       </div>
+
+      {confirmState && (
+        <ConfirmModal
+          msg={confirmState.msg}
+          onOk={confirmState.onOk}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </div>
   );
 }

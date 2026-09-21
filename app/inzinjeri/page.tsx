@@ -4,6 +4,7 @@ import { getInzinjeri, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Inzinjer, Odjel } from "@/lib/types";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function InzinjeriPage() {
   const { session, loading: authLoading } = useAuth();
@@ -13,6 +14,7 @@ export default function InzinjeriPage() {
   const [form, setForm] = useState({ ime: "", prezime: "", email: "", odjelId: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -48,10 +50,15 @@ export default function InzinjeriPage() {
     setForm({ ime: i.ime, prezime: i.prezime, email: i.email || "", odjelId: i.odjelId });
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Obrisati inžinjera?")) return;
-    await deleteInzinjer(id);
-    load();
+  function handleDelete(id: string) {
+    setConfirmState({
+      msg: "Obrisati ovog inžinjera? Ova akcija je nepovratna.",
+      onOk: async () => {
+        setConfirmState(null);
+        await deleteInzinjer(id);
+        load();
+      },
+    });
   }
 
   return (
@@ -161,6 +168,14 @@ export default function InzinjeriPage() {
           </tbody>
         </table>
       </div>
+
+      {confirmState && (
+        <ConfirmModal
+          msg={confirmState.msg}
+          onOk={confirmState.onOk}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </div>
   );
 }

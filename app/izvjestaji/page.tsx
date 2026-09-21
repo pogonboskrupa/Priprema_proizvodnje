@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getIzvjestaj } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { exportXlsx } from "@/lib/export";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
@@ -22,6 +23,9 @@ type InzinjerRow = {
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
+  danaGodisnji: number;
+  danaKancelarija: number;
+  danaBolovanje: number;
   brojUnosa: number;
 };
 
@@ -124,22 +128,36 @@ export default function IzvjestajiPage() {
       {loading && <div className="text-center py-16 text-gray-500">Učitavam...</div>}
 
       {!loading && data?.tip === "odjel" && (
-        <OdjelIzvjestaj rows={data.data as OdjelRow[]} />
+        <OdjelIzvjestaj rows={data.data as OdjelRow[]} period={data.period} />
       )}
 
       {!loading && data?.tip === "inzinjer" && (
-        <InzinjerIzvjestaj rows={data.data as InzinjerRow[]} />
+        <InzinjerIzvjestaj rows={data.data as InzinjerRow[]} period={data.period} />
       )}
     </div>
   );
 }
 
-function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
+function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) {
   const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoPovrsina = rows.reduce((s, r) => s + r.odjel.povrsina, 0);
   const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0);
+
+  function handleExport() {
+    const data = rows.map((r) => ({
+      Odjel: r.odjel.broj,
+      Naziv: r.odjel.naziv,
+      "Površina (ha)": r.odjel.povrsina,
+      "Obrađeno (ha)": r.ukupnoHektara,
+      "Preostalo (ha)": r.preostalo,
+      Stabala: r.ukupnoStabala,
+      "Vlake (km)": r.ukupnoKm,
+      "Napredak (%)": r.postotak,
+    }));
+    exportXlsx(data, `izvjestaj-odjeli-${period}`);
+  }
 
   return (
     <div className="space-y-4">
@@ -151,9 +169,14 @@ function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between">
+        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">Pregled po odjelima</h2>
-          <span className="text-xs text-gray-500">{aktivni.length} odjela sa aktivnošću</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">{aktivni.length} odjela sa aktivnošću</span>
+            <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
+              Export XLSX
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -205,24 +228,46 @@ function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
   );
 }
 
-function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
+function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Period }) {
   const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0 || r.ukupnoStabala > 0);
   const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
+  const ukupnoOdsustvo = rows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaKancelarija ?? 0) + (r.danaBolovanje ?? 0), 0);
+
+  function handleExport() {
+    const data = rows.map((r) => ({
+      Inžinjer: `${r.inzinjer.prezime} ${r.inzinjer.ime}`,
+      Odjel: r.inzinjer.odjel.broj,
+      "Hektara (ha)": r.ukupnoHektara,
+      Stabala: r.ukupnoStabala,
+      "Vlake (km)": r.ukupnoKm,
+      "God. odmor": r.danaGodisnji ?? 0,
+      Kancelarija: r.danaKancelarija ?? 0,
+      Bolovanje: r.danaBolovanje ?? 0,
+      "Ukupno unosa": r.brojUnosa,
+    }));
+    exportXlsx(data, `izvjestaj-inzinjeri-${period}`);
+  }
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
         <StatCard label="Doznačenih stabala" value={ukupnoSt.toString()} color="emerald" />
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
+        <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between">
+        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">Pregled po inžinjerima</h2>
-          <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
+            <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
+              Export XLSX
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -233,6 +278,9 @@ function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Hektara (ha)</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Stabala</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Vlake (km)</th>
+                <th className="px-4 py-3 text-gray-600 font-medium text-right">God.</th>
+                <th className="px-4 py-3 text-gray-600 font-medium text-right">Kanc.</th>
+                <th className="px-4 py-3 text-gray-600 font-medium text-right">Bol.</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Unosa</th>
               </tr>
             </thead>
@@ -255,6 +303,9 @@ function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
                   </td>
                   <td className="px-4 py-3 text-right">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
                   <td className="px-4 py-3 text-right">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-sky-600">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
+                  <td className="px-4 py-3 text-right text-violet-600">{(r.danaKancelarija ?? 0) > 0 ? r.danaKancelarija : "–"}</td>
+                  <td className="px-4 py-3 text-right text-red-500">{(r.danaBolovanje ?? 0) > 0 ? r.danaBolovanje : "–"}</td>
                   <td className="px-4 py-3 text-right text-gray-500">{r.brojUnosa}</td>
                 </tr>
               ))}

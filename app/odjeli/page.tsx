@@ -4,6 +4,7 @@ import { getOdjeli, createOdjel, updateOdjel, deleteOdjel } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
+import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function OdjeliPage() {
   const { session, loading: authLoading } = useAuth();
@@ -12,6 +13,7 @@ export default function OdjeliPage() {
   const [form, setForm] = useState({ naziv: "", broj: "", povrsina: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -53,10 +55,15 @@ export default function OdjeliPage() {
     setForm({ naziv: o.naziv, broj: o.broj, povrsina: String(o.povrsina) });
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Obrisati odjel?")) return;
-    await deleteOdjel(id);
-    load();
+  function handleDelete(id: string) {
+    setConfirmState({
+      msg: "Obrisati ovaj odjel? Ova akcija je nepovratna.",
+      onOk: async () => {
+        setConfirmState(null);
+        await deleteOdjel(id);
+        load();
+      },
+    });
   }
 
   return (
@@ -165,6 +172,14 @@ export default function OdjeliPage() {
           </tbody>
         </table>
       </div>
+
+      {confirmState && (
+        <ConfirmModal
+          msg={confirmState.msg}
+          onOk={confirmState.onOk}
+          onCancel={() => setConfirmState(null)}
+        />
+      )}
     </div>
   );
 }
