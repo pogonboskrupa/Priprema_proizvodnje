@@ -623,7 +623,21 @@ textarea{resize:none}
       </div>
       <div id="sec-users" hidden style="margin-top:14px">
         <div class="card">
-          <div class="card-hd">Korisnici <span class="sub">— reset PIN-a</span></div>
+          <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Korisnici <span class="sub">— upravljanje radnicima</span></span>
+            <button class="btn btn-p" style="font-size:12px;padding:5px 11px" onclick="toggleAddUser()">+ Novi radnik</button>
+          </div>
+          <div id="add-user-form" hidden style="padding:14px 14px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+            <div class="frow">
+              <div class="fg"><label class="lbl">Korisničko ime (za prijavu)</label><input type="text" id="au-name" maxlength="30" autocomplete="off"></div>
+              <div class="fg"><label class="lbl">Puno ime i prezime</label><input type="text" id="au-fullname" maxlength="60" autocomplete="off"></div>
+            </div>
+            <div class="fg"><label class="lbl">Radno mjesto / titula</label><input type="text" id="au-title" maxlength="60" autocomplete="off"></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-p" style="flex:1" onclick="addUser()">Dodaj radnika (PIN: 1234)</button>
+              <button class="btn btn-o" onclick="toggleAddUser()">Odustani</button>
+            </div>
+          </div>
           <div class="users-list" id="users-list"></div>
         </div>
       </div>
@@ -1710,6 +1724,35 @@ function resetPin(id){
   const def=u.role==='admin'?'0000':'1234';
   if(!confirm(`Resetovati PIN za ${u.name} na ${def}?`))return;
   u.pin=def; lsave(); toast(`PIN za ${u.name} resetovan na ${def} ✓`);
+}
+
+function toggleAddUser(){
+  const f=document.getElementById('add-user-form');
+  f.hidden=!f.hidden;
+  if(!f.hidden){
+    document.getElementById('au-name').value='';
+    document.getElementById('au-fullname').value='';
+    document.getElementById('au-title').value='';
+    setTimeout(()=>document.getElementById('au-name').focus(),50);
+  }
+}
+
+function addUser(){
+  const name=document.getElementById('au-name').value.trim();
+  const fullName=document.getElementById('au-fullname').value.trim();
+  const title=document.getElementById('au-title').value.trim();
+  if(!name){toast('Upiši korisničko ime!');return;}
+  if(db.users.some(u=>u.name.toUpperCase()===name.toUpperCase())){toast('Korisnik s tim imenom već postoji!');return;}
+  const newU={id:uid(),name:name.toUpperCase(),fullName:fullName||name,title,pin:'1234',role:'worker',avatar:'',odjeliIds:[]};
+  db.users.push(newU);
+  lsave();
+  renderLgUsers();
+  const workers=db.users.filter(u=>u.role==='worker');
+  document.getElementById('sh-wdd').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  document.getElementById('m-wsel').innerHTML=workers.map(w=>`<option value="${w.id}">${w.name}</option>`).join('');
+  renderUsers();
+  document.getElementById('add-user-form').hidden=true;
+  toast(`Radnik ${newU.name} dodan — defaultni PIN: 1234 ✓`);
 }
 
 // ── PRINT ────────────────────────────────────────────────────────────────────
