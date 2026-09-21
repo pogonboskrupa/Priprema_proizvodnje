@@ -138,7 +138,7 @@ export default function InzinjeriPage() {
           <tbody>
             {inzinjeri.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-400">
+                <td colSpan={4} className="text-center py-8 text-gray-500">
                   Nema inžinjera. Dodajte prvog inžinjera.
                 </td>
               </tr>

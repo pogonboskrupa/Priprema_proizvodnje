@@ -113,7 +113,7 @@ export default function PostavkePage() {
           <div>
             <div className="text-xs text-gray-500 mb-1">Prijavljeni kao</div>
             <div className="font-bold text-gray-800 text-lg">{session.ime}</div>
-            <div className="text-xs text-gray-400 uppercase tracking-wide">{session.role}</div>
+            <div className="text-xs text-gray-600 uppercase tracking-wide">{session.role}</div>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Puno ime i prezime</label>

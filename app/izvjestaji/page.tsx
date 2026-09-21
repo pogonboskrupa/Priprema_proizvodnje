@@ -114,14 +114,14 @@ export default function IzvjestajiPage() {
 
         {data && (
           <div className="ml-auto flex items-end">
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-500">
               Period: {formatDate(data.od)} – {data.do_ ? formatDate(data.do_) : ""}
             </span>
           </div>
         )}
       </div>
 
-      {loading && <div className="text-center py-16 text-gray-400">Učitavam...</div>}
+      {loading && <div className="text-center py-16 text-gray-500">Učitavam...</div>}
 
       {!loading && data?.tip === "odjel" && (
         <OdjelIzvjestaj rows={data.data as OdjelRow[]} />
@@ -153,7 +153,7 @@ function OdjelIzvjestaj({ rows }: { rows: OdjelRow[] }) {
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between">
           <h2 className="font-semibold text-gray-700">Pregled po odjelima</h2>
-          <span className="text-xs text-gray-400">{aktivni.length} odjela sa aktivnošću</span>
+          <span className="text-xs text-gray-500">{aktivni.length} odjela sa aktivnošću</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -222,7 +222,7 @@ function InzinjerIzvjestaj({ rows }: { rows: InzinjerRow[] }) {
       <div className="bg-white rounded-xl border overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between">
           <h2 className="font-semibold text-gray-700">Pregled po inžinjerima</h2>
-          <span className="text-xs text-gray-400">{aktivni.length} inžinjera sa aktivnošću</span>
+          <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -283,7 +283,7 @@ function StatCard({
   };
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>
-      <div className="text-xs font-medium opacity-70 mb-1">{label}</div>
+      <div className="text-xs font-medium opacity-80 mb-1">{label}</div>
       <div className="text-2xl font-bold">{value}</div>
     </div>
   );

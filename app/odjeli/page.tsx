@@ -134,7 +134,7 @@ export default function OdjeliPage() {
           <tbody>
             {odjeli.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center py-8 text-gray-400">
+                <td colSpan={6} className="text-center py-8 text-gray-500">
                   Nema odjela. Dodajte prvi odjel.
                 </td>
               </tr>

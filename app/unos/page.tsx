@@ -259,7 +259,7 @@ export default function UnosPage() {
                 <tbody>
                   {unosi.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-gray-400">
+                      <td colSpan={6} className="text-center py-10 text-gray-500">
                         Nema unosa. Dodajte prvi unos.
                       </td>
                     </tr>
@@ -299,7 +299,7 @@ export default function UnosPage() {
                       <td className="px-4 py-2">
                         <button
                           onClick={() => handleDelete(u.id)}
-                          className="text-red-400 hover:text-red-600 text-xs"
+                          className="text-red-500 hover:text-red-700 text-xs"
                         >
                           Obriši
                         </button>
