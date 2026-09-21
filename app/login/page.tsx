@@ -1,25 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getKorisnici } from "@/lib/db";
+import { getKorisnikByIme } from "@/lib/db";
 import { saveSession, getSession } from "@/lib/auth";
-import type { Korisnik } from "@/lib/types";
 import { VERSION } from "@/lib/version";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [ime, setIme] = useState("");
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [loading, setLoading] = useState(true);
   const imeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const ses = getSession();
-    if (ses) { router.replace("/"); return; }
-    getKorisnici().then((k) => { setKorisnici(k); setLoading(false); });
+    if (ses) router.replace("/");
   }, []);
 
   function addDigit(d: string) {
@@ -32,17 +29,15 @@ export default function LoginPage() {
 
   function delDigit() { setPin((p) => p.slice(0, -1)); setErr(""); }
 
-  function doLogin(p: string = pin) {
+  async function doLogin(p: string = pin) {
     const nameTrimmed = ime.trim().toUpperCase();
     if (!nameTrimmed) { setErr("Unesi korisničko ime!"); setPin(""); return; }
-    const found = korisnici.find((x) => x.ime === nameTrimmed);
-    if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
     if (p.length < 4) { setErr("Unesi 4-cifreni PIN!"); return; }
-    if (p !== found.pin) {
-      setErr("Pogrešan PIN!");
-      setPin("");
-      return;
-    }
+    setSubmitting(true);
+    const found = await getKorisnikByIme(nameTrimmed);
+    setSubmitting(false);
+    if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
+    if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
     saveSession(
       { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, avatar: found.avatar },
       remember
@@ -50,15 +45,7 @@ export default function LoginPage() {
     router.replace("/");
   }
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#5e7a68", fontSize: 14 }}>Učitavam...</div>
-      </div>
-    );
-  }
-
-  const dots = Array.from({ length: 4 }, (_, i) => pin.length > i);
+  const dots = Array.from({ length: 4 }, (_, i) => submitting ? true : pin.length > i);
 
   return (
     <div style={{
@@ -106,8 +93,8 @@ export default function LoginPage() {
           {dots.map((on, i) => (
             <span key={i} style={{
               width: 14, height: 14, borderRadius: "50%",
-              border: `2px solid ${err ? "#b92b20" : on ? "#26613e" : "#ccd8d0"}`,
-              background: on ? (err ? "#b92b20" : "#26613e") : "transparent",
+              border: `2px solid ${err ? "#b92b20" : submitting ? "#9ab0a2" : on ? "#26613e" : "#ccd8d0"}`,
+              background: on ? (err ? "#b92b20" : submitting ? "#9ab0a2" : "#26613e") : "transparent",
               transition: "all .13s",
               display: "inline-block"
             }} />
@@ -121,13 +108,13 @@ export default function LoginPage() {
         {/* Numerička tipkovnica */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 7 }}>
           {["1","2","3","4","5","6","7","8","9"].map((d) => (
-            <button key={d} onClick={() => addDigit(d)} style={btnStyle}>
+            <button key={d} onClick={() => addDigit(d)} disabled={submitting} style={btnStyle}>
               {d}
             </button>
           ))}
           <button style={{ ...btnStyle, opacity: 0.3, cursor: "default" }} disabled />
-          <button onClick={() => addDigit("0")} style={btnStyle}>0</button>
-          <button onClick={delDigit} style={{ ...btnStyle, fontSize: 15, color: "#4a6657" }}>⌫</button>
+          <button onClick={() => addDigit("0")} disabled={submitting} style={btnStyle}>0</button>
+          <button onClick={delDigit} disabled={submitting} style={{ ...btnStyle, fontSize: 15, color: "#4a6657" }}>⌫</button>
         </div>
 
         {/* Zapamti me */}
