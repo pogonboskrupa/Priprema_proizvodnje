@@ -81,7 +81,7 @@ export default function RealizacijaPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-bold text-gray-800">{o.broj}</div>
-                  <div className="text-xs text-gray-500">{o.naziv}</div>
+                  <div className="text-xs text-gray-500">{o.gj}</div>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   st === "zavrseno" ? "bg-green-100 text-green-700" :

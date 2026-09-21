@@ -95,7 +95,7 @@ export default function PlanPage() {
             <thead className="border-b bg-gray-50">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-600 font-medium">Br.</th>
-                <th className="text-left px-4 py-3 text-gray-600 font-medium">Naziv</th>
+                <th className="text-left px-4 py-3 text-gray-600 font-medium">GJ</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Ha</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Plan m³ čet.</th>
                 <th className="text-right px-4 py-3 text-gray-600 font-medium">Plan m³ liš.</th>
@@ -118,7 +118,7 @@ export default function PlanPage() {
                 return (
                   <tr key={o.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono font-semibold">{o.broj}</td>
-                    <td className="px-4 py-3 text-gray-700">{o.naziv}</td>
+                    <td className="px-4 py-3 text-gray-700">{o.gj}</td>
                     <td className="px-4 py-3 text-right text-gray-500">{o.povrsina?.toFixed(2)}</td>
 
                     {isEditing ? (

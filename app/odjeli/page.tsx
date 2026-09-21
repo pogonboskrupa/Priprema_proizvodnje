@@ -10,7 +10,7 @@ export default function OdjeliPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
-  const [form, setForm] = useState({ naziv: "", broj: "", povrsina: "" });
+  const [form, setForm] = useState({ gj: "", broj: "", povrsina: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
@@ -34,18 +34,18 @@ export default function OdjeliPage() {
     try {
       if (editId) {
         await updateOdjel(editId, {
-          naziv: form.naziv,
+          gj: form.gj,
           broj: form.broj,
           povrsina: parseFloat(form.povrsina),
         });
       } else {
         await createOdjel({
-          naziv: form.naziv,
+          gj: form.gj,
           broj: form.broj,
           povrsina: parseFloat(form.povrsina),
         });
       }
-      setForm({ naziv: "", broj: "", povrsina: "" });
+      setForm({ gj: "", broj: "", povrsina: "" });
       setEditId(null);
     } catch {
       // forma ostaje popunjena da korisnik može ponoviti
@@ -57,7 +57,7 @@ export default function OdjeliPage() {
 
   function startEdit(o: Odjel) {
     setEditId(o.id);
-    setForm({ naziv: o.naziv, broj: o.broj, povrsina: String(o.povrsina) });
+    setForm({ gj: o.gj, broj: o.broj, povrsina: String(o.povrsina) });
   }
 
   function handleDelete(id: string) {
@@ -80,12 +80,12 @@ export default function OdjeliPage() {
         className="bg-white rounded-xl border p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3"
       >
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Naziv odjela</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Gospodarska jedinica</label>
           <input
             className="w-full border rounded-lg px-3 py-2 text-sm"
-            placeholder="npr. Šumski odjel 1"
-            value={form.naziv}
-            onChange={(e) => setForm({ ...form, naziv: e.target.value })}
+            placeholder="npr. Jasikovac"
+            value={form.gj}
+            onChange={(e) => setForm({ ...form, gj: e.target.value })}
             required
           />
         </div>
@@ -122,7 +122,7 @@ export default function OdjeliPage() {
           {editId && (
             <button
               type="button"
-              onClick={() => { setEditId(null); setForm({ naziv: "", broj: "", povrsina: "" }); }}
+              onClick={() => { setEditId(null); setForm({ gj: "", broj: "", povrsina: "" }); }}
               className="border px-4 py-2 rounded-lg text-sm"
             >
               Odustani
@@ -135,8 +135,8 @@ export default function OdjeliPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">Broj</th>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">Naziv</th>
+              <th className="text-left px-4 py-3 text-gray-600 font-medium">GJ</th>
+              <th className="text-left px-4 py-3 text-gray-600 font-medium">Odjel br.</th>
               <th className="text-right px-4 py-3 text-gray-600 font-medium">Površina (ha)</th>
               <th className="text-right px-4 py-3 text-gray-600 font-medium">Inžinjeri</th>
               <th className="text-right px-4 py-3 text-gray-600 font-medium">Unosi</th>
@@ -153,8 +153,8 @@ export default function OdjeliPage() {
             )}
             {odjeli.map((o) => (
               <tr key={o.id} className="border-t hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium">{o.gj}</td>
                 <td className="px-4 py-3 font-mono">{o.broj}</td>
-                <td className="px-4 py-3 font-medium">{o.naziv}</td>
                 <td className="px-4 py-3 text-right">{o.povrsina.toFixed(2)}</td>
                 <td className="px-4 py-3 text-right text-gray-500">{o._count?.inzinjeri ?? 0}</td>
                 <td className="px-4 py-3 text-right text-gray-500">{o._count?.unosi ?? 0}</td>

@@ -112,7 +112,7 @@ export default function InzinjeriPage() {
             <option value="">Odaberi odjel...</option>
             {odjeli.map((o) => (
               <option key={o.id} value={o.id}>
-                {o.broj} – {o.naziv}
+                {o.gj} / {o.broj}
               </option>
             ))}
           </select>
@@ -161,7 +161,7 @@ export default function InzinjeriPage() {
                 <td className="px-4 py-3 text-gray-500">{i.email || "–"}</td>
                 <td className="px-4 py-3">
                   <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
-                    {i.odjel?.broj} – {i.odjel?.naziv}
+                    {i.odjel?.gj} / {i.odjel?.broj}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">

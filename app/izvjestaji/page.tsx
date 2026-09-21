@@ -9,7 +9,7 @@ type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
 
 type OdjelRow = {
-  odjel: { id: unknown; naziv: string; broj: string; povrsina: number };
+  odjel: { id: unknown; gj: string; broj: string; povrsina: number };
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
@@ -19,7 +19,7 @@ type OdjelRow = {
 };
 
 type InzinjerRow = {
-  inzinjer: { id: unknown; ime: string; prezime: string; odjel: { naziv: string; broj: string } };
+  inzinjer: { id: unknown; ime: string; prezime: string; odjel: { gj: string; broj: string } };
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
@@ -153,7 +153,7 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
   function handleExport() {
     const data = rows.map((r) => ({
       Odjel: r.odjel.broj,
-      Naziv: r.odjel.naziv,
+      GJ: r.odjel.gj,
       "Površina (ha)": r.odjel.povrsina,
       "Obrađeno (ha)": r.ukupnoHektara,
       "Preostalo (ha)": r.preostalo,
@@ -201,7 +201,7 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
                 <tr key={idx} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <span className="font-medium">{r.odjel.broj}</span>
-                    <span className="text-gray-500 ml-2 text-xs">{r.odjel.naziv}</span>
+                    <span className="text-gray-500 ml-2 text-xs">{r.odjel.gj}</span>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-500">{r.odjel.povrsina.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700">

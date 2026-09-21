@@ -18,7 +18,7 @@ export interface Korisnik {
 
 export interface Odjel {
   id: string;
-  naziv: string;
+  gj: string;   // gospodarska jedinica
   broj: string;
   povrsina: number;
   plan_cet: number;   // plan m³ četinara

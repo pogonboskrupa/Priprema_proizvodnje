@@ -196,7 +196,7 @@ export default function UnosPage() {
                 <option value="">Svi odjeli</option>
                 {odjeli.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.broj} – {o.naziv}
+                    {o.gj} / {o.broj}
                   </option>
                 ))}
               </select>

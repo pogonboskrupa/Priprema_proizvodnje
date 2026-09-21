@@ -63,7 +63,7 @@ export async function getOdjeli(): Promise<Odjel[]> {
 }
 
 export async function createOdjel(data: {
-  naziv: string;
+  gj: string;
   broj: string;
   povrsina: number;
 }): Promise<Odjel> {
@@ -73,7 +73,7 @@ export async function createOdjel(data: {
 
 export async function updateOdjel(
   id: string,
-  data: { naziv?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number }
+  data: { gj?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number }
 ): Promise<Odjel> {
   const raw = await update('odjeli', id, data as Record<string, unknown>);
   return raw as unknown as Odjel;
@@ -278,7 +278,7 @@ export async function getIzvjestaj(
         const preostalo = povrsina - g.ha;
         const postotak = povrsina > 0 ? Math.round((g.ha / povrsina) * 100) : 0;
         return {
-          odjel: { id: o.id, naziv: o.naziv, broj: o.broj, povrsina },
+          odjel: { id: o.id, gj: o.gj, broj: o.broj, povrsina },
           ukupnoHektara: g.ha,
           ukupnoStabala: g.stabala,
           ukupnoKm: g.km,
@@ -310,13 +310,13 @@ export async function getIzvjestaj(
       )
       .map((i) => {
         const g = grouped[i.id as string] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0 };
-        const odjel = odMap[i.odjelId as string] || { naziv: '–', broj: '–' };
+        const odjel = odMap[i.odjelId as string] || { gj: '–', broj: '–' };
         return {
           inzinjer: {
             id: i.id,
             ime: i.ime,
             prezime: i.prezime,
-            odjel: { naziv: odjel.naziv, broj: odjel.broj },
+            odjel: { gj: odjel.gj, broj: odjel.broj },
           },
           ukupnoHektara: g.ha,
           ukupnoStabala: g.stabala,
