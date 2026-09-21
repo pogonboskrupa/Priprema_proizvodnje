@@ -273,6 +273,22 @@ Svaki tab koji ima print dugme ima svoju `print*()` funkciju.
 
 ---
 
+## Verzioniranje
+
+Konstanta `VERSION` u `docs/index.html` (vrh `<script>` bloka).
+Prikaz: login ekran (`#lg-ver`) i Postavke tab (`#app-ver-badge`).
+Detalji: vidi `CHANGELOG.md`.
+
+| Tip promjene | Šta inkrementovati | Primjer |
+|--------------|--------------------|---------|
+| Bugfix, sitna UI promjena, novo polje | PATCH | 1.0.0 → 1.0.1 |
+| Nova funkcionalna cjelina, promjena sheme | MINOR | 1.0.9 → 1.1.0 |
+| Promjena arhitekture ili platforme | MAJOR | 1.x.x → 2.0.0 |
+
+Patch: 1.0.0 → 1.0.1 → ... → 1.0.9 → **1.1.0** (minor reset patch na 0).
+
+---
+
 ## Opće konvencije
 
 - **Sve u jednom fajlu.** Nema modula, nema bundlera. JS funkcije su globalne.

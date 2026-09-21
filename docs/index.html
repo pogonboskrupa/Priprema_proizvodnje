@@ -58,6 +58,10 @@ body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Inter',
 .pdbtn.ok:hover{background:var(--acc-h)}
 .lg-rem{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
 .lg-rem input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.lg-ver{text-align:center;margin-top:14px;font-size:11px;color:var(--border);letter-spacing:.04em}
+.app-info{margin-top:20px;padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.app-info-name{font-size:12px;font-weight:600;color:var(--muted)}
+.app-info-ver{font-size:11px;font-family:'DM Mono',monospace;color:var(--border);letter-spacing:.06em;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 8px}
 
 /* HEADER */
 .hdr{position:sticky;top:env(safe-area-inset-top,0);background:linear-gradient(160deg,var(--acc-h) 0%,var(--accent) 100%);color:#fff;z-index:50;padding:0 14px;display:flex;align-items:stretch;gap:0;box-shadow:0 2px 12px rgba(0,0,0,.28)}
@@ -415,6 +419,7 @@ textarea{resize:none}
     <label class="lg-rem">
       <input type="checkbox" id="lg-rem"> Zapamti me
     </label>
+    <div class="lg-ver" id="lg-ver"></div>
   </div>
 </div>
 
@@ -627,6 +632,7 @@ textarea{resize:none}
             <span>Korisnici <span class="sub">— upravljanje radnicima</span></span>
             <button class="btn btn-p" style="font-size:12px;padding:5px 11px" onclick="toggleAddUser()">+ Novi radnik</button>
           </div>
+
           <div id="add-user-form" hidden style="padding:14px 14px 10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
             <div class="frow">
               <div class="fg"><label class="lbl">Korisničko ime (za prijavu)</label><input type="text" id="au-name" maxlength="30" autocomplete="off"></div>
@@ -640,6 +646,10 @@ textarea{resize:none}
           </div>
           <div class="users-list" id="users-list"></div>
         </div>
+      </div>
+      <div class="app-info">
+        <span class="app-info-name">🌲 Priprema Proizvodnje Bos. Krupa</span>
+        <span class="app-info-ver" id="app-ver-badge"></span>
       </div>
     </div>
 
@@ -717,6 +727,9 @@ textarea{resize:none}
 <div class="offline-bar" id="offline-bar"></div>
 
 <script>
+// ── VERSION ───────────────────────────────────────────────────────────────────
+const VERSION='1.0.0';
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const KEY='spp_v2', SKEY='spp_ses';
 
@@ -1848,6 +1861,8 @@ if(!navigator.onLine){
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+document.getElementById('lg-ver').textContent='v'+VERSION;
+document.getElementById('app-ver-badge').textContent='v'+VERSION;
 renderLgUsers();
 if(ses&&db.users.find(u=>u.id===ses.uid)){
   enterApp();
