@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import { update, remove, getById } from '@/lib/firebase';
 
 export async function PUT(
   req: NextRequest,
@@ -7,17 +7,14 @@ export async function PUT(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const inzinjer = await prisma.inzinjer.update({
-    where: { id: parseInt(id) },
-    data: {
-      ime: body.ime,
-      prezime: body.prezime,
-      email: body.email || null,
-      odjelId: parseInt(body.odjelId),
-    },
-    include: { odjel: true },
+  const inzinjer = await update('inzinjeri', id, {
+    ime:     body.ime,
+    prezime: body.prezime,
+    email:   body.email || null,
+    odjelId: body.odjelId,
   });
-  return NextResponse.json(inzinjer);
+  const odjel = await getById('odjeli', body.odjelId);
+  return NextResponse.json({ ...inzinjer, odjel });
 }
 
 export async function DELETE(
@@ -25,6 +22,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  await prisma.inzinjer.delete({ where: { id: parseInt(id) } });
+  await remove('inzinjeri', id);
   return NextResponse.json({ ok: true });
 }

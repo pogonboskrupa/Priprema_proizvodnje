@@ -1,46 +1,57 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import { db, create, getAll, getById, queryCol, Timestamp } from '@/lib/firebase';
+import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
+import type { UnosRada, Inzinjer, Odjel } from '@/lib/types';
+
+async function joinUnosi(unosi: UnosRada[]) {
+  const [inzinjeri, odjeli] = await Promise.all([
+    getAll('inzinjeri') as Promise<Inzinjer[]>,
+    getAll('odjeli')    as Promise<Odjel[]>,
+  ]);
+  const inzMap = Object.fromEntries(inzinjeri.map((i) => [i.id, i]));
+  const odMap  = Object.fromEntries(odjeli.map((o) => [o.id, o]));
+  return unosi.map((u) => ({
+    ...u,
+    inzinjer: inzMap[u.inzinjerId] ?? null,
+    odjel:    odMap[u.odjelId]    ?? null,
+  }));
+}
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const inzinjerId = searchParams.get("inzinjerId");
-  const odjelId = searchParams.get("odjelId");
-  const od = searchParams.get("od");
-  const do_ = searchParams.get("do");
+  const sp = new URL(req.url).searchParams;
+  const inzinjerId = sp.get('inzinjerId');
+  const odjelId    = sp.get('odjelId');
+  const od         = sp.get('od');
+  const do_        = sp.get('do');
 
-  const unosi = await prisma.unosRada.findMany({
-    where: {
-      ...(inzinjerId ? { inzinjerId: parseInt(inzinjerId) } : {}),
-      ...(odjelId ? { odjelId: parseInt(odjelId) } : {}),
-      ...(od || do_
-        ? {
-            datum: {
-              ...(od ? { gte: new Date(od) } : {}),
-              ...(do_ ? { lte: new Date(do_) } : {}),
-            },
-          }
-        : {}),
-    },
-    include: { inzinjer: true, odjel: true },
-    orderBy: { datum: "desc" },
-  });
-  return NextResponse.json(unosi);
+  const constraints: Parameters<typeof query>[1][] = [];
+  if (inzinjerId) constraints.push(where('inzinjerId', '==', inzinjerId));
+  if (odjelId)    constraints.push(where('odjelId',    '==', odjelId));
+  if (od)  constraints.push(where('datum', '>=', Timestamp.fromDate(new Date(od))));
+  if (do_) constraints.push(where('datum', '<=', Timestamp.fromDate(new Date(do_))));
+  constraints.push(orderBy('datum', 'desc'));
+
+  const unosi = await queryCol('unosi', constraints) as UnosRada[];
+  const result = await joinUnosi(unosi);
+  return NextResponse.json(result);
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const unos = await prisma.unosRada.create({
-    data: {
-      datum: new Date(body.datum),
-      vrsta: body.vrsta,
-      inzinjerId: parseInt(body.inzinjerId),
-      odjelId: parseInt(body.odjelId),
-      brojStabala: body.vrsta === "DOZNAKA" ? parseInt(body.brojStabala) || null : null,
-      hektari: body.vrsta === "DOZNAKA" ? parseFloat(body.hektari) || null : null,
-      kilometri: body.vrsta === "VLAKA" ? parseFloat(body.kilometri) || null : null,
-      napomena: body.napomena || null,
-    },
-    include: { inzinjer: true, odjel: true },
+  const isDoznaka = body.vrsta === 'DOZNAKA';
+  const unos = await create('unosi', {
+    datum:       Timestamp.fromDate(new Date(body.datum)),
+    vrsta:       body.vrsta,
+    inzinjerId:  body.inzinjerId,
+    odjelId:     body.odjelId,
+    brojStabala: isDoznaka ? (parseInt(body.brojStabala) || null) : null,
+    hektari:     isDoznaka ? (parseFloat(body.hektari)   || null) : null,
+    kilometri:  !isDoznaka ? (parseFloat(body.kilometri) || null) : null,
+    napomena:    body.napomena || null,
   });
-  return NextResponse.json(unos, { status: 201 });
+  const [inzinjer, odjel] = await Promise.all([
+    getById('inzinjeri', body.inzinjerId),
+    getById('odjeli',    body.odjelId),
+  ]);
+  return NextResponse.json({ ...unos, inzinjer, odjel }, { status: 201 });
 }
