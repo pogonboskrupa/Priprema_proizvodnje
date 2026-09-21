@@ -18,13 +18,12 @@ function getStatus(o: Odjel): "plan" | "u_toku" | "zavrseno" {
 export default function RealizacijaPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [filt, setFilt] = useState<RFilt>("sve");
 
   useEffect(() => {
-    if (!loading && !session) router.replace(base + "/login/");
-    if (!loading && session?.role !== "admin") router.replace(base + "/");
+    if (!loading && !session) router.replace("/login/");
+    if (!loading && session?.role !== "admin") router.replace("/");
   }, [session, loading]);
 
   useEffect(() => { getOdjeli().then(setOdjeli); }, []);

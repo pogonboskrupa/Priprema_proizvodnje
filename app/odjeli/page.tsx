@@ -8,15 +8,14 @@ import type { Odjel } from "@/lib/types";
 export default function OdjeliPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [form, setForm] = useState({ naziv: "", broj: "", povrsina: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !session) router.replace(base + "/login/");
-    if (!authLoading && session?.role !== "admin") router.replace(base + "/");
+    if (!authLoading && !session) router.replace("/login/");
+    if (!authLoading && session?.role !== "admin") router.replace("/");
   }, [session, authLoading]);
 
   async function load() {

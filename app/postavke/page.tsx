@@ -9,8 +9,6 @@ import type { Korisnik } from "@/lib/types";
 export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
@@ -20,7 +18,7 @@ export default function PostavkePage() {
   const [pinMsg, setPinMsg] = useState("");
 
   useEffect(() => {
-    if (!loading && !session) router.replace(base + "/login/");
+    if (!loading && !session) router.replace("/login/");
   }, [session, loading]);
 
   useEffect(() => {

@@ -10,7 +10,6 @@ const today = () => new Date().toISOString().split("T")[0];
 export default function UnosPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
@@ -28,7 +27,7 @@ export default function UnosPage() {
   const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    if (!authLoading && !session) router.replace(base + "/login/");
+    if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
   async function load() {

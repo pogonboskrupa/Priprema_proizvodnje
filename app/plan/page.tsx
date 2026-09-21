@@ -8,15 +8,14 @@ import type { Odjel } from "@/lib/types";
 export default function PlanPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ plan_cet: "", plan_lis: "", real_cet: "", real_lis: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!loading && !session) router.replace(base + "/login/");
-    if (!loading && session?.role !== "admin") router.replace(base + "/");
+    if (!loading && !session) router.replace("/login/");
+    if (!loading && session?.role !== "admin") router.replace("/");
   }, [session, loading]);
 
   useEffect(() => { loadOdjeli(); }, []);

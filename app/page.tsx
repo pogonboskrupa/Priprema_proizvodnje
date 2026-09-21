@@ -7,10 +7,8 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
   useEffect(() => {
-    if (!loading && !session) router.replace(base + "/login/");
+    if (!loading && !session) router.replace("/login/");
   }, [session, loading]);
 
   if (loading || !session) return null;

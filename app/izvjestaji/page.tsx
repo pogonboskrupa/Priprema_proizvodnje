@@ -36,14 +36,13 @@ type IzvjestajData = {
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !session) router.replace(base + "/login/");
+    if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
   async function load(p: Period = period, t: Tip = tip) {

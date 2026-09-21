@@ -8,7 +8,6 @@ import type { Inzinjer, Odjel } from "@/lib/types";
 export default function InzinjeriPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [form, setForm] = useState({ ime: "", prezime: "", email: "", odjelId: "" });
@@ -16,8 +15,8 @@ export default function InzinjeriPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !session) router.replace(base + "/login/");
-    if (!authLoading && session?.role !== "admin") router.replace(base + "/");
+    if (!authLoading && !session) router.replace("/login/");
+    if (!authLoading && session?.role !== "admin") router.replace("/");
   }, [session, authLoading]);
 
   async function load() {

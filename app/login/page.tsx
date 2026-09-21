@@ -16,11 +16,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(true);
   const nameRef = useRef<HTMLSelectElement>(null);
 
-  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
   useEffect(() => {
     const ses = getSession();
-    if (ses) { router.replace(base + "/"); return; }
+    if (ses) { router.replace("/"); return; }
     getKorisnici().then((k) => { setKorisnici(k); setLoading(false); });
   }, []);
 
@@ -46,7 +44,7 @@ export default function LoginPage() {
       { userId: selected.id, ime: selected.ime, fullName: selected.fullName, role: selected.role, avatar: selected.avatar },
       remember
     );
-    router.replace(base + "/");
+    router.replace("/");
   }
 
   if (loading) {
