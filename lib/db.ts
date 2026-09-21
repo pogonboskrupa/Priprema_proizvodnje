@@ -9,7 +9,33 @@ import {
   where,
   orderBy,
 } from './firebase';
-import type { Odjel, Inzinjer, UnosRada, UnosRadaForm } from './types';
+import type { Odjel, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
+
+// ── Korisnici ─────────────────────────────────────────────────────────────────
+
+export async function getKorisnici(): Promise<Korisnik[]> {
+  const raw = await getAll('users');
+  return (raw as unknown as Korisnik[]).sort((a, b) => a.ime.localeCompare(b.ime));
+}
+
+export async function getKorisnikByIme(ime: string): Promise<Korisnik | null> {
+  const all = await queryCol('users', [where('ime', '==', ime.toUpperCase())]);
+  return all.length ? all[0] as unknown as Korisnik : null;
+}
+
+export async function createKorisnik(data: Omit<Korisnik, 'id' | 'createdAt' | 'updatedAt'>): Promise<Korisnik> {
+  const raw = await create('users', data as unknown as Record<string, unknown>);
+  return raw as unknown as Korisnik;
+}
+
+export async function updateKorisnik(id: string, data: Partial<Omit<Korisnik, 'id' | 'createdAt'>>): Promise<Korisnik> {
+  const raw = await update('users', id, data as Record<string, unknown>);
+  return raw as unknown as Korisnik;
+}
+
+export async function deleteKorisnik(id: string): Promise<void> {
+  await remove('users', id);
+}
 
 // ── Odjeli ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +68,7 @@ export async function createOdjel(data: {
 
 export async function updateOdjel(
   id: string,
-  data: { naziv?: string; broj?: string; povrsina?: number }
+  data: { naziv?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number }
 ): Promise<Odjel> {
   const raw = await update('odjeli', id, data as Record<string, unknown>);
   return raw as unknown as Odjel;

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, limit, query } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
+import { useAuth } from "@/context/AuthContext";
 
 type Status = "checking" | "online" | "offline";
 
@@ -23,10 +24,8 @@ function useConnectionStatus(): Status {
 
   useEffect(() => {
     checkFirebase();
-
     function handleOnline() { checkFirebase(); }
     function handleOffline() { setStatus("offline"); }
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {
@@ -38,17 +37,30 @@ function useConnectionStatus(): Status {
   return status;
 }
 
-const links = [
+const adminLinks = [
   { href: "/", label: "Početna" },
   { href: "/unos", label: "Unos rada" },
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/odjeli", label: "Odjeli" },
   { href: "/inzinjeri", label: "Inžinjeri" },
+  { href: "/plan", label: "Plan sječe" },
+  { href: "/realizacija", label: "Realizacija" },
+  { href: "/postavke", label: "Postavke" },
+];
+
+const workerLinks = [
+  { href: "/", label: "Početna" },
+  { href: "/unos", label: "Unos rada" },
+  { href: "/izvjestaji", label: "Izvještaji" },
+  { href: "/postavke", label: "Postavke" },
 ];
 
 export default function Nav() {
   const path = usePathname();
   const status = useConnectionStatus();
+  const { session, logout } = useAuth();
+
+  const links = session?.role === "admin" ? adminLinks : workerLinks;
 
   const dot =
     status === "online"
@@ -57,15 +69,17 @@ export default function Nav() {
       ? { color: "bg-red-500", label: "Offline · nema konekcije" }
       : { color: "bg-yellow-400 animate-pulse", label: "Provjera konekcije..." };
 
+  if (!session) return null;
+
   return (
     <nav className="bg-green-800 text-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14">
-        <span className="font-bold text-lg mr-4 whitespace-nowrap">🌲 Priprema Proizvodnje</span>
+      <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14 overflow-x-auto">
+        <span className="font-bold text-sm mr-3 whitespace-nowrap flex-shrink-0">🌲 PP</span>
         {links.map((l) => (
           <Link
             key={l.href}
             href={l.href}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               path === l.href
                 ? "bg-white/20 text-white"
                 : "hover:bg-white/10 text-green-100"
@@ -75,14 +89,25 @@ export default function Nav() {
           </Link>
         ))}
 
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-green-300 text-xs hidden sm:block">v{VERSION}</span>
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
+          <span className="text-green-200 text-xs hidden sm:block whitespace-nowrap">
+            {session.ime}
+          </span>
+          <span className="text-green-300 text-xs hidden md:block">v{VERSION}</span>
+
           <div className="relative group">
-            <span className={`block w-3 h-3 rounded-full ${dot.color}`} />
+            <span className={`block w-3 h-3 rounded-full flex-shrink-0 ${dot.color}`} />
             <div className="absolute right-0 top-5 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
               {dot.label}
             </div>
           </div>
+
+          <button
+            onClick={logout}
+            className="border border-white/30 text-white/80 rounded px-2 py-1 text-xs hover:bg-white/10 whitespace-nowrap flex-shrink-0"
+          >
+            Odjava
+          </button>
         </div>
       </div>
     </nav>

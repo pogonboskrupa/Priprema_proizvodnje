@@ -1,12 +1,30 @@
 // Firestore document IDs are strings
 export type VrstaRada = 'DOZNAKA' | 'VLAKA';
 export type PeriodIzvjestaja = 'sedmicno' | 'mjesecno' | 'godisnje';
+export type UserRole = 'admin' | 'worker';
+
+export interface Korisnik {
+  id: string;
+  ime: string;         // korisničko ime (za login)
+  fullName: string;    // puno ime i prezime
+  title: string;       // radno mjesto
+  pin: string;
+  role: UserRole;
+  avatar: string;
+  odjeliIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Odjel {
   id: string;
   naziv: string;
   broj: string;
   povrsina: number;
+  plan_cet: number;   // plan m³ četinara
+  plan_lis: number;   // plan m³ lišćara
+  real_cet: number;   // realizacija m³ četinara
+  real_lis: number;   // realizacija m³ lišćara
   createdAt: string;
   updatedAt: string;
   _count?: { inzinjeri: number; unosi: number };

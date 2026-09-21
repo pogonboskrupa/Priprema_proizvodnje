@@ -1,6 +1,20 @@
+"use client";
 import Link from "next/link";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { session, loading } = useAuth();
+  const router = useRouter();
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+  useEffect(() => {
+    if (!loading && !session) router.replace(base + "/login/");
+  }, [session, loading]);
+
+  if (loading || !session) return null;
+
   return (
     <div className="py-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-2">
@@ -25,19 +39,44 @@ export default function Home() {
           desc="Sedmično, mjesečno i godišnje po radniku i odjelu"
           color="bg-green-50 border-green-200 hover:bg-green-100"
         />
+        {session.role === "admin" && (
+          <>
+            <QuickCard
+              href="/odjeli"
+              icon="🗺️"
+              title="Šumski odjeli"
+              desc="Upravljanje odjelima i površinama"
+              color="bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
+            />
+            <QuickCard
+              href="/inzinjeri"
+              icon="👷"
+              title="Inžinjeri"
+              desc="Upravljanje radnicima"
+              color="bg-purple-50 border-purple-200 hover:bg-purple-100"
+            />
+            <QuickCard
+              href="/plan"
+              icon="📅"
+              title="Plan sječe"
+              desc="Godišnji plan i realizacija po odjelima"
+              color="bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+            />
+            <QuickCard
+              href="/realizacija"
+              icon="📈"
+              title="Realizacija"
+              desc="Praćenje napretka realizacije plana"
+              color="bg-teal-50 border-teal-200 hover:bg-teal-100"
+            />
+          </>
+        )}
         <QuickCard
-          href="/odjeli"
-          icon="🗺️"
-          title="Šumski odjeli"
-          desc="Upravljanje odjelima i površinama"
-          color="bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
-        />
-        <QuickCard
-          href="/inzinjeri"
-          icon="👷"
-          title="Inžinjeri"
-          desc="Upravljanje radnicima"
-          color="bg-purple-50 border-purple-200 hover:bg-purple-100"
+          href="/postavke"
+          icon="⚙️"
+          title="Postavke"
+          desc="Profil, PIN i upravljanje korisnicima"
+          color="bg-gray-50 border-gray-200 hover:bg-gray-100"
         />
       </div>
     </div>

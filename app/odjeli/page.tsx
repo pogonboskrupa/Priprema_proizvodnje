@@ -1,19 +1,31 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getOdjeli, createOdjel, updateOdjel, deleteOdjel } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 
 export default function OdjeliPage() {
+  const { session, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [form, setForm] = useState({ naziv: "", broj: "", povrsina: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !session) router.replace(base + "/login/");
+    if (!authLoading && session?.role !== "admin") router.replace(base + "/");
+  }, [session, authLoading]);
 
   async function load() {
     setOdjeli(await getOdjeli());
   }
 
   useEffect(() => { load(); }, []);
+
+  if (authLoading || !session) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

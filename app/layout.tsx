@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import { AuthProvider } from "@/context/AuthContext";
 
 const geist = Geist({ subsets: ["latin"] });
 
@@ -29,17 +30,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href={`${BASE}/icons/icon-192.png`} />
       </head>
       <body className={`${geist.className} bg-gray-50 min-h-screen`}>
-        <Nav />
-        <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+        <AuthProvider>
+          <Nav />
+          <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+        </AuthProvider>
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('${BASE}/sw.js');
-                });
-              }
-            `,
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('${BASE}/sw.js');})}`,
           }}
         />
       </body>

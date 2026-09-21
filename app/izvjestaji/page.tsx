@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getIzvjestaj } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
@@ -32,10 +34,17 @@ type IzvjestajData = {
 };
 
 export default function IzvjestajiPage() {
+  const { session, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !session) router.replace(base + "/login/");
+  }, [session, authLoading]);
 
   async function load(p: Period = period, t: Tip = tip) {
     setLoading(true);
@@ -45,6 +54,8 @@ export default function IzvjestajiPage() {
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (authLoading || !session) return null;
 
   function handlePeriod(p: Period) {
     setPeriod(p);

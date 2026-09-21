@@ -1,11 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 import type { Odjel, Inzinjer, UnosRada } from "@/lib/types";
 
 const today = () => new Date().toISOString().split("T")[0];
 
 export default function UnosPage() {
+  const { session, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
@@ -22,6 +27,10 @@ export default function UnosPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
 
+  useEffect(() => {
+    if (!authLoading && !session) router.replace(base + "/login/");
+  }, [session, authLoading]);
+
   async function load() {
     const [od, inz, un] = await Promise.all([getOdjeli(), getInzinjeri(), getUnosi()]);
     setOdjeli(od);
@@ -30,6 +39,8 @@ export default function UnosPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  if (authLoading || !session) return null;
 
   function handleInzinjerChange(id: string) {
     const inz = inzinjeri.find((i) => i.id === id);
