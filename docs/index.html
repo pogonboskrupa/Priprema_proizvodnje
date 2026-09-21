@@ -1256,7 +1256,13 @@ function renderIzvj(){
     <div class="stat a"><div class="stat-lbl">Vlake</div><div class="stat-val">${fN(ukKm)}<span class="stat-unit">km</span></div></div>
     <div class="stat b"><div class="stat-lbl">Unosa</div><div class="stat-val">${fil.length}</div></div>`;
 
-  if(!isAdm()||curGr==='inz') renderIzvjInz(fil);
+  // Show group buttons for all users; update labels by role
+  document.getElementById('gr-sep').hidden=false;
+  document.getElementById('gr-inz').hidden=false;
+  document.getElementById('gr-od').hidden=false;
+  document.getElementById('gr-inz').textContent=isAdm()?'👷 Po radniku':'📋 Moji unosi';
+
+  if(curGr==='inz') renderIzvjInz(fil);
   else renderIzvjOd(fil);
 }
 
@@ -1286,15 +1292,36 @@ function renderIzvjInz(fil){
 
 function renderIzvjOd(fil){
   document.getElementById('izvj-hd').textContent='Pregled po odjelu';
-  document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Površina</th><th class="r">Obrađeno</th><th class="r">Preostalo</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th>Napredak</th></tr>';
-  document.getElementById('izvj-tb').innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
-    const uf=fil.filter(u=>u.odId===o.id);
-    const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
-    const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
-    const allHa=db.unosi.filter(u=>u.odId===o.id&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
-    const pr=Math.max(o.pov-allHa,0), pct=Math.min((allHa/o.pov)*100,100);
-    return`<tr class="${!uf.length?'dim':''}"><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono">${fN(o.pov)}</td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td>${prog(pct)}</td></tr>`;
-  }).join('')||'<tr><td colspan="7" class="empty">Nema podataka.</td></tr>';
+
+  if(isAdm()){
+    document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Površina</th><th class="r">Obrađeno</th><th class="r">Preostalo</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th>Napredak</th></tr>';
+    document.getElementById('izvj-tb').innerHTML=[...db.odjeli].sort((a,b)=>a.br.localeCompare(b.br)).map(o=>{
+      const uf=fil.filter(u=>u.odId===o.id);
+      const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+      const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
+      const allHa=db.unosi.filter(u=>u.odId===o.id&&u.vr==='D').reduce((s,u)=>s+(u.ha||0),0);
+      const pr=Math.max(o.pov-allHa,0), pct=Math.min((allHa/o.pov)*100,100);
+      return`<tr class="${!uf.length?'dim':''}"><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono">${fN(o.pov)}</td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r">${pr<=0?'<span class="c-acc fw6">✓</span>':`<span class="mono">${fN(pr)}</span>`}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td>${prog(pct)}</td></tr>`;
+    }).join('')||'<tr><td colspan="7" class="empty">Nema podataka.</td></tr>';
+  } else {
+    // Worker view: odjeli they actually worked in during the period
+    document.getElementById('izvj-th').innerHTML='<tr><th>Odjel</th><th class="r">Ha doznačeno</th><th class="r">Stabala</th><th class="r">Km vlaka</th><th class="r">Unosa</th></tr>';
+    const workedOdIds=[...new Set(fil.map(u=>u.odId).filter(Boolean))];
+    if(!workedOdIds.length){
+      document.getElementById('izvj-tb').innerHTML='<tr><td colspan="5" class="empty">Nema radnih unosa u ovom periodu.</td></tr>';
+      return;
+    }
+    document.getElementById('izvj-tb').innerHTML=workedOdIds
+      .map(id=>db.odjeli.find(o=>o.id===id))
+      .filter(Boolean)
+      .sort((a,b)=>a.br.localeCompare(b.br))
+      .map(o=>{
+        const uf=fil.filter(u=>u.odId===o.id);
+        const d=uf.filter(u=>u.vr==='D'),v=uf.filter(u=>u.vr==='V');
+        const ha=d.reduce((s,u)=>s+(u.ha||0),0),st=d.reduce((s,u)=>s+(u.st||0),0),km=v.reduce((s,u)=>s+(u.km||0),0);
+        return`<tr><td><span class="mono fw6">${o.br}</span> <span class="c-mut">${o.naz}</span></td><td class="r mono c-acc fw6">${ha>0?fN(ha):'–'}</td><td class="r mono">${fI(st)}</td><td class="r mono c-amb">${km>0?fN(km):'–'}</td><td class="r mono c-mut">${uf.length}</td></tr>`;
+      }).join('');
+  }
 }
 
 // ── PLAN 2026 / ODJELI ────────────────────────────────────────────────────────
