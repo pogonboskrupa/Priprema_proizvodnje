@@ -2,14 +2,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
-import { saveSession } from "@/lib/auth";
+import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
+import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
 
 export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
   const router = useRouter();
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
+  const [me, setMe] = useState<Korisnik | null>(null);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
   const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "" });
@@ -22,11 +23,17 @@ export default function PostavkePage() {
   }, [session, loading]);
 
   useEffect(() => {
-    if (session) {
-      setProfForm({ fullName: session.fullName || "", title: "" });
-      if (session.role === "admin") loadKorisnici();
-    }
+    if (!session) return;
+    loadMe(session.userId);
+    if (session.role === "admin") loadKorisnici();
   }, [session]);
+
+  async function loadMe(id: string) {
+    const k = await getKorisnik(id);
+    if (!k) return;
+    setMe(k);
+    setProfForm({ fullName: k.fullName || "", title: k.title || "" });
+  }
 
   async function loadKorisnici() {
     setKorisnici(await getKorisnici());
@@ -35,20 +42,20 @@ export default function PostavkePage() {
   async function saveProfile() {
     if (!session) return;
     await updateKorisnik(session.userId, { fullName: profForm.fullName, title: profForm.title });
-    saveSession({ ...session, fullName: profForm.fullName }, true);
+    saveSession({ ...session, fullName: profForm.fullName }, isRemembered());
     refresh();
+    loadMe(session.userId);
     toast("Profil sačuvan ✓");
   }
 
   async function changePin() {
-    if (!session) return;
-    const me = korisnici.find((k) => k.id === session.userId);
-    const myPin = me?.pin || "";
-    if (pinForm.old !== myPin) { setPinMsg("Trenutni PIN nije ispravan!"); return; }
+    if (!session || !me) return;
+    if (pinForm.old !== me.pin) { setPinMsg("Trenutni PIN nije ispravan!"); return; }
     if (!/^\d{4}$/.test(pinForm.new1)) { setPinMsg("Novi PIN mora biti 4 cifre!"); return; }
     if (pinForm.new1 !== pinForm.new2) { setPinMsg("PIN-ovi se ne poklapaju!"); return; }
     await updateKorisnik(session.userId, { pin: pinForm.new1 });
     setPinForm({ old: "", new1: "", new2: "" });
+    setMe({ ...me, pin: pinForm.new1 });
     setPinMsg("PIN promijenjen ✓");
     setTimeout(() => setPinMsg(""), 3000);
   }

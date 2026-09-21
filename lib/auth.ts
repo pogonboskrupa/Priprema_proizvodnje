@@ -1,4 +1,4 @@
-import type { Korisnik, UserRole } from './types';
+import type { UserRole } from './types';
 
 const SESSION_KEY = 'ppnext_ses';
 
@@ -30,6 +30,14 @@ export function saveSession(ses: Session, remember: boolean) {
       localStorage.removeItem(SESSION_KEY);
     }
   } catch {}
+}
+
+export function isRemembered(): boolean {
+  try {
+    return localStorage.getItem(SESSION_KEY) !== null;
+  } catch {
+    return false;
+  }
 }
 
 export function clearSession() {

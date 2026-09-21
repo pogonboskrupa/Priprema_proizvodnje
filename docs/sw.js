@@ -1,72 +1,58 @@
-const CACHE = 'ppbk-v4';
+const CACHE = 'ppnext-v3';
 const BASE = '/Priprema_proizvodnje';
-const SHELL = [
-  BASE + '/',
-  BASE + '/index.html',
-  BASE + '/manifest.json',
-  BASE + '/icons/icon-192.png',
-  BASE + '/icons/icon-512.png',
-];
 
-// Install: pre-cache app shell
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(SHELL))
-      .then(() => self.skipWaiting())
-  );
-});
+self.addEventListener('install', () => self.skipWaiting());
 
-// Activate: delete old caches, claim clients immediately
-self.addEventListener('activate', e => {
+self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-// Fetch strategy:
-// - Navigation requests (HTML): network-first, fallback to cache
-// - Everything else: cache-first, then network (updates cache on success)
-self.addEventListener('fetch', e => {
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+
   const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.hostname.includes('firestore.googleapis.com') || url.hostname.includes('firebase')) return;
 
-  // Only handle same-origin requests
-  if (url.origin !== location.origin) return;
+  // Hashed build assets never change under the same URL — safe to serve from cache.
+  const isImmutable = url.pathname.startsWith(BASE + '/_next/static/');
 
-  if (e.request.mode === 'navigate') {
-    // Network-first: always try to get fresh HTML; fall back to cached version
+  if (isImmutable) {
     e.respondWith(
-      fetch(e.request)
-        .then(res => {
+      caches.match(e.request).then((cached) =>
+        cached ||
+        fetch(e.request).then((res) => {
           if (res.ok) {
             const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
+            caches.open(CACHE).then((c) => c.put(e.request, clone));
           }
           return res;
         })
-        .catch(() => caches.match(BASE + '/index.html'))
+      )
     );
     return;
   }
 
-  // Cache-first for static assets
+  // Everything else (HTML, manifest, icons): network first, cache only as offline fallback.
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
+    fetch(e.request)
+      .then((res) => {
         if (res.ok) {
           const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
         }
         return res;
-      });
-    })
+      })
+      .catch(() =>
+        caches.match(e.request).then((cached) => {
+          if (cached) return cached;
+          if (e.request.mode === 'navigate') return caches.match(BASE + '/');
+          return Response.error();
+        })
+      )
   );
-});
-
-// Listen for skip-waiting message (used to apply updates immediately)
-self.addEventListener('message', e => {
-  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });

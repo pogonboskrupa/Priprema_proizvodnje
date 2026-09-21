@@ -18,6 +18,11 @@ export async function getKorisnici(): Promise<Korisnik[]> {
   return (raw as unknown as Korisnik[]).sort((a, b) => a.ime.localeCompare(b.ime));
 }
 
+export async function getKorisnik(id: string): Promise<Korisnik | null> {
+  const raw = await getById('users', id);
+  return raw ? (raw as unknown as Korisnik) : null;
+}
+
 export async function getKorisnikByIme(ime: string): Promise<Korisnik | null> {
   const all = await queryCol('users', [where('ime', '==', ime.toUpperCase())]);
   return all.length ? all[0] as unknown as Korisnik : null;
