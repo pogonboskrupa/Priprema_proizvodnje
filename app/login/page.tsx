@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getKorisnikByIme } from "@/lib/db";
 import { saveSession, getSession } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 import { VERSION } from "@/lib/version";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refresh } = useAuth();
   const [ime, setIme] = useState("");
   const [pin, setPin] = useState("");
   const [err, setErr] = useState("");
@@ -43,6 +45,7 @@ export default function LoginPage() {
         { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, avatar: found.avatar },
         remember
       );
+      refresh();
       router.replace("/");
     } catch {
       setSubmitting(false);
