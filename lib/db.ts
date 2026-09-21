@@ -163,9 +163,10 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
   if (form.vrsta === 'DOZNAKA') {
     data.brojStabala = Number(form.brojStabala) || null;
     data.hektari = Number(form.hektari) || null;
-  } else {
+  } else if (form.vrsta === 'VLAKA') {
     data.kilometri = Number(form.kilometri) || null;
   }
+  // GODISNJI, KANCELARIJA, BOLOVANJE — nema numeričkih polja
 
   const raw = await create('unosi', data);
   const [inzinjer, odjel] = await Promise.all([

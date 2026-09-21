@@ -34,7 +34,7 @@ export default function Home() {
           href="/izvjestaji"
           icon="📊"
           title="Izvještaji"
-          desc="Sedmično, mjesečno i godišnje po radniku i odjelu"
+          desc="Sedmično, mjesečno i godišnje po projektantu i odjelu"
           color="bg-green-50 border-green-200 hover:bg-green-100"
         />
         {session.role === "admin" && (
@@ -50,7 +50,7 @@ export default function Home() {
               href="/inzinjeri"
               icon="👷"
               title="Inžinjeri"
-              desc="Upravljanje radnicima"
+              desc="Upravljanje projektantima"
               color="bg-purple-50 border-purple-200 hover:bg-purple-100"
             />
             <QuickCard

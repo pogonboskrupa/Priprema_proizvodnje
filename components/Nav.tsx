@@ -81,8 +81,8 @@ export default function Nav() {
             href={l.href}
             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
               path === l.href
-                ? "bg-white/20 text-white"
-                : "hover:bg-white/10 text-green-100"
+                ? "bg-white/25 text-white font-semibold"
+                : "hover:bg-white/15 text-white/85"
             }`}
           >
             {l.label}

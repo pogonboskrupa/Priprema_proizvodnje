@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Odjel, Inzinjer, UnosRada } from "@/lib/types";
+import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -15,7 +15,7 @@ export default function UnosPage() {
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [form, setForm] = useState({
     datum: today(),
-    vrsta: "DOZNAKA" as "DOZNAKA" | "VLAKA",
+    vrsta: "DOZNAKA" as VrstaRada,
     inzinjerId: "",
     odjelId: "",
     brojStabala: "",
@@ -116,24 +116,33 @@ export default function UnosPage() {
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Vrsta rada</label>
-              <div className="flex gap-3">
-                {(["DOZNAKA", "VLAKA"] as const).map((v) => (
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {(["DOZNAKA", "VLAKA"] as VrstaRada[]).map((v) => (
                   <label
                     key={v}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border-2 cursor-pointer text-sm font-medium transition-colors ${
+                    className={`flex items-center justify-center gap-2 py-2 rounded-lg border-2 cursor-pointer text-sm font-medium transition-colors ${
                       form.vrsta === v
                         ? "border-green-600 bg-green-50 text-green-700"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-300 text-gray-700 hover:border-gray-400"
                     }`}
                   >
-                    <input
-                      type="radio"
-                      className="hidden"
-                      value={v}
-                      checked={form.vrsta === v}
-                      onChange={() => setForm({ ...form, vrsta: v })}
-                    />
+                    <input type="radio" className="hidden" value={v} checked={form.vrsta === v} onChange={() => setForm({ ...form, vrsta: v })} />
                     {v === "DOZNAKA" ? "🌳 Doznaka" : "🛤️ Vlake"}
+                  </label>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(["GODISNJI", "KANCELARIJA", "BOLOVANJE"] as VrstaRada[]).map((v) => (
+                  <label
+                    key={v}
+                    className={`flex items-center justify-center gap-1 py-2 rounded-lg border-2 cursor-pointer text-xs font-medium transition-colors text-center ${
+                      form.vrsta === v
+                        ? "border-amber-500 bg-amber-50 text-amber-700"
+                        : "border-gray-300 text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    <input type="radio" className="hidden" value={v} checked={form.vrsta === v} onChange={() => setForm({ ...form, vrsta: v })} />
+                    {v === "GODISNJI" ? "🏖️ God. odmor" : v === "KANCELARIJA" ? "🏢 Kancelarija" : "🏥 Bolovanje"}
                   </label>
                 ))}
               </div>
@@ -172,7 +181,7 @@ export default function UnosPage() {
               </select>
             </div>
 
-            {form.vrsta === "DOZNAKA" ? (
+            {form.vrsta === "DOZNAKA" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Broj stabala</label>
@@ -198,7 +207,8 @@ export default function UnosPage() {
                   />
                 </div>
               </div>
-            ) : (
+            )}
+            {form.vrsta === "VLAKA" && (
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Kilometri vlaka (km)</label>
                 <input
@@ -274,26 +284,22 @@ export default function UnosPage() {
                       </td>
                       <td className="px-4 py-2 text-gray-500 text-xs">{u.odjel?.broj}</td>
                       <td className="px-4 py-2">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            u.vrsta === "DOZNAKA"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-amber-100 text-amber-700"
-                          }`}
-                        >
-                          {u.vrsta === "DOZNAKA" ? "🌳 Doznaka" : "🛤️ Vlake"}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${vrstaBadgeClass(u.vrsta)}`}>
+                          {vrstaLabel(u.vrsta)}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-right text-xs">
+                      <td className="px-4 py-2 text-right text-xs text-gray-600">
                         {u.vrsta === "DOZNAKA" ? (
                           <span>
-                            <span className="font-semibold">{u.brojStabala}</span> st /{" "}
-                            <span className="font-semibold">{u.hektari?.toFixed(2)}</span> ha
+                            <span className="font-semibold text-gray-800">{u.brojStabala}</span> st /{" "}
+                            <span className="font-semibold text-gray-800">{u.hektari?.toFixed(2)}</span> ha
+                          </span>
+                        ) : u.vrsta === "VLAKA" ? (
+                          <span>
+                            <span className="font-semibold text-gray-800">{u.kilometri?.toFixed(2)}</span> km
                           </span>
                         ) : (
-                          <span>
-                            <span className="font-semibold">{u.kilometri?.toFixed(2)}</span> km
-                          </span>
+                          <span className="text-gray-400">–</span>
                         )}
                       </td>
                       <td className="px-4 py-2">
@@ -314,4 +320,26 @@ export default function UnosPage() {
       </div>
     </div>
   );
+}
+
+function vrstaLabel(vrsta: string): string {
+  const map: Record<string, string> = {
+    DOZNAKA: "🌳 Doznaka",
+    VLAKA: "🛤️ Vlake",
+    GODISNJI: "🏖️ God. odmor",
+    KANCELARIJA: "🏢 Kancelarija",
+    BOLOVANJE: "🏥 Bolovanje",
+  };
+  return map[vrsta] ?? vrsta;
+}
+
+function vrstaBadgeClass(vrsta: string): string {
+  const map: Record<string, string> = {
+    DOZNAKA: "bg-green-100 text-green-800",
+    VLAKA: "bg-amber-100 text-amber-800",
+    GODISNJI: "bg-sky-100 text-sky-800",
+    KANCELARIJA: "bg-violet-100 text-violet-800",
+    BOLOVANJE: "bg-red-100 text-red-800",
+  };
+  return map[vrsta] ?? "bg-gray-100 text-gray-700";
 }

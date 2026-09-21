@@ -77,7 +77,7 @@ export default function PostavkePage() {
     setAddForm({ ime: "", fullName: "", title: "" });
     setShowAdd(false);
     loadKorisnici();
-    toast(`Radnik ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
+    toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
   }
 
   async function resetPin(k: Korisnik) {
@@ -179,13 +179,13 @@ export default function PostavkePage() {
         <div className="mt-6 bg-white rounded-xl border overflow-hidden">
           <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
             <span className="font-semibold text-gray-700">
-              Korisnici <span className="text-xs font-normal text-gray-400">— upravljanje radnicima</span>
+              Korisnici <span className="text-xs font-normal text-gray-500">— upravljanje projektantima</span>
             </span>
             <button
               onClick={() => setShowAdd((v) => !v)}
               className="bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-800"
             >
-              + Novi radnik
+              + Novi projektant
             </button>
           </div>
 
