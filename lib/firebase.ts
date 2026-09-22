@@ -50,11 +50,20 @@ export const db = initDb();
 
 // Tiha anonimna prijava — Firestore security rules zahtijevaju request.auth != null
 // Korisnik mora omogućiti Anonymous auth u Firebase Console > Authentication
+let _authReady: Promise<void>;
 if (typeof window !== 'undefined') {
   const auth = getAuth(getApps()[0] ?? initializeApp(firebaseConfig));
-  onAuthStateChanged(auth, (user) => {
-    if (!user) signInAnonymously(auth).catch(() => {});
+  _authReady = new Promise<void>((resolve) => {
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signInAnonymously(auth).catch(() => resolve()); // resolve anyway on error
+      } else {
+        resolve();
+      }
+    });
   });
+} else {
+  _authReady = Promise.resolve();
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -70,11 +79,13 @@ export function docToObj(snap: QueryDocumentSnapshot<DocumentData>) {
 }
 
 export async function getAll(col: string) {
+  await _authReady;
   const snaps = await getDocs(collection(db, col));
   return snaps.docs.map(docToObj);
 }
 
 export async function getById(col: string, id: string) {
+  await _authReady;
   const snap = await getDoc(doc(db, col, id));
   if (!snap.exists()) return null;
   return docToObj(snap as QueryDocumentSnapshot<DocumentData>);
@@ -102,6 +113,7 @@ export async function queryCol(
   col: string,
   constraints: Parameters<typeof query>[1][]
 ) {
+  await _authReady;
   const ref = collection(db, col) as CollectionReference<DocumentData>;
   const q: Query<DocumentData> = constraints.length
     ? query(ref, ...constraints)
