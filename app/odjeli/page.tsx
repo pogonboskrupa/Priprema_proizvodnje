@@ -307,7 +307,7 @@ export default function OdjeliPage() {
               <th className="text-left px-4 py-3 text-gray-600 font-medium">GJ</th>
               <th className="text-left px-4 py-3 text-gray-600 font-medium">Odjel br.</th>
               <th className="text-right px-4 py-3 text-gray-600 font-medium">Površina (ha)</th>
-              <th className="text-right px-4 py-3 text-gray-600 font-medium">Inžinjeri</th>
+              <th className="text-right px-4 py-3 text-gray-600 font-medium">Projektanti</th>
               <th className="text-right px-4 py-3 text-gray-600 font-medium">Unosi</th>
               <th className="px-4 py-3"></th>
             </tr>

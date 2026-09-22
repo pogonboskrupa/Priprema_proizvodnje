@@ -8,6 +8,12 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
 
 const today = () => new Date().toISOString().split("T")[0];
+
+function getDayOfWeek(dateStr: string): number {
+  // Parse as local date to avoid UTC offset issues
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).getDay(); // 0=Sun, 6=Sat
+}
 const currentMonth = () => new Date().toISOString().slice(0, 7);
 
 function getMonthOptions() {
@@ -45,6 +51,10 @@ export default function UnosPage() {
   });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+
+  const dayOfWeek = getDayOfWeek(form.datum);
+  const isSunday = dayOfWeek === 0;
+  const isSaturday = dayOfWeek === 6;
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -139,7 +149,7 @@ export default function UnosPage() {
   function handleExport() {
     const rows = filteredUnosi.map((u) => ({
       Datum: new Date(u.datum).toLocaleDateString("bs-BA"),
-      Inžinjer: `${u.inzinjer?.prezime ?? ""} ${u.inzinjer?.ime ?? ""}`.trim(),
+      Projektant: `${u.inzinjer?.prezime ?? ""} ${u.inzinjer?.ime ?? ""}`.trim(),
       Odjel: u.odjel?.broj ?? "",
       Vrsta: u.vrsta,
       "Hektari (ha)": u.hektari ?? "",
@@ -174,6 +184,16 @@ export default function UnosPage() {
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
               />
+              {isSunday && (
+                <div className="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs font-medium text-red-700">
+                  ⛔ Nedjelja je neradni dan — unos nije moguć.
+                </div>
+              )}
+              {isSaturday && (
+                <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs font-medium text-amber-800">
+                  ℹ️ Subota je inače neradni dan — unos je moguć ako je bila radna subota.
+                </div>
+              )}
             </div>
 
             <div>
@@ -227,14 +247,14 @@ export default function UnosPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Inžinjer</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Projektant</label>
               <select
                 className="w-full border rounded-lg px-3 py-2 text-sm"
                 value={form.inzinjerId}
                 onChange={(e) => handleInzinjerChange(e.target.value)}
                 required
               >
-                <option value="">Odaberi inžinjera...</option>
+                <option value="">Odaberi projektanta...</option>
                 {filteredInzinjeri.map((i) => (
                   <option key={i.id} value={i.id}>
                     {i.prezime} {i.ime} ({i.odjel?.broj})
@@ -297,7 +317,7 @@ export default function UnosPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isSunday}
               className="w-full bg-green-700 text-white py-2.5 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
             >
               {loading ? "Čuvanje..." : "Sačuvaj unos"}
@@ -337,7 +357,7 @@ export default function UnosPage() {
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-4 py-2 text-gray-600 font-medium">Datum</th>
-                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Inžinjer</th>
+                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Projektant</th>
                     <th className="text-left px-4 py-2 text-gray-600 font-medium">Odjel</th>
                     <th className="text-left px-4 py-2 text-gray-600 font-medium">Vrsta</th>
                     <th className="text-right px-4 py-2 text-gray-600 font-medium">Količina</th>

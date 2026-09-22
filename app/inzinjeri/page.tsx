@@ -60,7 +60,7 @@ export default function InzinjeriPage() {
 
   function handleDelete(id: string) {
     setConfirmState({
-      msg: "Obrisati ovog inžinjera? Ova akcija je nepovratna.",
+      msg: "Obrisati ovog projektanta? Ova akcija je nepovratna.",
       onOk: async () => {
         setConfirmState(null);
         await deleteInzinjer(id);
@@ -71,7 +71,7 @@ export default function InzinjeriPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Inžinjeri</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">Projektanti</h1>
 
       <form
         onSubmit={handleSubmit}
@@ -169,7 +169,7 @@ export default function InzinjeriPage() {
             {inzinjeri.length === 0 && (
               <tr>
                 <td colSpan={4} className="text-center py-8 text-gray-500">
-                  Nema inžinjera. Dodajte prvog inžinjera.
+                  Nema projektanata. Dodajte prvog projektanta.
                 </td>
               </tr>
             )}

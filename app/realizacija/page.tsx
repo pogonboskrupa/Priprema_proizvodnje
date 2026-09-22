@@ -132,16 +132,16 @@ export default function RealizacijaPage() {
 }
 
 function StatCard({ label, value, color }: { label: string; value: string; color: "blue" | "green" | "amber" | "emerald" }) {
-  const cls = {
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    green: "bg-green-50 border-green-200 text-green-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+  const styles = {
+    blue:    { card: "bg-blue-50 border-blue-300",     label: "text-blue-800",    value: "text-blue-900" },
+    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900" },
+    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950" },
+    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900" },
   }[color];
   return (
-    <div className={`rounded-xl border p-4 ${cls}`}>
-      <div className="text-xs opacity-70 mb-1">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+    <div className={`rounded-xl border p-4 ${styles.card}`}>
+      <div className={`text-xs font-semibold mb-1 ${styles.label}`}>{label}</div>
+      <div className={`text-2xl font-bold ${styles.value}`}>{value}</div>
     </div>
   );
 }

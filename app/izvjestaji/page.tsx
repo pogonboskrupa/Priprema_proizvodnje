@@ -135,7 +135,7 @@ export default function IzvjestajiPage() {
                       : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                   }`}
                 >
-                  {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po inžinjeru"}
+                  {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po projektantu"}
                 </button>
               ))}
             </div>
@@ -282,7 +282,7 @@ function InzinjerIzvjestaj({
 
   function handleExport() {
     const data = visibleRows.map((r) => ({
-      Inžinjer: `${r.inzinjer.prezime} ${r.inzinjer.ime}`,
+      Projektant: `${r.inzinjer.prezime} ${r.inzinjer.ime}`,
       Odjel: r.inzinjer.odjel.broj,
       "Hektara (ha)": r.ukupnoHektara,
       Stabala: r.ukupnoStabala,
@@ -300,7 +300,7 @@ function InzinjerIzvjestaj({
     return (
       <div className="bg-white rounded-xl border shadow-sm p-8 text-center text-gray-500">
         <p className="text-lg font-medium mb-1">Nema podataka</p>
-        <p className="text-sm">Vaš korisnički nalog nije povezan s nijednim inžinjerom. Obratite se administratoru.</p>
+        <p className="text-sm">Vaš korisnički nalog nije povezan s nijednim projektantom. Obratite se administratoru.</p>
       </div>
     );
   }
@@ -318,11 +318,11 @@ function InzinjerIzvjestaj({
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">
-            {isPersonal ? "Moji podaci" : "Pregled po inžinjerima"}
+            {isPersonal ? "Moji podaci" : "Pregled po projektantima"}
           </h2>
           <div className="flex items-center gap-3">
             {!isPersonal && (
-              <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
+              <span className="text-xs text-gray-500">{aktivni.length} projektanata sa aktivnošću</span>
             )}
             <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
               Export XLSX
@@ -333,7 +333,7 @@ function InzinjerIzvjestaj({
           <table className="w-full text-sm">
             <thead className="border-b">
               <tr className="text-left">
-                <th className="px-4 py-3 text-gray-600 font-medium">Inžinjer</th>
+                <th className="px-4 py-3 text-gray-600 font-medium">Projektant</th>
                 <th className="px-4 py-3 text-gray-600 font-medium">Odjel</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Hektara (ha)</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Stabala</th>
@@ -389,16 +389,17 @@ function StatCard({
   color: "green" | "blue" | "emerald" | "amber" | "orange";
 }) {
   const colors = {
-    green: "bg-green-50 border-green-200 text-green-700",
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-    orange: "bg-orange-50 border-orange-200 text-orange-700",
+    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900" },
+    blue:    { card: "bg-blue-50 border-blue-300",     label: "text-blue-800",    value: "text-blue-900" },
+    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900" },
+    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950" },
+    orange:  { card: "bg-orange-50 border-orange-300", label: "text-orange-800",  value: "text-orange-900" },
   };
+  const c = colors[color];
   return (
-    <div className={`rounded-xl border p-4 ${colors[color]}`}>
-      <div className="text-xs font-medium opacity-80 mb-1">{label}</div>
-      <div className="text-2xl font-bold">{value}</div>
+    <div className={`rounded-xl border p-4 ${c.card}`}>
+      <div className={`text-xs font-semibold mb-1 ${c.label}`}>{label}</div>
+      <div className={`text-2xl font-bold ${c.value}`}>{value}</div>
     </div>
   );
 }

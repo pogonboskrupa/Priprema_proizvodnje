@@ -43,7 +43,7 @@ export default function Home() {
         >
           Priprema Proizvodnje
         </h1>
-        <p className="text-gray-500 mt-2">Evidencija učinka inžinjera po odjelima</p>
+        <p className="text-gray-500 mt-2">Evidencija učinka projektanata po odjelima</p>
       </div>
 
       {rezime && (
@@ -88,8 +88,8 @@ export default function Home() {
             <QuickCard
               href="/inzinjeri"
               icon="👷"
-              title="Inžinjeri"
-              desc="Upravljanje projektantima"
+              title="Projektanti"
+              desc="Upravljanje projektantima i nalozima"
               color="bg-purple-50 border-purple-200 hover:bg-purple-100"
             />
             <QuickCard
@@ -126,18 +126,18 @@ function MiniStat({
   label: string; value: string; unit: string;
   color: "green" | "emerald" | "amber" | "sky" | "orange";
 }) {
-  const c = {
-    green: "bg-green-50 border-green-200 text-green-700",
-    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-    sky: "bg-sky-50 border-sky-200 text-sky-700",
-    orange: "bg-orange-50 border-orange-200 text-orange-700",
+  const styles = {
+    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900",   unit: "text-green-700" },
+    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900", unit: "text-emerald-700" },
+    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950",   unit: "text-amber-800" },
+    sky:     { card: "bg-sky-50 border-sky-300",       label: "text-sky-800",     value: "text-sky-900",     unit: "text-sky-700" },
+    orange:  { card: "bg-orange-50 border-orange-300", label: "text-orange-800",  value: "text-orange-900",  unit: "text-orange-700" },
   }[color];
   return (
-    <div className={`rounded-xl border p-4 ${c}`}>
-      <div className="text-xs font-medium opacity-75 mb-1">{label}</div>
-      <div className="text-2xl font-bold tabular-nums">{value}</div>
-      <div className="text-xs opacity-60 mt-0.5">{unit}</div>
+    <div className={`rounded-xl border p-4 ${styles.card}`}>
+      <div className={`text-xs font-semibold mb-1 ${styles.label}`}>{label}</div>
+      <div className={`text-2xl font-bold tabular-nums ${styles.value}`}>{value}</div>
+      <div className={`text-xs mt-0.5 font-medium ${styles.unit}`}>{unit}</div>
     </div>
   );
 }

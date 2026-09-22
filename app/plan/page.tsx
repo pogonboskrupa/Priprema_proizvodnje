@@ -175,13 +175,13 @@ export default function PlanPage() {
 }
 
 function StatBox({ label, value, color }: { label: string; value: string; color: "blue" | "green" }) {
-  const cls = color === "green"
-    ? "bg-green-50 border-green-200 text-green-700"
-    : "bg-blue-50 border-blue-200 text-blue-700";
+  const styles = color === "green"
+    ? { card: "bg-green-50 border-green-300", label: "text-green-800", value: "text-green-900" }
+    : { card: "bg-blue-50 border-blue-300",  label: "text-blue-800",  value: "text-blue-900" };
   return (
-    <div className={`rounded-lg border p-3 ${cls}`}>
-      <div className="text-xs opacity-70 mb-1">{label}</div>
-      <div className="text-lg font-bold">{value}</div>
+    <div className={`rounded-lg border p-3 ${styles.card}`}>
+      <div className={`text-xs font-semibold mb-1 ${styles.label}`}>{label}</div>
+      <div className={`text-lg font-bold ${styles.value}`}>{value}</div>
     </div>
   );
 }
