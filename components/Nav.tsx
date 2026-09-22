@@ -45,6 +45,7 @@ const adminLinks = [
   { href: "/inzinjeri", label: "Projektanti" },
   { href: "/plan", label: "Plan sječe" },
   { href: "/realizacija", label: "Realizacija" },
+  { href: "/elaborat", label: "Elaborat" },
   { href: "/postavke", label: "Postavke" },
 ];
 
@@ -52,6 +53,7 @@ const workerLinks = [
   { href: "/", label: "Početna" },
   { href: "/unos", label: "Unos rada" },
   { href: "/izvjestaji", label: "Izvještaji" },
+  { href: "/elaborat", label: "Elaborat" },
   { href: "/postavke", label: "Postavke" },
 ];
 

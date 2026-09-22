@@ -299,53 +299,67 @@ export default function OdjeliPage() {
         </form>
       )}
 
-      {/* ── Tabela ────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">GJ</th>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">Odjel br.</th>
-              <th className="text-right px-4 py-3 text-gray-600 font-medium">Površina (ha)</th>
-              <th className="text-right px-4 py-3 text-gray-600 font-medium">Projektanti</th>
-              <th className="text-right px-4 py-3 text-gray-600 font-medium">Unosi</th>
-              <th className="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {odjeli.length === 0 && (
-              <tr>
-                <td colSpan={6} className="text-center py-8 text-gray-500">
-                  Nema odjela. Dodajte prvi odjel.
-                </td>
-              </tr>
-            )}
-            {odjeli.map((o) => (
-              <tr key={o.id} className={`border-t hover:bg-gray-50 ${editId === o.id ? "bg-blue-50" : ""}`}>
-                <td className="px-4 py-3 font-medium">{o.gj}</td>
-                <td className="px-4 py-3 font-mono">{o.broj}</td>
-                <td className="px-4 py-3 text-right">{o.povrsina.toFixed(2)}</td>
-                <td className="px-4 py-3 text-right text-gray-500">{o._count?.inzinjeri ?? 0}</td>
-                <td className="px-4 py-3 text-right text-gray-500">{o._count?.unosi ?? 0}</td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => startEdit(o)}
-                    className="text-blue-600 hover:underline mr-3 text-xs"
-                  >
-                    Uredi
-                  </button>
-                  <button
-                    onClick={() => handleDelete(o.id)}
-                    className="text-red-500 hover:underline text-xs"
-                  >
-                    Obriši
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Tabela grupirana po GJ ──────────────────────────────────────── */}
+      {odjeli.length === 0 ? (
+        <div className="bg-white rounded-xl border shadow-sm px-4 py-8 text-center text-gray-500 text-sm">
+          Nema odjela. Dodajte prvi odjel.
+        </div>
+      ) : (
+        (() => {
+          const gjMap = new Map<string, Odjel[]>();
+          for (const o of odjeli) {
+            if (!gjMap.has(o.gj)) gjMap.set(o.gj, []);
+            gjMap.get(o.gj)!.push(o);
+          }
+          const sorted = Array.from(gjMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+          return (
+            <div className="space-y-4">
+              {sorted.map(([gj, items]) => {
+                const totalHa = items.reduce((s, i) => s + i.povrsina, 0);
+                return (
+                  <div key={gj} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                    <div className="bg-green-700 px-4 py-2.5 flex items-center justify-between">
+                      <span className="text-white font-semibold text-sm">{gj}</span>
+                      <span className="text-green-200 text-xs">
+                        {items.length} {items.length === 1 ? "odjel" : "odjela"} · {totalHa.toFixed(2)} ha
+                      </span>
+                    </div>
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b">
+                        <tr>
+                          <th className="text-left px-4 py-2 text-gray-600 font-medium text-xs">Odjel br.</th>
+                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Površina (ha)</th>
+                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Projektanti</th>
+                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Unosi</th>
+                          <th className="px-4 py-2"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((o) => (
+                          <tr key={o.id} className={`border-t hover:bg-gray-50 ${editId === o.id ? "bg-blue-50" : ""}`}>
+                            <td className="px-4 py-2.5 font-mono font-medium">{o.broj}</td>
+                            <td className="px-4 py-2.5 text-right tabular-nums">{o.povrsina.toFixed(2)}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-500">{o._count?.inzinjeri ?? 0}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-500">{o._count?.unosi ?? 0}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <button onClick={() => startEdit(o)} className="text-blue-600 hover:underline mr-3 text-xs">
+                                Uredi
+                              </button>
+                              <button onClick={() => handleDelete(o.id)} className="text-red-500 hover:underline text-xs">
+                                Obriši
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
+      )}
 
       {confirmState && (
         <ConfirmModal

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import InstallBanner from "@/components/InstallBanner";
 import { AuthProvider } from "@/context/AuthContext";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <Nav />
           <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+          <InstallBanner />
         </AuthProvider>
         <script
           dangerouslySetInnerHTML={{
