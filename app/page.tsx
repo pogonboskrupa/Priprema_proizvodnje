@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjerByKorisnikId } from "@/lib/db";
+import { mesecLabel } from "@/lib/format";
 
 type Rezime = {
   ha: number; stabala: number; km: number;
@@ -34,7 +35,7 @@ export default function Home() {
 
   if (loading || !session) return null;
 
-  const mesec = new Date().toLocaleString("bs-BA", { month: "long", year: "numeric" });
+  const mesec = mesecLabel(new Date());
 
   const displayRezime = isWorker ? myRezime : rezime;
   const odsustva = displayRezime ? (displayRezime.godisnji + displayRezime.kancelarija + displayRezime.bolovanje) : 0;

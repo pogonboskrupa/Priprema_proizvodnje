@@ -4,6 +4,7 @@ import { getIzvjestaj, getInzinjerByKorisnikId } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
+import { fmtDate } from "@/lib/format";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
@@ -93,8 +94,7 @@ export default function IzvjestajiPage() {
     load(period, t);
   }
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const formatDate = (d: string) => fmtDate(d);
 
   return (
     <div>

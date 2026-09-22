@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
+import { fmtDate, mesecLabel } from "@/lib/format";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -21,7 +22,7 @@ function getMonthOptions() {
   for (let i = 0; i < 13; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = d.toLocaleString("bs-BA", { month: "long", year: "numeric" });
+    const label = mesecLabel(d);
     opts.push({ val, label });
   }
   return opts;
@@ -179,7 +180,7 @@ export default function UnosPage() {
 
   function handleExport() {
     const rows = filteredUnosi.map((u) => ({
-      Datum: new Date(u.datum).toLocaleDateString("bs-BA"),
+      Datum: fmtDate(u.datum),
       Projektant: `${u.inzinjer?.prezime ?? ""} ${u.inzinjer?.ime ?? ""}`.trim(),
       Odjel: u.odjel?.broj ?? "",
       Vrsta: u.vrsta,
@@ -459,7 +460,7 @@ export default function UnosPage() {
                   {filteredUnosi.map((u) => (
                     <tr key={u.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">
-                        {new Date(u.datum).toLocaleDateString("bs-BA")}
+                        {fmtDate(u.datum)}
                       </td>
                       <td className="px-4 py-2 text-gray-900 dark:text-gray-100">
                         {u.inzinjer?.prezime} {u.inzinjer?.ime}

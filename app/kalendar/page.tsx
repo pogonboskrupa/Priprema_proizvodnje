@@ -4,6 +4,7 @@ import { getUnosiZaMjesec, getInzinjerByKorisnikId } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { UnosRada } from "@/lib/types";
+import { monthYearLabel, fmtDateLong } from "@/lib/format";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
@@ -98,7 +99,7 @@ export default function KalendarPage() {
   const offset = getFirstDayOffset(year, month);
   const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
 
-  const monthLabel = new Date(year, month - 1, 1).toLocaleString("bs-BA", { month: "long", year: "numeric" });
+  const monthLabel = monthYearLabel(year, month);
 
   const selectedKey = selectedDay;
   const selectedEntries = selectedKey ? (byDay[selectedKey] ?? []) : [];
@@ -196,7 +197,7 @@ export default function KalendarPage() {
       {selectedDay && (
         <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
           <h3 className="font-semibold text-gray-700 dark:text-gray-200 mb-3 text-sm">
-            {new Date(selectedDay + "T12:00:00").toLocaleDateString("bs-BA", { weekday: "long", day: "numeric", month: "long" })}
+            {fmtDateLong(selectedDay)}
           </h3>
           {selectedEntries.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500">Nema unosa za ovaj dan.</p>
