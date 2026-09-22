@@ -44,6 +44,7 @@ export default function KalendarPage() {
   const router = useRouter();
   const isWorker = session?.role === "worker";
   const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
+  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(!isWorker);
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -58,7 +59,10 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!session || !isWorker) return;
-    getInzinjerByKorisnikId(session.userId).then((inz) => setMyInzinjerId(inz?.id ?? null));
+    getInzinjerByKorisnikId(session.userId).then((inz) => {
+      setMyInzinjerId(inz?.id ?? null);
+      setMyInzinjerLoaded(true);
+    });
   }, [session]);
 
   useEffect(() => {
@@ -69,7 +73,7 @@ export default function KalendarPage() {
       .finally(() => setLoading(false));
   }, [session, year, month]);
 
-  if (authLoading || !session) return null;
+  if (authLoading || !session || !myInzinjerLoaded) return null;
 
   function prevMonth() {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -83,7 +87,7 @@ export default function KalendarPage() {
     setSelectedDay(null);
   }
 
-  const visibleUnosi = isWorker && myInzinjerId
+  const visibleUnosi = isWorker
     ? unosi.filter((u) => u.inzinjerId === myInzinjerId)
     : unosi;
 

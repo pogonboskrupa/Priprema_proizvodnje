@@ -21,6 +21,7 @@ export default function PlanPoProjectantPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [fetching, setFetching] = useState(false);
   const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
+  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(!isWorker);
   const [editId, setEditId] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState("");
   const [saving, setSaving] = useState(false);
@@ -31,7 +32,10 @@ export default function PlanPoProjectantPage() {
 
   useEffect(() => {
     if (!session || !isWorker) return;
-    getInzinjerByKorisnikId(session.userId).then((inz) => setMyInzinjerId(inz?.id ?? null));
+    getInzinjerByKorisnikId(session.userId).then((inz) => {
+      setMyInzinjerId(inz?.id ?? null);
+      setMyInzinjerLoaded(true);
+    });
   }, [session]);
 
   useEffect(() => {
@@ -42,9 +46,9 @@ export default function PlanPoProjectantPage() {
       .finally(() => setFetching(false));
   }, [session, year]);
 
-  if (loading || !session) return null;
+  if (loading || !session || !myInzinjerLoaded) return null;
 
-  const visibleRows = isWorker && myInzinjerId
+  const visibleRows = isWorker
     ? rows.filter((r) => r.inzinjer.id === myInzinjerId)
     : rows;
 
