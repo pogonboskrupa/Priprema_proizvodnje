@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getIzvjestaj, getInzinjerByKorisnikId } from "@/lib/db";
+import { getIzvjestaj } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
@@ -20,7 +20,7 @@ type OdjelRow = {
 };
 
 type InzinjerRow = {
-  inzinjer: { id: unknown; ime: string; prezime: string; odjel: { gj: string; broj: string } };
+  inzinjer: { id: unknown; ime: string; prezime: string; odjeli: string[] };
   ukupnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
@@ -47,24 +47,16 @@ export default function IzvjestajiPage() {
   const [tip, setTip] = useState<Tip>("odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
-  const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
-  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
   useEffect(() => {
-    if (!session || session.role !== "worker") {
-      setMyInzinjerLoaded(true);
-      return;
-    }
-    setTip("inzinjer");
-    getInzinjerByKorisnikId(session.userId).then((inz) => {
-      setMyInzinjerId(inz?.id ?? null);
-      setMyInzinjerLoaded(true);
-    });
-  }, [session]);
+    if (!session) return;
+    if (session.role === "worker") setTip("inzinjer");
+    load();
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load(p: Period = period, t: Tip = tip) {
     setLoading(true);
@@ -78,11 +70,7 @@ export default function IzvjestajiPage() {
     }
   }
 
-  useEffect(() => {
-    if (myInzinjerLoaded) load();
-  }, [myInzinjerLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (authLoading || !session || !myInzinjerLoaded) return null;
+  if (authLoading || !session) return null;
 
   function handlePeriod(p: Period) {
     setPeriod(p);
@@ -160,7 +148,7 @@ export default function IzvjestajiPage() {
         <InzinjerIzvjestaj
           rows={data.data as InzinjerRow[]}
           period={data.period}
-          filterInzinjerId={isWorker ? myInzinjerId : null}
+          filterInzinjerId={isWorker ? session.userId : null}
         />
       )}
     </div>
@@ -281,8 +269,8 @@ function InzinjerIzvjestaj({
 
   function handleExport() {
     const data = visibleRows.map((r) => ({
-      Projektant: `${r.inzinjer.prezime} ${r.inzinjer.ime}`,
-      Odjel: r.inzinjer.odjel.broj,
+      Projektant: `${r.inzinjer.prezime} ${r.inzinjer.ime}`.trim(),
+      Odjeli: r.inzinjer.odjeli.join(', '),
       "Hektara (ha)": r.ukupnoHektara,
       Stabala: r.ukupnoStabala,
       "Vlake (km)": r.ukupnoKm,
@@ -293,15 +281,6 @@ function InzinjerIzvjestaj({
       "Ukupno unosa": r.brojUnosa,
     }));
     exportXlsx(data, `izvjestaj-inzinjeri-${period}`);
-  }
-
-  if (isPersonal && visibleRows.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
-        <p className="text-lg font-medium mb-1">Nema podataka</p>
-        <p className="text-sm">Vaš korisnički nalog nije povezan s nijednim projektantom. Obratite se administratoru.</p>
-      </div>
-    );
   }
 
   return (
@@ -354,9 +333,16 @@ function InzinjerIzvjestaj({
                     {r.inzinjer.prezime} {r.inzinjer.ime}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
-                      {r.inzinjer.odjel.broj}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {r.inzinjer.odjeli.length > 0
+                        ? r.inzinjer.odjeli.map((b) => (
+                            <span key={b} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
+                              {b}
+                            </span>
+                          ))
+                        : <span className="text-gray-400 text-xs">–</span>
+                      }
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                     {r.ukupnoHektara > 0 ? r.ukupnoHektara.toFixed(2) : "–"}
