@@ -39,6 +39,7 @@ export interface Inzinjer {
   odjelId: string;
   korisnikId?: string | null;
   planHa?: number;
+  rjesenje?: boolean;
   createdAt: string;
   updatedAt: string;
   odjel?: Odjel;

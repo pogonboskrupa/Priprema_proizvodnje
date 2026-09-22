@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik, getInzinjeri, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer } from "@/lib/db";
+import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer, getInzinjeriByKorisnikId } from "@/lib/db";
 import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik, Inzinjer, Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -26,14 +26,13 @@ export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
   const router = useRouter();
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
-  const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [me, setMe] = useState<Korisnik | null>(null);
+  const [myInzinjeri, setMyInzinjeri] = useState<Inzinjer[]>([]);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
   const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "", odjelId: "" });
   const [showAdd, setShowAdd] = useState(false);
-  const [editOdjel, setEditOdjel] = useState<{ korisnikId: string; inzinjerId: string | null; odjelId: string } | null>(null);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
@@ -45,6 +44,7 @@ export default function PostavkePage() {
   useEffect(() => {
     if (!session) return;
     loadMe(session.userId);
+    getInzinjeriByKorisnikId(session.userId).then(setMyInzinjeri);
     if (session.role === "admin") loadKorisnici();
   }, [session]);
 
@@ -56,9 +56,8 @@ export default function PostavkePage() {
   }
 
   async function loadKorisnici() {
-    const [k, inz, od] = await Promise.all([getKorisnici(), getInzinjeri(), getOdjeli()]);
+    const [k, od] = await Promise.all([getKorisnici(), getOdjeli()]);
     setKorisnici(k);
-    setInzinjeri(inz);
     setOdjeli(od);
   }
 
@@ -113,27 +112,9 @@ export default function PostavkePage() {
     toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
   }
 
-  async function saveOdjelEdit() {
-    if (!editOdjel) return;
-    const { korisnikId, inzinjerId, odjelId } = editOdjel;
-    const k = korisnici.find((x) => x.id === korisnikId);
-    if (!k) return;
-    if (odjelId === "") {
-      if (inzinjerId) await deleteInzinjer(inzinjerId);
-    } else if (inzinjerId) {
-      await updateInzinjer(inzinjerId, { odjelId });
-    } else {
-      const parts = (k.fullName || k.ime).trim().split(/\s+/);
-      await createInzinjer({
-        ime: parts[0] || k.ime,
-        prezime: parts.slice(1).join(" ") || parts[0] || k.ime,
-        email: "",
-        odjelId,
-        korisnikId,
-      });
-    }
-    setEditOdjel(null);
-    loadKorisnici();
+  async function toggleRjesenje(inz: Inzinjer) {
+    const updated = await updateInzinjer(inz.id, { rjesenje: !inz.rjesenje });
+    setMyInzinjeri((prev) => prev.map((i) => i.id === inz.id ? { ...i, ...updated } : i));
   }
 
   function resetPin(k: Korisnik) {
@@ -243,6 +224,38 @@ export default function PostavkePage() {
         </div>
       </div>
 
+      {/* Moji odjeli — zvjezdica za rješenje */}
+      {myInzinjeri.length > 0 && (
+        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Moji odjeli</h2>
+          <div className="space-y-2">
+            {myInzinjeri.map((inz) => (
+              <div key={inz.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                <div>
+                  <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                    {inz.odjel ? `${inz.odjel.gj} / ${inz.odjel.broj}` : inz.odjelId}
+                  </span>
+                  {inz.rjesenje && (
+                    <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-medium">Imam rješenje</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => toggleRjesenje(inz)}
+                  title={inz.rjesenje ? "Ukloni oznaku rješenja" : "Označi da imam rješenje"}
+                  className={`text-2xl leading-none transition-colors ${
+                    inz.rjesenje
+                      ? "text-amber-400 hover:text-amber-300"
+                      : "text-gray-300 dark:text-gray-600 hover:text-amber-400"
+                  }`}
+                >
+                  {inz.rjesenje ? "★" : "☆"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* APK download */}
       <ApkDownload />
 
@@ -321,51 +334,16 @@ export default function PostavkePage() {
               <tr>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {korisnici.map((k) => {
-                const inz = inzinjeri.find((i) => i.korisnikId === k.id) ?? null;
-                const isEditingOdjel = editOdjel?.korisnikId === k.id;
                 return (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
-                    <td className="px-4 py-3">
-                      {isEditingOdjel ? (
-                        <div className="flex items-center gap-1">
-                          <select
-                            autoFocus
-                            className="border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                            value={editOdjel.odjelId}
-                            onChange={(e) => setEditOdjel({ ...editOdjel, odjelId: e.target.value })}
-                          >
-                            <option value="">— Bez odjela —</option>
-                            {odjeli.map((o) => (
-                              <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
-                            ))}
-                          </select>
-                          <button onClick={saveOdjelEdit} className="text-green-700 dark:text-green-400 text-xs font-medium hover:underline">✓</button>
-                          <button onClick={() => setEditOdjel(null)} className="text-gray-400 text-xs hover:underline">✕</button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setEditOdjel({ korisnikId: k.id, inzinjerId: inz?.id ?? null, odjelId: inz?.odjelId ?? "" })}
-                          className="group flex items-center gap-1"
-                        >
-                          {inz?.odjel ? (
-                            <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
-                              {inz.odjel.gj} / {inz.odjel.broj}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300">+ dodaj</span>
-                          )}
-                        </button>
-                      )}
-                    </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         k.role === "admin" ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"

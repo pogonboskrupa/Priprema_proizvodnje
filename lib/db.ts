@@ -126,9 +126,21 @@ export async function createInzinjer(data: {
   return { ...(raw as unknown as Inzinjer), odjel: odjel as unknown as Odjel };
 }
 
+export async function getInzinjeriByKorisnikId(korisnikId: string): Promise<Inzinjer[]> {
+  const [inzinjeriRaw, odjeliRaw] = await Promise.all([
+    queryCol('inzinjeri', [where('korisnikId', '==', korisnikId)]),
+    getAll('odjeli'),
+  ]);
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+  return inzinjeriRaw.map((i) => ({
+    ...(i as unknown as Inzinjer),
+    odjel: odMap[i.odjelId as string] as unknown as Odjel,
+  }));
+}
+
 export async function updateInzinjer(
   id: string,
-  data: { ime?: string; prezime?: string; email?: string; odjelId?: string; korisnikId?: string | null; planHa?: number }
+  data: { ime?: string; prezime?: string; email?: string; odjelId?: string; korisnikId?: string | null; planHa?: number; rjesenje?: boolean }
 ): Promise<Inzinjer> {
   const raw = await update('inzinjeri', id, data as Record<string, unknown>);
   const odjelId = (raw as Record<string, unknown>).odjelId as string;
