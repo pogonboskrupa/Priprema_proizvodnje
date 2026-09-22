@@ -169,8 +169,8 @@ export default function UnosPage() {
                   </label>
                 ))}
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                {(["GODISNJI", "KANCELARIJA", "BOLOVANJE"] as VrstaRada[]).map((v) => (
+              <div className="grid grid-cols-2 gap-2">
+                {(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"] as VrstaRada[]).map((v) => (
                   <label
                     key={v}
                     className={`flex items-center justify-center gap-1 py-2 rounded-lg border-2 cursor-pointer text-xs font-medium transition-colors text-center ${
@@ -180,7 +180,7 @@ export default function UnosPage() {
                     }`}
                   >
                     <input type="radio" className="hidden" value={v} checked={form.vrsta === v} onChange={() => setForm({ ...form, vrsta: v })} />
-                    {v === "GODISNJI" ? "🏖️ God. odmor" : v === "KANCELARIJA" ? "🏢 Kancelarija" : "🏥 Bolovanje"}
+                    {v === "TEREN" ? "🥾 Teren" : v === "GODISNJI" ? "🏖️ God. odmor" : v === "KANCELARIJA" ? "🏢 Kancelarija" : "🏥 Bolovanje"}
                   </label>
                 ))}
               </div>
@@ -388,6 +388,7 @@ function vrstaLabel(vrsta: string): string {
   const map: Record<string, string> = {
     DOZNAKA: "🌳 Doznaka",
     VLAKA: "🛤️ Vlake",
+    TEREN: "🥾 Teren",
     GODISNJI: "🏖️ God. odmor",
     KANCELARIJA: "🏢 Kancelarija",
     BOLOVANJE: "🏥 Bolovanje",
@@ -399,6 +400,7 @@ function vrstaBadgeClass(vrsta: string): string {
   const map: Record<string, string> = {
     DOZNAKA: "bg-green-100 text-green-800",
     VLAKA: "bg-amber-100 text-amber-800",
+    TEREN: "bg-orange-100 text-orange-800",
     GODISNJI: "bg-sky-100 text-sky-800",
     KANCELARIJA: "bg-violet-100 text-violet-800",
     BOLOVANJE: "bg-red-100 text-red-800",

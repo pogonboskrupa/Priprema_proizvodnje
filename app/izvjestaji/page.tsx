@@ -26,6 +26,7 @@ type InzinjerRow = {
   danaGodisnji: number;
   danaKancelarija: number;
   danaBolovanje: number;
+  danaTeren: number;
   brojUnosa: number;
 };
 
@@ -239,6 +240,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoOdsustvo = rows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaKancelarija ?? 0) + (r.danaBolovanje ?? 0), 0);
+  const ukupnoTeren = rows.reduce((s, r) => s + (r.danaTeren ?? 0), 0);
 
   function handleExport() {
     const data = rows.map((r) => ({
@@ -247,6 +249,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
       "Hektara (ha)": r.ukupnoHektara,
       Stabala: r.ukupnoStabala,
       "Vlake (km)": r.ukupnoKm,
+      Teren: r.danaTeren ?? 0,
       "God. odmor": r.danaGodisnji ?? 0,
       Kancelarija: r.danaKancelarija ?? 0,
       Bolovanje: r.danaBolovanje ?? 0,
@@ -257,10 +260,11 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
         <StatCard label="Doznačenih stabala" value={ukupnoSt.toString()} color="emerald" />
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
+        <StatCard label="Dana na terenu" value={ukupnoTeren.toString()} color="orange" />
         <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
       </div>
 
@@ -283,6 +287,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Hektara (ha)</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Stabala</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Vlake (km)</th>
+                <th className="px-4 py-3 text-gray-600 font-medium text-right">Teren</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">God.</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Kanc.</th>
                 <th className="px-4 py-3 text-gray-600 font-medium text-right">Bol.</th>
@@ -308,6 +313,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
                   </td>
                   <td className="px-4 py-3 text-right">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
                   <td className="px-4 py-3 text-right">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-orange-600">{(r.danaTeren ?? 0) > 0 ? r.danaTeren : "–"}</td>
                   <td className="px-4 py-3 text-right text-sky-600">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
                   <td className="px-4 py-3 text-right text-violet-600">{(r.danaKancelarija ?? 0) > 0 ? r.danaKancelarija : "–"}</td>
                   <td className="px-4 py-3 text-right text-red-500">{(r.danaBolovanje ?? 0) > 0 ? r.danaBolovanje : "–"}</td>
@@ -329,13 +335,14 @@ function StatCard({
 }: {
   label: string;
   value: string;
-  color: "green" | "blue" | "emerald" | "amber";
+  color: "green" | "blue" | "emerald" | "amber" | "orange";
 }) {
   const colors = {
     green: "bg-green-50 border-green-200 text-green-700",
     blue: "bg-blue-50 border-blue-200 text-blue-700",
     emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
     amber: "bg-amber-50 border-amber-200 text-amber-700",
+    orange: "bg-orange-50 border-orange-200 text-orange-700",
   };
   return (
     <div className={`rounded-xl border p-4 ${colors[color]}`}>

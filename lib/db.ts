@@ -166,7 +166,7 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
   } else if (form.vrsta === 'VLAKA') {
     data.kilometri = Number(form.kilometri) || null;
   }
-  // GODISNJI, KANCELARIJA, BOLOVANJE — nema numeričkih polja
+  // GODISNJI, KANCELARIJA, BOLOVANJE, TEREN — nema numeričkih polja
 
   const raw = await create('unosi', data);
   const [inzinjer, odjel] = await Promise.all([
@@ -198,7 +198,7 @@ export async function getMjesecniRezime() {
   ]);
 
   return unosi.reduce(
-    (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; ukupno: number }, u) => {
+    (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number }, u) => {
       const vrsta = u.vrsta as string;
       if (vrsta === 'DOZNAKA') {
         acc.ha += Number(u.hektari) || 0;
@@ -208,10 +208,11 @@ export async function getMjesecniRezime() {
       } else if (vrsta === 'GODISNJI') acc.godisnji++;
       else if (vrsta === 'KANCELARIJA') acc.kancelarija++;
       else if (vrsta === 'BOLOVANJE') acc.bolovanje++;
+      else if (vrsta === 'TEREN') acc.teren++;
       acc.ukupno++;
       return acc;
     },
-    { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, ukupno: 0 }
+    { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, ukupno: 0 }
   );
 }
 
@@ -291,10 +292,10 @@ export async function getIzvjestaj(
     return { period, od: od.toISOString(), do_: do_.toISOString(), tip, data };
   } else {
     const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
-    const grouped: Record<string, { ha: number; stabala: number; km: number; count: number; godisnji: number; kancelarija: number; bolovanje: number }> = {};
+    const grouped: Record<string, { ha: number; stabala: number; km: number; count: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number }> = {};
     for (const u of unosiRaw) {
       const key = u.inzinjerId as string;
-      if (!grouped[key]) grouped[key] = { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0 };
+      if (!grouped[key]) grouped[key] = { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0 };
       grouped[key].ha += Number(u.hektari) || 0;
       grouped[key].stabala += Number(u.brojStabala) || 0;
       grouped[key].km += Number(u.kilometri) || 0;
@@ -302,6 +303,7 @@ export async function getIzvjestaj(
       if (u.vrsta === 'GODISNJI') grouped[key].godisnji++;
       else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija++;
       else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje++;
+      else if (u.vrsta === 'TEREN') grouped[key].teren++;
     }
 
     const data = inzinjeriRaw
@@ -309,7 +311,7 @@ export async function getIzvjestaj(
         `${a.prezime} ${a.ime}`.localeCompare(`${b.prezime} ${b.ime}`)
       )
       .map((i) => {
-        const g = grouped[i.id as string] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0 };
+        const g = grouped[i.id as string] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0 };
         const odjel = odMap[i.odjelId as string] || { gj: '–', broj: '–' };
         return {
           inzinjer: {
@@ -324,6 +326,7 @@ export async function getIzvjestaj(
           danaGodisnji: g.godisnji,
           danaKancelarija: g.kancelarija,
           danaBolovanje: g.bolovanje,
+          danaTeren: g.teren,
           brojUnosa: g.count,
         };
       });
