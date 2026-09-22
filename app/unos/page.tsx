@@ -169,10 +169,11 @@ export default function UnosPage() {
     return true;
   });
 
-  // Worker sees only their assigned odjeli; admin sees all filtered by selected worker
+  // Worker sees only their assigned odjeli; if none assigned, fall back to all
+  const assignedIds = myKorisnik?.odjeliIds ?? [];
   const workerOdjeli =
-    isWorker && myKorisnik
-      ? odjeli.filter((o) => myKorisnik.odjeliIds?.includes(o.id))
+    isWorker && myKorisnik && assignedIds.length > 0
+      ? odjeli.filter((o) => assignedIds.includes(o.id))
       : odjeli;
 
   const formOdjeli = !isWorker
