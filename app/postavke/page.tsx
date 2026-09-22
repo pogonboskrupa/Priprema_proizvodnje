@@ -7,8 +7,10 @@ import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
-// Postavi na true tek kad pravi APK fajl bude na public/app-release.apk
+// Postavi na true kad je APK spreman (radi komanda /posalji-apk)
 const APK_AVAILABLE = false;
+// Eksterna URL za APK (GitHub Releases ili prazan string = koristi public/app-release.apk)
+const APK_URL = '';
 
 const APK_VERSION = '1.0.0';
 const APK_DATE = '22. 09. 2026.';
@@ -315,7 +317,7 @@ export default function PostavkePage() {
 }
 
 function ApkDownload() {
-  const apkUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/app-release.apk`;
+  const apkUrl = APK_URL || `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/app-release.apk`;
   const [dlState, setDlState] = useState<"idle" | "progress" | "done">("idle");
   const [progress, setProgress] = useState(0);
 
