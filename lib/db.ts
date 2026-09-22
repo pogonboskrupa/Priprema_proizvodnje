@@ -412,6 +412,76 @@ export async function getMojiOdjeliData(): Promise<{
   return { odjeli, korisnici, statsPerOdjel };
 }
 
+// ── Sedmična tabela ──────────────────────────────────────────────────────────
+
+export interface DnevnaAktivnost {
+  vrsta: string;
+  gjBroj: string | null;
+  stabala: number;
+  ha: number;
+  km: number;
+}
+
+export async function getSedmicnaTabela(refDate?: Date): Promise<{
+  radnici: { id: string; name: string }[];
+  entries: Record<string, Record<number, DnevnaAktivnost[]>>;
+  od: string;
+  do_: string;
+}> {
+  const now = refDate ?? new Date();
+  const day = now.getDay() || 7;
+  const od = new Date(now);
+  od.setDate(now.getDate() - day + 1);
+  od.setHours(0, 0, 0, 0);
+  const do_ = new Date(od);
+  do_.setDate(od.getDate() + 6);
+  do_.setHours(23, 59, 59, 999);
+
+  const [unosiRaw, korisnaciRaw, odjeliRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('users'),
+    getAll('odjeli'),
+  ]);
+
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+  const radnici = (korisnaciRaw as unknown as Korisnik[])
+    .filter((k) => k.role === 'worker')
+    .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime))
+    .map((k) => ({ id: k.id, name: k.fullName || k.ime }));
+
+  const entries: Record<string, Record<number, DnevnaAktivnost[]>> = {};
+
+  for (const u of unosiRaw) {
+    const radnikId = u.inzinjerId as string;
+    const datumStr = u.datum as string;
+    const d = new Date(datumStr);
+    const dow = d.getDay() || 7; // 1=Pon … 7=Ned
+
+    if (!entries[radnikId]) entries[radnikId] = {};
+    if (!entries[radnikId][dow]) entries[radnikId][dow] = [];
+
+    const odjel = odMap[u.odjelId as string];
+    const gjBroj = odjel ? `${odjel.gj} ${odjel.broj}` : null;
+
+    entries[radnikId][dow].push({
+      vrsta: u.vrsta as string,
+      gjBroj,
+      stabala: Number(u.brojStabala) || 0,
+      ha: Number(u.hektari) || 0,
+      km: Number(u.kilometri) || 0,
+    });
+  }
+
+  function fmtDate(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  return { radnici, entries, od: fmtDate(od), do_: fmtDate(do_) };
+}
+
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
 function localDateStr(d: Date): string {

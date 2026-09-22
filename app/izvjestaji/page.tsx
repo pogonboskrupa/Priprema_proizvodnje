@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { getIzvjestaj } from "@/lib/db";
+import { getIzvjestaj, getSedmicnaTabela, type DnevnaAktivnost } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
@@ -39,6 +39,13 @@ type IzvjestajData = {
   data: OdjelRow[] | InzinjerRow[];
 };
 
+type TabelaData = {
+  radnici: { id: string; name: string }[];
+  entries: Record<string, Record<number, DnevnaAktivnost[]>>;
+  od: string;
+  do_: string;
+};
+
 // Generates last N months newest-first as { value: ISO date string, label }
 function buildMonthOptions(count = 24) {
   const now = new Date();
@@ -65,6 +72,7 @@ export default function IzvjestajiPage() {
   const [monthOptions] = useState(() => buildMonthOptions(24));
   const [selectedMonth, setSelectedMonth] = useState(() => buildMonthOptions(1)[0].value);
   const [data, setData] = useState<IzvjestajData | null>(null);
+  const [tabelaData, setTabelaData] = useState<TabelaData | null>(null);
   const [loading, setLoading] = useState(false);
   const genRef = useRef(0);
 
@@ -89,9 +97,14 @@ export default function IzvjestajiPage() {
     const gen = ++genRef.current;
     setLoading(true);
     try {
-      const json = await getIzvjestaj(p, t, refDateFor(p, monthVal));
+      const fetches: [Promise<unknown>, Promise<TabelaData | null>] = [
+        getIzvjestaj(p, t, refDateFor(p, monthVal)),
+        p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela() : Promise.resolve(null),
+      ];
+      const [json, tabela] = await Promise.all(fetches);
       if (gen !== genRef.current) return;
       setData(json as IzvjestajData);
+      setTabelaData(tabela as TabelaData | null);
     } catch {
       // data ostaje kao prije — korisnik vidi prethodne podatke
     } finally {
@@ -201,6 +214,13 @@ export default function IzvjestajiPage() {
           rows={data.data as InzinjerRow[]}
           period={data.period}
           filterInzinjerId={isWorker ? session.userId : null}
+        />
+      )}
+
+      {!loading && tabelaData && (
+        <SedmicnaTabela
+          data={tabelaData}
+          filterRadnikId={isWorker ? session.userId : null}
         />
       )}
     </div>
@@ -431,6 +451,138 @@ function InzinjerIzvjestaj({
       </div>
     </div>
   );
+}
+
+const DANI = ["Pon", "Uto", "Sri", "Čet", "Pet"] as const;
+const DANI_DOW = [1, 2, 3, 4, 5] as const; // 1=Ponedjeljak … 5=Petak
+
+function formatAktivnost(a: DnevnaAktivnost): string {
+  const prefix = a.gjBroj ?? "";
+  switch (a.vrsta) {
+    case "DOZNAKA": {
+      const parts: string[] = [];
+      if (a.stabala > 0) parts.push(`${a.stabala}st`);
+      if (a.ha > 0) parts.push(`${a.ha.toFixed(1)}ha`);
+      return [prefix, parts.join("/")].filter(Boolean).join(" ");
+    }
+    case "VLAKA":
+      return [prefix, a.km > 0 ? `${a.km.toFixed(1)}km` : ""].filter(Boolean).join(" ");
+    case "TEREN":
+      return prefix ? `Teren ${prefix}` : "Teren";
+    case "GODISNJI":
+      return "God. odmor";
+    case "KANCELARIJA":
+      return "Kancelarija";
+    case "BOLOVANJE":
+      return "Bolovanje";
+    default:
+      return prefix || a.vrsta;
+  }
+}
+
+function aktivnostColor(vrsta: string) {
+  switch (vrsta) {
+    case "DOZNAKA":    return "bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200";
+    case "VLAKA":      return "bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200";
+    case "TEREN":      return "bg-orange-100 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200";
+    case "GODISNJI":   return "bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200";
+    case "KANCELARIJA":return "bg-violet-100 dark:bg-violet-900/60 text-violet-800 dark:text-violet-200";
+    case "BOLOVANJE":  return "bg-red-100 dark:bg-red-900/60 text-red-800 dark:text-red-200";
+    default:           return "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200";
+  }
+}
+
+function SedmicnaTabela({
+  data,
+  filterRadnikId,
+}: {
+  data: TabelaData;
+  filterRadnikId?: string | null;
+}) {
+  const radnici = filterRadnikId
+    ? data.radnici.filter((r) => r.id === filterRadnikId)
+    : data.radnici;
+
+  return (
+    <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200">
+          Dnevna aktivnost — {data.od} do {data.do_}
+        </h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs min-w-[600px]">
+          <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th className="px-4 py-2.5 text-left text-gray-600 dark:text-gray-300 font-semibold w-40">
+                Ime i prezime
+              </th>
+              {DANI.map((dan, i) => (
+                <th key={dan} className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300 font-semibold">
+                  {dan}
+                  <span className="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
+                    {fmtDayInTable(data.od, DANI_DOW[i])}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {radnici.map((radnik) => {
+              const dayMap = data.entries[radnik.id] ?? {};
+              const hasAny = DANI_DOW.some((dow) => (dayMap[dow]?.length ?? 0) > 0);
+              return (
+                <tr
+                  key={radnik.id}
+                  className={`border-t border-gray-100 dark:border-gray-800 align-top ${
+                    !hasAny ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">
+                    {radnik.name}
+                  </td>
+                  {DANI_DOW.map((dow) => {
+                    const aktivnosti = dayMap[dow] ?? [];
+                    return (
+                      <td key={dow} className="px-2 py-2 text-center">
+                        {aktivnosti.length === 0 ? (
+                          <span className="text-gray-300 dark:text-gray-600">–</span>
+                        ) : (
+                          <div className="flex flex-col gap-1 items-center">
+                            {aktivnosti.map((a, i) => (
+                              <span
+                                key={i}
+                                className={`inline-block rounded px-1.5 py-0.5 leading-snug text-[11px] font-medium ${aktivnostColor(a.vrsta)}`}
+                              >
+                                {formatAktivnost(a)}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+            {radnici.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                  Nema podataka za ovu sedmicu
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function fmtDayInTable(mondayIso: string, dow: number): string {
+  const [y, m, d] = mondayIso.split("-").map(Number);
+  const date = new Date(y, m - 1, d + (dow - 1));
+  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function StatCard({
