@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getUnosiZaMjesec, getInzinjerByKorisnikId } from "@/lib/db";
+import { getUnosiZaMjesec } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { UnosRada } from "@/lib/types";
@@ -40,8 +40,6 @@ export default function KalendarPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
-  const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
-  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(!isWorker);
 
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
@@ -55,14 +53,6 @@ export default function KalendarPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    if (!session || !isWorker) return;
-    getInzinjerByKorisnikId(session.userId).then((inz) => {
-      setMyInzinjerId(inz?.id ?? null);
-      setMyInzinjerLoaded(true);
-    });
-  }, [session]);
-
-  useEffect(() => {
     if (!session) return;
     setLoading(true);
     getUnosiZaMjesec(year, month)
@@ -70,7 +60,7 @@ export default function KalendarPage() {
       .finally(() => setLoading(false));
   }, [session, year, month]);
 
-  if (authLoading || !session || !myInzinjerLoaded) return null;
+  if (authLoading || !session) return null;
 
   function prevMonth() {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -85,7 +75,7 @@ export default function KalendarPage() {
   }
 
   const visibleUnosi = isWorker
-    ? unosi.filter((u) => u.inzinjerId === myInzinjerId)
+    ? unosi.filter((u) => u.inzinjerId === session.userId)
     : unosi;
 
   const byDay: Record<string, UnosRada[]> = {};
