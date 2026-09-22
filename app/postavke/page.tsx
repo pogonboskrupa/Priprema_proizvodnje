@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer, getInzinjeriByKorisnikId } from "@/lib/db";
+import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik, getOdjeli } from "@/lib/db";
 import { saveSession, isRemembered } from "@/lib/auth";
-import type { Korisnik, Inzinjer, Odjel } from "@/lib/types";
+import type { Korisnik, Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
 // Postavi na true kad je APK spreman (radi komanda /posalji-apk)
@@ -28,10 +28,10 @@ export default function PostavkePage() {
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [me, setMe] = useState<Korisnik | null>(null);
-  const [myInzinjeri, setMyInzinjeri] = useState<Inzinjer[]>([]);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
-  const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "", odjelId: "" });
+  const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "" });
+  const [addOdjelId, setAddOdjelId] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
@@ -44,7 +44,7 @@ export default function PostavkePage() {
   useEffect(() => {
     if (!session) return;
     loadMe(session.userId);
-    getInzinjeriByKorisnikId(session.userId).then(setMyInzinjeri);
+    getOdjeli().then(setOdjeli);
     if (session.role === "admin") loadKorisnici();
   }, [session]);
 
@@ -87,7 +87,7 @@ export default function PostavkePage() {
     if (korisnici.some((k) => k.ime.toUpperCase() === addForm.ime.toUpperCase())) {
       toast("Korisnik s tim imenom već postoji!"); return;
     }
-    const newK = await createKorisnik({
+    await createKorisnik({
       ime: addForm.ime.toUpperCase(),
       fullName: addForm.fullName || addForm.ime,
       title: addForm.title,
@@ -96,25 +96,42 @@ export default function PostavkePage() {
       avatar: "",
       odjeliIds: [],
     });
-    if (addForm.odjelId) {
-      const parts = (addForm.fullName || addForm.ime).trim().split(/\s+/);
-      await createInzinjer({
-        ime: parts[0] || addForm.ime,
-        prezime: parts.slice(1).join(" ") || parts[0] || addForm.ime,
-        email: "",
-        odjelId: addForm.odjelId,
-        korisnikId: newK.id,
-      });
-    }
-    setAddForm({ ime: "", fullName: "", title: "", odjelId: "" });
+    setAddForm({ ime: "", fullName: "", title: "" });
     setShowAdd(false);
     loadKorisnici();
     toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
   }
 
-  async function toggleRjesenje(inz: Inzinjer) {
-    const updated = await updateInzinjer(inz.id, { rjesenje: !inz.rjesenje });
-    setMyInzinjeri((prev) => prev.map((i) => i.id === inz.id ? { ...i, ...updated } : i));
+  async function toggleMojOdjel(odjelId: string) {
+    if (!me || !session) return;
+    const ids = me.odjeliIds ?? [];
+    const rjesenja = me.odjeliRjesenjaIds ?? [];
+    const hasIt = ids.includes(odjelId);
+    const newIds = hasIt ? ids.filter((id) => id !== odjelId) : [...ids, odjelId];
+    const newRjesenja = hasIt ? rjesenja.filter((id) => id !== odjelId) : rjesenja;
+    const updated = { ...me, odjeliIds: newIds, odjeliRjesenjaIds: newRjesenja };
+    setMe(updated);
+    await updateKorisnik(session.userId, { odjeliIds: newIds, odjeliRjesenjaIds: newRjesenja });
+  }
+
+  async function toggleRjesenje(odjelId: string) {
+    if (!me || !session) return;
+    const rjesenja = me.odjeliRjesenjaIds ?? [];
+    const hasIt = rjesenja.includes(odjelId);
+    const newRjesenja = hasIt ? rjesenja.filter((id) => id !== odjelId) : [...rjesenja, odjelId];
+    const updated = { ...me, odjeliRjesenjaIds: newRjesenja };
+    setMe(updated);
+    await updateKorisnik(session.userId, { odjeliRjesenjaIds: newRjesenja });
+  }
+
+  async function addOdjel() {
+    if (!addOdjelId || !me || !session) return;
+    if ((me.odjeliIds ?? []).includes(addOdjelId)) { setAddOdjelId(""); return; }
+    const newIds = [...(me.odjeliIds ?? []), addOdjelId];
+    const updated = { ...me, odjeliIds: newIds };
+    setMe(updated);
+    setAddOdjelId("");
+    await updateKorisnik(session.userId, { odjeliIds: newIds });
   }
 
   function resetPin(k: Korisnik) {
@@ -224,34 +241,79 @@ export default function PostavkePage() {
         </div>
       </div>
 
-      {/* Moji odjeli — zvjezdica za rješenje */}
-      {myInzinjeri.length > 0 && (
+      {/* Moji odjeli — self-service za radnike */}
+      {session.role === "worker" && (
         <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-3">Moji odjeli</h2>
-          <div className="space-y-2">
-            {myInzinjeri.map((inz) => (
-              <div key={inz.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
-                <div>
-                  <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                    {inz.odjel ? `${inz.odjel.gj} / ${inz.odjel.broj}` : inz.odjelId}
-                  </span>
-                  {inz.rjesenje && (
-                    <span className="ml-2 text-xs text-amber-600 dark:text-amber-400 font-medium">Imam rješenje</span>
-                  )}
-                </div>
-                <button
-                  onClick={() => toggleRjesenje(inz)}
-                  title={inz.rjesenje ? "Ukloni oznaku rješenja" : "Označi da imam rješenje"}
-                  className={`text-2xl leading-none transition-colors ${
-                    inz.rjesenje
-                      ? "text-amber-400 hover:text-amber-300"
-                      : "text-gray-300 dark:text-gray-600 hover:text-amber-400"
-                  }`}
-                >
-                  {inz.rjesenje ? "★" : "☆"}
-                </button>
-              </div>
-            ))}
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200 mb-1">Moji odjeli</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+            Odjeli u kojima si radio/la ili imaš rješenje o izradi projekta. Zvjezdica označava da imaš rješenje za taj odjel.
+          </p>
+
+          {/* Dodani odjeli */}
+          {(me?.odjeliIds ?? []).length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">Nema dodanih odjela.</p>
+          ) : (
+            <div className="space-y-2 mb-4">
+              {(me?.odjeliIds ?? []).map((odjelId) => {
+                const o = odjeli.find((x) => x.id === odjelId);
+                const hasRjesenje = (me?.odjeliRjesenjaIds ?? []).includes(odjelId);
+                return (
+                  <div key={odjelId} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                        {o ? `${o.gj} / ${o.broj}` : odjelId}
+                      </span>
+                      {hasRjesenje && (
+                        <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">Imam rješenje</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => toggleRjesenje(odjelId)}
+                        title={hasRjesenje ? "Ukloni oznaku rješenja" : "Označi da imam rješenje"}
+                        className={`text-xl leading-none transition-colors ${
+                          hasRjesenje
+                            ? "text-amber-400 hover:text-amber-300"
+                            : "text-gray-300 dark:text-gray-600 hover:text-amber-400"
+                        }`}
+                      >
+                        {hasRjesenje ? "★" : "☆"}
+                      </button>
+                      <button
+                        onClick={() => toggleMojOdjel(odjelId)}
+                        title="Ukloni iz mojih odjela"
+                        className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 text-sm leading-none transition-colors"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Dodaj novi odjel */}
+          <div className="flex gap-2">
+            <select
+              value={addOdjelId}
+              onChange={(e) => setAddOdjelId(e.target.value)}
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            >
+              <option value="">— Odaberi odjel —</option>
+              {odjeli
+                .filter((o) => !(me?.odjeliIds ?? []).includes(o.id))
+                .map((o) => (
+                  <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
+                ))}
+            </select>
+            <button
+              onClick={addOdjel}
+              disabled={!addOdjelId}
+              className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 disabled:opacity-40"
+            >
+              + Dodaj
+            </button>
           </div>
         </div>
       )}
@@ -303,19 +365,6 @@ export default function PostavkePage() {
                     onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
                     maxLength={60}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Odjel (opciono)</label>
-                  <select
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={addForm.odjelId}
-                    onChange={(e) => setAddForm({ ...addForm, odjelId: e.target.value })}
-                  >
-                    <option value="">— Bez odjela —</option>
-                    {odjeli.map((o) => (
-                      <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
-                    ))}
-                  </select>
                 </div>
               </div>
               <div className="flex gap-2">

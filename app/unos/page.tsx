@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, getKorisnici, getKorisnik, getUnosi, createUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getKorisnici, getUnosi, createUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel, Korisnik, UnosRada, VrstaRada } from "@/lib/types";
@@ -37,8 +37,6 @@ export default function UnosPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
-  const [myKorisnik, setMyKorisnik] = useState<Korisnik | null>(null);
-  const [myKorisnikLoaded, setMyKorisnikLoaded] = useState(false);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
@@ -83,16 +81,8 @@ export default function UnosPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    if (!session || !isWorker) {
-      setMyKorisnikLoaded(true);
-      return;
-    }
-    getKorisnik(session.userId).then((k) => {
-      setMyKorisnik(k);
-      const odjelId = k?.odjeliIds?.length === 1 ? k.odjeliIds[0] : "";
-      setForm((f) => ({ ...f, inzinjerId: session.userId, odjelId }));
-      setMyKorisnikLoaded(true);
-    });
+    if (!session || !isWorker) return;
+    setForm((f) => ({ ...f, inzinjerId: session.userId }));
   }, [session]);
 
   async function load() {
@@ -106,7 +96,7 @@ export default function UnosPage() {
     load();
   }, []);
 
-  if (authLoading || !session || (isWorker && !myKorisnikLoaded)) return null;
+  if (authLoading || !session) return null;
 
   function handleKorisnikChange(id: string) {
     const kor = korisnici.find((k) => k.id === id);
@@ -169,20 +159,7 @@ export default function UnosPage() {
     return true;
   });
 
-  // Worker sees only their assigned odjeli; if none assigned, fall back to all
-  const assignedIds = myKorisnik?.odjeliIds ?? [];
-  const workerOdjeli =
-    isWorker && myKorisnik && assignedIds.length > 0
-      ? odjeli.filter((o) => assignedIds.includes(o.id))
-      : odjeli;
-
-  const formOdjeli = !isWorker
-    ? (() => {
-        const kor = korisnici.find((k) => k.id === form.inzinjerId);
-        const ids = kor?.odjeliIds ?? [];
-        return ids.length > 0 ? odjeli.filter((o) => ids.includes(o.id)) : odjeli;
-      })()
-    : workerOdjeli;
+  const formOdjeli = odjeli;
 
   const filterSummary = filteredUnosi.reduce(
     (acc, u) => {

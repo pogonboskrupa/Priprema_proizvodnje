@@ -13,6 +13,7 @@ export interface Korisnik {
   operater?: boolean;
   avatar: string;
   odjeliIds: string[];
+  odjeliRjesenjaIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
