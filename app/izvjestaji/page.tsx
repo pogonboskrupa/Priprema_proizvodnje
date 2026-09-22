@@ -55,15 +55,15 @@ function buildMonthOptions(count = 24) {
   return opts;
 }
 
-const MONTH_OPTIONS = buildMonthOptions(24);
-
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
-  const [selectedMonth, setSelectedMonth] = useState<string>(MONTH_OPTIONS[0].value);
+  // Computed inside state initializer to avoid SSR/client timezone mismatch
+  const [monthOptions] = useState(() => buildMonthOptions(24));
+  const [selectedMonth, setSelectedMonth] = useState(() => buildMonthOptions(1)[0].value);
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
   const genRef = useRef(0);
@@ -152,7 +152,7 @@ export default function IzvjestajiPage() {
               onChange={(e) => handleMonth(e.target.value)}
               className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
             >
-              {MONTH_OPTIONS.map((o) => (
+              {monthOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
@@ -221,7 +221,6 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoPovrsina = rows.reduce((s, r) => s + r.odjel.povrsina, 0);
-  const aktivni = rows;
 
   function handleExport() {
     const data = rows.map((r) => ({
@@ -250,7 +249,7 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
         <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700 dark:text-gray-200">Pregled po odjelima</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{aktivni.length} odjela sa aktivnošću</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{rows.length} odjela sa aktivnošću</span>
             <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
               Export XLSX
             </button>
@@ -327,6 +326,15 @@ function InzinjerIzvjestaj({
   const ukupnoTeren = visibleRows.reduce((s, r) => s + (r.danaTeren ?? 0), 0);
 
   const isPersonal = !!filterInzinjerId;
+
+  if (!isPersonal && aktivni.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
+        <p className="text-2xl mb-2">📭</p>
+        <p className="font-medium">Nema aktivnosti u odabranom periodu</p>
+      </div>
+    );
+  }
 
   function handleExport() {
     const data = visibleRows.map((r) => ({

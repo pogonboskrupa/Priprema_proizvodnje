@@ -399,7 +399,8 @@ function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Da
     const od = new Date(now);
     od.setDate(now.getDate() - day + 1);
     od.setHours(0, 0, 0, 0);
-    const do_ = new Date(now);
+    const do_ = new Date(od);
+    do_.setDate(od.getDate() + 6);
     do_.setHours(23, 59, 59, 999);
     return { od, do_ };
   } else if (period === 'mjesecno') {
