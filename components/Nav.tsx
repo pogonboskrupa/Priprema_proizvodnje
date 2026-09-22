@@ -1,9 +1,9 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
-import { collection, getDocs, limit, query } from "firebase/firestore";
+import { useEffect, useRef, useState } from "react";
+import { db, collection, query, orderBy, onSnapshot } from "@/lib/firebase";
+import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
 import { useAuth } from "@/context/AuthContext";
 
@@ -45,6 +45,7 @@ const adminLinks = [
   { href: "/odjeli", label: "Odjeli" },
   { href: "/inzinjeri", label: "Projektanti" },
   { href: "/plan", label: "Plan sječe" },
+  { href: "/plan-projektant", label: "Plan/projektant" },
   { href: "/realizacija", label: "Realizacija" },
   { href: "/elaborat", label: "Elaborat" },
   { href: "/postavke", label: "Postavke" },
@@ -59,10 +60,42 @@ const workerLinks = [
   { href: "/postavke", label: "Postavke" },
 ];
 
+function useNewEntryNotifier() {
+  const [toast, setToast] = useState<string | null>(null);
+  const { session } = useAuth();
+  const initializedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (session?.role !== "admin") return;
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+    initializedRef.current = false;
+    const q = query(collection(db, "unosi"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      if (!initializedRef.current) { initializedRef.current = true; return; }
+      const added = snapshot.docChanges().filter((c) => c.type === "added");
+      if (!added.length) return;
+      const msg = added.length === 1 ? "Novi unos je dodan" : `${added.length} novih unosa`;
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("Priprema Proizvodnje", { body: msg });
+      }
+      setToast(msg);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setToast(null), 5000);
+    });
+    return () => { unsub(); if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [session]);
+
+  return toast;
+}
+
 export default function Nav() {
   const path = usePathname();
   const status = useConnectionStatus();
   const { session, logout } = useAuth();
+  const toast = useNewEntryNotifier();
 
   const links = session?.role === "admin" ? adminLinks : workerLinks;
 
@@ -76,6 +109,13 @@ export default function Nav() {
   if (!session) return null;
 
   return (
+    <>
+    {toast && (
+      <div className="fixed top-16 right-4 z-50 flex items-center gap-2 bg-green-700 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg animate-in fade-in slide-in-from-right">
+        <span>🔔</span>
+        <span>{toast}</span>
+      </div>
+    )}
     <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14 overflow-x-auto">
         <span className="font-bold text-sm mr-3 whitespace-nowrap flex-shrink-0">🌲 PP</span>
@@ -115,5 +155,6 @@ export default function Nav() {
         </div>
       </div>
     </nav>
+    </>
   );
 }

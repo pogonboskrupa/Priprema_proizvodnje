@@ -20,6 +20,8 @@ import {
   DocumentData,
   Query,
   CollectionReference,
+  onSnapshot,
+  limit,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -108,4 +110,4 @@ export async function queryCol(
   return snaps.docs.map(docToObj);
 }
 
-export { collection, query, where, orderBy, Timestamp };
+export { collection, query, where, orderBy, Timestamp, onSnapshot, limit };

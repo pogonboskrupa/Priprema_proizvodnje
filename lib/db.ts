@@ -128,7 +128,7 @@ export async function createInzinjer(data: {
 
 export async function updateInzinjer(
   id: string,
-  data: { ime?: string; prezime?: string; email?: string; odjelId?: string; korisnikId?: string | null }
+  data: { ime?: string; prezime?: string; email?: string; odjelId?: string; korisnikId?: string | null; planHa?: number }
 ): Promise<Inzinjer> {
   const raw = await update('inzinjeri', id, data as Record<string, unknown>);
   const odjelId = (raw as Record<string, unknown>).odjelId as string;
@@ -138,6 +138,42 @@ export async function updateInzinjer(
 
 export async function deleteInzinjer(id: string): Promise<void> {
   await remove('inzinjeri', id);
+}
+
+export async function getGodisnjePlanPoInzinjeru(year: number) {
+  const od = new Date(year, 0, 1);
+  const do_ = new Date(year, 11, 31);
+  do_.setHours(23, 59, 59, 999);
+
+  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('inzinjeri'),
+    getAll('odjeli'),
+  ]);
+
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+  const haMap: Record<string, number> = {};
+  const kmMap: Record<string, number> = {};
+
+  for (const u of unosiRaw) {
+    const id = u.inzinjerId as string;
+    haMap[id] = (haMap[id] || 0) + (u.vrsta === 'DOZNAKA' ? (Number(u.hektari) || 0) : 0);
+    kmMap[id] = (kmMap[id] || 0) + (u.vrsta === 'VLAKA' ? (Number(u.kilometri) || 0) : 0);
+  }
+
+  return (inzinjeriRaw as unknown as Inzinjer[])
+    .map((i) => ({
+      inzinjer: { ...i, odjel: odMap[i.odjelId] as unknown as Odjel },
+      planHa: Number(i.planHa) || 0,
+      odradjeno: haMap[i.id] || 0,
+      odradjenoKm: kmMap[i.id] || 0,
+    }))
+    .sort((a, b) =>
+      `${a.inzinjer.prezime} ${a.inzinjer.ime}`.localeCompare(`${b.inzinjer.prezime} ${b.inzinjer.ime}`)
+    );
 }
 
 // ── Unosi ─────────────────────────────────────────────────────────────────────

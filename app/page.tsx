@@ -120,6 +120,13 @@ export default function Home() {
               desc="Praćenje napretka realizacije plana"
               color="bg-teal-50 dark:bg-teal-950 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900"
             />
+            <QuickCard
+              href="/plan-projektant"
+              icon="🎯"
+              title="Plan po projektantu"
+              desc="Godišnji cilj ha po inžinjeru — plan vs odrađeno"
+              color="bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900"
+            />
           </>
         )}
         <QuickCard
