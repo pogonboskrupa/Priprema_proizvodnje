@@ -136,7 +136,7 @@ export default function OdjeliPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Odjeli</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Odjeli</h1>
 
       {/* Mode toggle (samo kad nije edit) */}
       {!editId && (
@@ -144,7 +144,7 @@ export default function OdjeliPage() {
           <button
             onClick={() => switchMode(false)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              !bulkMode ? "bg-green-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              !bulkMode ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             Pojedinačno
@@ -152,7 +152,7 @@ export default function OdjeliPage() {
           <button
             onClick={() => switchMode(true)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              bulkMode ? "bg-green-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              bulkMode ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
             Grupni unos (više odjela)
@@ -164,33 +164,33 @@ export default function OdjeliPage() {
       {!bulkMode && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl border shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3"
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Gospodarska jedinica</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Gospodarska jedinica</label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.gj}
               onChange={(e) => setForm({ ...form, gj: e.target.value })}
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Broj odjela</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Broj odjela</label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.broj}
               onChange={(e) => setForm({ ...form, broj: e.target.value })}
               required
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Površina (ha)</label>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Površina (ha)</label>
             <input
               type="number"
               step="0.01"
               min="0"
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.povrsina}
               onChange={(e) => setForm({ ...form, povrsina: e.target.value })}
               required
@@ -208,7 +208,7 @@ export default function OdjeliPage() {
               <button
                 type="button"
                 onClick={cancelEdit}
-                className="border px-4 py-2 rounded-lg text-sm text-gray-600"
+                className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300"
               >
                 Odustani
               </button>
@@ -221,14 +221,14 @@ export default function OdjeliPage() {
       {bulkMode && (
         <form
           onSubmit={handleBulkSubmit}
-          className="bg-white rounded-xl border shadow-sm p-5 mb-6 space-y-4"
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 space-y-4"
         >
           <div className="max-w-xs">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Gospodarska jedinica (zajednička za sve)
             </label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={bulkGj}
               onChange={(e) => setBulkGj(e.target.value)}
               required
@@ -236,7 +236,7 @@ export default function OdjeliPage() {
           </div>
 
           <div className="space-y-2">
-            <div className="grid grid-cols-[1fr_1fr_32px] gap-2 text-xs font-medium text-gray-500 px-1">
+            <div className="grid grid-cols-[1fr_1fr_32px] gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 px-1">
               <span>Broj odjela</span>
               <span>Površina (ha)</span>
               <span />
@@ -245,7 +245,7 @@ export default function OdjeliPage() {
             {bulkRows.map((row, idx) => (
               <div key={idx} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
                 <input
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   value={row.broj}
                   onChange={(e) => updateBulkRow(idx, "broj", e.target.value)}
                   placeholder=""
@@ -254,7 +254,7 @@ export default function OdjeliPage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  className="border rounded-lg px-3 py-2 text-sm"
+                  className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   value={row.povrsina}
                   onChange={(e) => updateBulkRow(idx, "povrsina", e.target.value)}
                   placeholder=""
@@ -263,7 +263,7 @@ export default function OdjeliPage() {
                   type="button"
                   onClick={() => removeBulkRow(idx)}
                   disabled={bulkRows.length <= 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-30 transition-colors"
                   title="Ukloni red"
                 >
                   <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
@@ -278,7 +278,7 @@ export default function OdjeliPage() {
             <button
               type="button"
               onClick={addBulkRow}
-              className="flex items-center gap-1.5 text-sm text-green-700 hover:text-green-800 font-medium"
+              className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 font-medium"
             >
               <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
@@ -301,7 +301,7 @@ export default function OdjeliPage() {
 
       {/* ── Tabela grupirana po GJ ──────────────────────────────────────── */}
       {odjeli.length === 0 ? (
-        <div className="bg-white rounded-xl border shadow-sm px-4 py-8 text-center text-gray-500 text-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-8 text-center text-gray-600 dark:text-gray-400 text-sm">
           Nema odjela. Dodajte prvi odjel.
         </div>
       ) : (
@@ -317,7 +317,7 @@ export default function OdjeliPage() {
               {sorted.map(([gj, items]) => {
                 const totalHa = items.reduce((s, i) => s + i.povrsina, 0);
                 return (
-                  <div key={gj} className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                  <div key={gj} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="bg-green-700 px-4 py-2.5 flex items-center justify-between">
                       <span className="text-white font-semibold text-sm">{gj}</span>
                       <span className="text-green-200 text-xs">
@@ -325,29 +325,31 @@ export default function OdjeliPage() {
                       </span>
                     </div>
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50 border-b">
+                      <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                         <tr>
-                          <th className="text-left px-4 py-2 text-gray-600 font-medium text-xs">Odjel br.</th>
-                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Površina (ha)</th>
-                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Projektanti</th>
-                          <th className="text-right px-4 py-2 text-gray-600 font-medium text-xs">Unosi</th>
-                          <th className="px-4 py-2"></th>
+                          <th className="text-left px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Odjel br.</th>
+                          <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Površina (ha)</th>
+                          <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Proj.</th>
+                          <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Unosi</th>
+                          <th className="px-3 py-2 w-20"></th>
                         </tr>
                       </thead>
                       <tbody>
                         {items.map((o) => (
-                          <tr key={o.id} className={`border-t hover:bg-gray-50 ${editId === o.id ? "bg-blue-50" : ""}`}>
-                            <td className="px-4 py-2.5 font-mono font-medium">{o.broj}</td>
-                            <td className="px-4 py-2.5 text-right tabular-nums">{o.povrsina.toFixed(2)}</td>
-                            <td className="px-4 py-2.5 text-right text-gray-500">{o._count?.inzinjeri ?? 0}</td>
-                            <td className="px-4 py-2.5 text-right text-gray-500">{o._count?.unosi ?? 0}</td>
-                            <td className="px-4 py-2.5 text-right">
-                              <button onClick={() => startEdit(o)} className="text-blue-600 hover:underline mr-3 text-xs">
-                                Uredi
-                              </button>
-                              <button onClick={() => handleDelete(o.id)} className="text-red-500 hover:underline text-xs">
-                                Obriši
-                              </button>
+                          <tr key={o.id} className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${editId === o.id ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
+                            <td className="px-3 py-2.5 font-mono font-semibold text-gray-900 dark:text-gray-100">{o.broj}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 dark:text-gray-200">{o.povrsina.toFixed(2)}</td>
+                            <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.inzinjeri ?? 0}</td>
+                            <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.unosi ?? 0}</td>
+                            <td className="px-3 py-2.5 text-right w-20">
+                              <div className="flex flex-col items-end gap-0.5">
+                                <button onClick={() => startEdit(o)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
+                                  Uredi
+                                </button>
+                                <button onClick={() => handleDelete(o.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
+                                  Obriši
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
