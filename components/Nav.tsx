@@ -135,7 +135,7 @@ export default function Nav() {
 
         <div className="ml-auto flex items-center gap-2 flex-shrink-0 pl-2">
           <span className="text-green-200 text-xs hidden sm:block whitespace-nowrap">
-            {session.ime}
+            {session.fullName}
           </span>
           <span className="text-green-300 text-xs">v{VERSION}</span>
 
