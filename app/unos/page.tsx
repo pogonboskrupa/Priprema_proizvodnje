@@ -296,38 +296,42 @@ export default function UnosPage() {
               </div>
             </div>
 
-            <div>
-              <label className={labelCls}>Odjel</label>
-              <select
-                className={inputCls}
-                value={form.odjelId}
-                onChange={(e) => setForm({ ...form, odjelId: e.target.value, inzinjerId: "" })}
-              >
-                <option value="">Svi odjeli</option>
-                {odjeli.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.gj} / {o.broj}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isWorker && (
+              <div>
+                <label className={labelCls}>Odjel</label>
+                <select
+                  className={inputCls}
+                  value={form.odjelId}
+                  onChange={(e) => setForm({ ...form, odjelId: e.target.value, inzinjerId: "" })}
+                >
+                  <option value="">Svi odjeli</option>
+                  {odjeli.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.gj} / {o.broj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div>
-              <label className={labelCls}>Projektant</label>
-              <select
-                className={inputCls}
-                value={form.inzinjerId}
-                onChange={(e) => handleInzinjerChange(e.target.value)}
-                required
-              >
-                <option value="">Odaberi projektanta...</option>
-                {filteredInzinjeri.map((i) => (
-                  <option key={i.id} value={i.id}>
-                    {i.prezime} {i.ime} ({i.odjel?.broj})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {!isWorker && (
+              <div>
+                <label className={labelCls}>Projektant</label>
+                <select
+                  className={inputCls}
+                  value={form.inzinjerId}
+                  onChange={(e) => handleInzinjerChange(e.target.value)}
+                  required
+                >
+                  <option value="">Odaberi projektanta...</option>
+                  {filteredInzinjeri.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.prezime} {i.ime} ({i.odjel?.broj})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {form.vrsta === "DOZNAKA" && (
               <div className="grid grid-cols-2 gap-3">
