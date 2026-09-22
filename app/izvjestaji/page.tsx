@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getIzvjestaj } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,8 @@ export default function IzvjestajiPage() {
   const [tip, setTip] = useState<Tip>("odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
+  // generation counter — odbacuje zastarjele odgovore kada se period/tip promijeni
+  const genRef = useRef(0);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -54,19 +56,23 @@ export default function IzvjestajiPage() {
 
   useEffect(() => {
     if (!session) return;
-    if (session.role === "worker") setTip("inzinjer");
-    load();
+    // tip se mora riješiti ovdje, ne kroz state, jer setTip je async
+    const initialTip: Tip = session.role === "worker" ? "inzinjer" : "odjel";
+    if (session.role === "worker") setTip(initialTip);
+    load(period, initialTip);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function load(p: Period = period, t: Tip = tip) {
+    const gen = ++genRef.current;
     setLoading(true);
     try {
       const json = await getIzvjestaj(p, t);
+      if (gen !== genRef.current) return; // zastarjeli odgovor — ignoriši
       setData(json as IzvjestajData);
     } catch {
       // data ostaje kao prije — korisnik vidi prethodne podatke
     } finally {
-      setLoading(false);
+      if (gen === genRef.current) setLoading(false);
     }
   }
 
