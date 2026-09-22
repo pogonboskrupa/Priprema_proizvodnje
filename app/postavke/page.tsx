@@ -8,7 +8,7 @@ import type { Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
 // Postavi na true tek kad pravi APK fajl bude na public/app-release.apk
-const APK_AVAILABLE = false;
+const APK_AVAILABLE = true;
 
 const APK_VERSION = '1.0.0';
 const APK_DATE = '22. 09. 2026.';
