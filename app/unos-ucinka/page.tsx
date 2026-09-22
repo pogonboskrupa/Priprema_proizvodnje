@@ -12,14 +12,16 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const RECENT_KEY = "ppnext_recent_inz";
-function getRecentIds(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
+const RECENT_INZ_KEY = "ppnext_recent_inz";
+const RECENT_ODJ_KEY = "ppnext_recent_odj";
+
+function getRecentIds(key: string): string[] {
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; }
 }
-function pushRecentId(id: string) {
+function pushRecentId(key: string, id: string) {
   try {
-    const arr = [id, ...getRecentIds().filter((r) => r !== id)].slice(0, 20);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
+    const arr = [id, ...getRecentIds(key).filter((r) => r !== id)].slice(0, 20);
+    localStorage.setItem(key, JSON.stringify(arr));
   } catch {}
 }
 
@@ -338,19 +340,30 @@ function EntryFields({
   onChange: (patch: FormPatch) => void;
   onInzinjerChange: (id: string) => void;
 }) {
-  const recentIds = typeof window !== "undefined" ? getRecentIds() : [];
+  const recentInzIds = typeof window !== "undefined" ? getRecentIds(RECENT_INZ_KEY) : [];
+  const recentOdjIds = typeof window !== "undefined" ? getRecentIds(RECENT_ODJ_KEY) : [];
+
   const workers = korisnici.filter((k) => k.role === "worker");
   const items = workers.map((k) => ({
     korisnik: k,
     inz: inzinjeri.find((i) => i.korisnikId === k.id) ?? null,
   }));
   items.sort((a, b) => {
-    const ai = a.inz ? recentIds.indexOf(a.inz.id) : -1;
-    const bi = b.inz ? recentIds.indexOf(b.inz.id) : -1;
+    const ai = a.inz ? recentInzIds.indexOf(a.inz.id) : -1;
+    const bi = b.inz ? recentInzIds.indexOf(b.inz.id) : -1;
     if (ai >= 0 && bi >= 0) return ai - bi;
     if (ai >= 0) return -1;
     if (bi >= 0) return 1;
     return (a.korisnik.fullName || a.korisnik.ime).localeCompare(b.korisnik.fullName || b.korisnik.ime);
+  });
+
+  const sortedOdjeli = [...odjeli].sort((a, b) => {
+    const ai = recentOdjIds.indexOf(a.id);
+    const bi = recentOdjIds.indexOf(b.id);
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    if (ai >= 0) return -1;
+    if (bi >= 0) return 1;
+    return String(a.gj + a.broj).localeCompare(String(b.gj + b.broj));
   });
 
   return (
@@ -362,7 +375,7 @@ function EntryFields({
             className={inputCls}
             value={form.inzinjerId}
             onChange={(e) => {
-              if (e.target.value) pushRecentId(e.target.value);
+              if (e.target.value) pushRecentId(RECENT_INZ_KEY, e.target.value);
               onInzinjerChange(e.target.value);
             }}
             required
@@ -371,7 +384,6 @@ function EntryFields({
             {items.map(({ korisnik, inz }) => (
               <option key={korisnik.id} value={inz?.id ?? ""} disabled={!inz}>
                 {korisnik.fullName || korisnik.ime}
-                {!inz ? " — nema odjela" : ""}
               </option>
             ))}
           </select>
@@ -383,11 +395,14 @@ function EntryFields({
           <select
             className={inputCls}
             value={form.odjelId}
-            onChange={(e) => onChange({ odjelId: e.target.value })}
+            onChange={(e) => {
+              if (e.target.value) pushRecentId(RECENT_ODJ_KEY, e.target.value);
+              onChange({ odjelId: e.target.value });
+            }}
             required
           >
             <option value="">Odaberi odjel...</option>
-            {odjeli.map((o) => (
+            {sortedOdjeli.map((o) => (
               <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
             ))}
           </select>
