@@ -507,7 +507,7 @@ function SedmicnaTabela({
     <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
         <h2 className="font-semibold text-gray-700 dark:text-gray-200">
-          Dnevna aktivnost — {data.od} do {data.do_}
+          Dnevna aktivnost — {fmtDate(data.od)} – {fmtDate(data.do_)}
         </h2>
       </div>
       <div className="overflow-x-auto">
@@ -582,7 +582,7 @@ function SedmicnaTabela({
 function fmtDayInTable(mondayIso: string, dow: number): string {
   const [y, m, d] = mondayIso.split("-").map(Number);
   const date = new Date(y, m - 1, d + (dow - 1));
-  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}`;
+  return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}.`;
 }
 
 function StatCard({
