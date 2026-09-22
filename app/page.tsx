@@ -86,13 +86,6 @@ export default function Home() {
               color="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900"
             />
             <QuickCard
-              href="/inzinjeri"
-              icon="👷"
-              title="Projektanti"
-              desc="Upravljanje projektantima i nalozima"
-              color="bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900"
-            />
-            <QuickCard
               href="/plan"
               icon="📅"
               title="Plan sječe"
