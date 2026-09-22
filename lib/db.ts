@@ -388,11 +388,11 @@ function localDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje'): {
+function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Date): {
   od: Date;
   do_: Date;
 } {
-  const now = new Date();
+  const now = refDate ?? new Date();
 
   if (period === 'sedmicno') {
     const day = now.getDay() || 7;
@@ -417,9 +417,10 @@ function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje'): {
 
 export async function getIzvjestaj(
   period: 'sedmicno' | 'mjesecno' | 'godisnje',
-  tip: 'odjel' | 'inzinjer'
+  tip: 'odjel' | 'inzinjer',
+  refDate?: Date
 ) {
-  const { od, do_ } = getDateRange(period);
+  const { od, do_ } = getDateRange(period, refDate);
 
   const [unosiRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
     queryCol('unosi', [
@@ -442,9 +443,10 @@ export async function getIzvjestaj(
     }
 
     const data = odjeliRaw
+      .filter((o) => !!grouped[o.id as string])  // samo odjeli s aktivnošću u periodu
       .sort((a, b) => String(a.broj).localeCompare(String(b.broj)))
       .map((o) => {
-        const g = grouped[o.id as string] || { ha: 0, stabala: 0, km: 0, count: 0 };
+        const g = grouped[o.id as string];
         const povrsina = Number(o.povrsina) || 0;
         const preostalo = povrsina - g.ha;
         const postotak = povrsina > 0 ? Math.round((g.ha / povrsina) * 100) : 0;

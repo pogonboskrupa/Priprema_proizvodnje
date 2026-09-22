@@ -39,15 +39,33 @@ type IzvjestajData = {
   data: OdjelRow[] | InzinjerRow[];
 };
 
+// Generates last N months newest-first as { value: ISO date string, label }
+function buildMonthOptions(count = 24) {
+  const now = new Date();
+  const opts: { value: string; label: string; date: Date }[] = [];
+  const names = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    opts.push({
+      date: d,
+      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: `${names[d.getMonth()]} ${d.getFullYear()}`,
+    });
+  }
+  return opts;
+}
+
+const MONTH_OPTIONS = buildMonthOptions(24);
+
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
+  const [selectedMonth, setSelectedMonth] = useState<string>(MONTH_OPTIONS[0].value);
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
-  // generation counter — odbacuje zastarjele odgovore kada se period/tip promijeni
   const genRef = useRef(0);
 
   useEffect(() => {
@@ -56,18 +74,23 @@ export default function IzvjestajiPage() {
 
   useEffect(() => {
     if (!session) return;
-    // tip se mora riješiti ovdje, ne kroz state, jer setTip je async
     const initialTip: Tip = session.role === "worker" ? "inzinjer" : "odjel";
     if (session.role === "worker") setTip(initialTip);
-    load(period, initialTip);
+    load(period, initialTip, selectedMonth);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function load(p: Period = period, t: Tip = tip) {
+  function refDateFor(p: Period, monthVal: string): Date | undefined {
+    if (p !== "mjesecno") return undefined;
+    const [y, m] = monthVal.split("-").map(Number);
+    return new Date(y, m - 1, 15); // mid-month → getDateRange calculates correct range
+  }
+
+  async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth) {
     const gen = ++genRef.current;
     setLoading(true);
     try {
-      const json = await getIzvjestaj(p, t);
-      if (gen !== genRef.current) return; // zastarjeli odgovor — ignoriši
+      const json = await getIzvjestaj(p, t, refDateFor(p, monthVal));
+      if (gen !== genRef.current) return;
       setData(json as IzvjestajData);
     } catch {
       // data ostaje kao prije — korisnik vidi prethodne podatke
@@ -80,12 +103,17 @@ export default function IzvjestajiPage() {
 
   function handlePeriod(p: Period) {
     setPeriod(p);
-    load(p, tip);
+    load(p, tip, selectedMonth);
   }
 
   function handleTip(t: Tip) {
     setTip(t);
-    load(period, t);
+    load(period, t, selectedMonth);
+  }
+
+  function handleMonth(val: string) {
+    setSelectedMonth(val);
+    load(period, tip, val);
   }
 
   const formatDate = (d: string) => fmtDate(d);
@@ -94,17 +122,18 @@ export default function IzvjestajiPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Izvještaji</h1>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
+        {/* Period */}
         <div>
-          <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Period</span>
-          <div className="flex gap-2">
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Period</span>
+          <div className="flex gap-1.5">
             {(["sedmicno", "mjesecno", "godisnje"] as Period[]).map((p) => (
               <button
                 key={p}
                 onClick={() => handlePeriod(p)}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   period === p
-                    ? "bg-green-700 text-white"
+                    ? "bg-green-700 text-white shadow-sm"
                     : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                 }`}
               >
@@ -114,17 +143,34 @@ export default function IzvjestajiPage() {
           </div>
         </div>
 
+        {/* Month picker — only for "miesecno" */}
+        {period === "mjesecno" && (
+          <div>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Mjesec</span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => handleMonth(e.target.value)}
+              className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+            >
+              {MONTH_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Grouping — admin only */}
         {!isWorker && (
           <div>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Grupiranje</span>
-            <div className="flex gap-2">
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Grupiranje</span>
+            <div className="flex gap-1.5">
               {(["odjel", "inzinjer"] as Tip[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => handleTip(t)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     tip === t
-                      ? "bg-blue-600 text-white"
+                      ? "bg-blue-600 text-white shadow-sm"
                       : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                   }`}
                 >
@@ -136,9 +182,9 @@ export default function IzvjestajiPage() {
         )}
 
         {data && (
-          <div className="ml-auto flex items-end">
+          <div className="ml-auto">
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              Period: {formatDate(data.od)} – {data.do_ ? formatDate(data.do_) : ""}
+              {formatDate(data.od)} – {data.do_ ? formatDate(data.do_) : ""}
             </span>
           </div>
         )}
@@ -162,11 +208,20 @@ export default function IzvjestajiPage() {
 }
 
 function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) {
+  if (rows.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
+        <p className="text-2xl mb-2">📭</p>
+        <p className="font-medium">Nema aktivnosti u odabranom periodu</p>
+      </div>
+    );
+  }
+
   const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoPovrsina = rows.reduce((s, r) => s + r.odjel.povrsina, 0);
-  const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0);
+  const aktivni = rows;
 
   function handleExport() {
     const data = rows.map((r) => ({
