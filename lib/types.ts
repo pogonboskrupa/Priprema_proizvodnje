@@ -55,10 +55,13 @@ export interface UnosRada {
   hektari?: number | null;
   kilometri?: number | null;
   napomena?: string | null;
+  createdById?: string | null;
+  createdByRole?: UserRole | null;
   createdAt: string;
   updatedAt: string;
   inzinjer?: Inzinjer;
   korisnik?: Korisnik;
+  creator?: Korisnik;
   odjel?: Odjel;
 }
 
@@ -71,4 +74,6 @@ export interface UnosRadaForm {
   hektari?: number;
   kilometri?: number;
   napomena?: string;
+  createdById?: string;
+  createdByRole?: UserRole;
 }

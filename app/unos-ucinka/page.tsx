@@ -125,6 +125,8 @@ export default function UnosUcinkaPage() {
         hektari: addForm.hektari ? Number(addForm.hektari) : undefined,
         kilometri: addForm.kilometri ? Number(addForm.kilometri) : undefined,
         napomena: addForm.napomena || undefined,
+        createdById: session!.userId,
+        createdByRole: session!.role,
       });
       setAddForm(emptyForm());
       setShowAdd(false);
@@ -283,7 +285,12 @@ export default function UnosUcinkaPage() {
                   ) : (
                     <tr key={u.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {displayName(u)}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {displayName(u)}
+                          {u.createdById && u.createdById === u.inzinjerId && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">↑ sam/a</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                         {u.odjel?.gj}/{u.odjel?.broj}

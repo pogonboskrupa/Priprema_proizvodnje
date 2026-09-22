@@ -191,18 +191,22 @@ export async function getGodisnjePlanPoInzinjeru(year: number) {
 // ── Unosi ─────────────────────────────────────────────────────────────────────
 
 export async function getUnosi(): Promise<UnosRada[]> {
-  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+  const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
     queryCol('unosi', [orderBy('datum', 'desc')]),
     getAll('inzinjeri'),
     getAll('odjeli'),
+    getAll('users'),
   ]);
 
   const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+  const korMap = Object.fromEntries(korisnaciRaw.map((k) => [k.id as string, k]));
 
   return unosiRaw.map((u) => ({
     ...(u as unknown as UnosRada),
     inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
+    korisnik: korMap[u.inzinjerId as string] as unknown as Korisnik,
+    creator: korMap[u.createdById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
 }
@@ -218,6 +222,8 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
     brojStabala: null,
     hektari: null,
     kilometri: null,
+    createdById: form.createdById ?? null,
+    createdByRole: form.createdByRole ?? null,
   };
 
   if (form.vrsta === 'DOZNAKA') {
@@ -229,13 +235,15 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
   // GODISNJI, KANCELARIJA, BOLOVANJE, TEREN — nema numeričkih polja
 
   const raw = await create('unosi', data);
-  const [inzinjer, odjel] = await Promise.all([
+  const [inzinjer, odjel, korisnik] = await Promise.all([
     getById('inzinjeri', form.inzinjerId),
     getById('odjeli', form.odjelId),
+    getById('users', form.inzinjerId),
   ]);
   return {
     ...(raw as unknown as UnosRada),
     inzinjer: inzinjer as unknown as Inzinjer,
+    korisnik: korisnik as unknown as Korisnik,
     odjel: odjel as unknown as Odjel,
   };
 }
@@ -280,6 +288,7 @@ export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
     ...(u as unknown as UnosRada),
     inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
     korisnik: korMap[u.inzinjerId as string] as unknown as Korisnik,
+    creator: korMap[u.createdById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
 }
