@@ -37,6 +37,7 @@ export default function UnosPage() {
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [filterMjesec, setFilterMjesec] = useState(currentMonth);
+  const [filterOdjel, setFilterOdjel] = useState("");
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
   const [form, setForm] = useState({
     datum: today(),
@@ -163,8 +164,18 @@ export default function UnosPage() {
   const filteredUnosi = unosi.filter((u) => {
     if (u.datum.slice(0, 7) !== filterMjesec) return false;
     if (isWorker && myInzinjerId && u.inzinjerId !== myInzinjerId) return false;
+    if (filterOdjel && u.odjelId !== filterOdjel) return false;
     return true;
   });
+
+  const filterSummary = filteredUnosi.reduce(
+    (acc, u) => {
+      if (u.vrsta === "DOZNAKA") { acc.ha += u.hektari ?? 0; acc.stabala += u.brojStabala ?? 0; }
+      else if (u.vrsta === "VLAKA") acc.km += u.kilometri ?? 0;
+      return acc;
+    },
+    { ha: 0, stabala: 0, km: 0 }
+  );
 
   function handleExport() {
     const rows = filteredUnosi.map((u) => ({
@@ -398,6 +409,16 @@ export default function UnosPage() {
                   <option key={o.val} value={o.val}>{o.label}</option>
                 ))}
               </select>
+              <select
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                value={filterOdjel}
+                onChange={(e) => setFilterOdjel(e.target.value)}
+              >
+                <option value="">Svi odjeli</option>
+                {odjeli.map((o) => (
+                  <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+                ))}
+              </select>
               <button
                 onClick={handleExport}
                 disabled={filteredUnosi.length === 0}
@@ -406,6 +427,15 @@ export default function UnosPage() {
                 Export XLSX
               </button>
             </div>
+            {filterOdjel && filteredUnosi.length > 0 && (
+              <div className="px-5 py-2 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900 flex gap-4 text-xs text-blue-700 dark:text-blue-300">
+                <span>Odjel {odjeli.find(o => o.id === filterOdjel)?.broj}:</span>
+                {filterSummary.ha > 0 && <span><b>{filterSummary.ha.toFixed(2)}</b> ha</span>}
+                {filterSummary.stabala > 0 && <span><b>{filterSummary.stabala}</b> stabala</span>}
+                {filterSummary.km > 0 && <span><b>{filterSummary.km.toFixed(2)}</b> km vlaka</span>}
+                <span className="text-blue-500 dark:text-blue-400">{filteredUnosi.length} unosa</span>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">

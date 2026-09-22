@@ -41,6 +41,7 @@ const adminLinks = [
   { href: "/", label: "Početna" },
   { href: "/unos", label: "Unos rada" },
   { href: "/izvjestaji", label: "Izvještaji" },
+  { href: "/kalendar", label: "Kalendar" },
   { href: "/odjeli", label: "Odjeli" },
   { href: "/inzinjeri", label: "Projektanti" },
   { href: "/plan", label: "Plan sječe" },
@@ -53,6 +54,7 @@ const workerLinks = [
   { href: "/", label: "Početna" },
   { href: "/unos", label: "Unos rada" },
   { href: "/izvjestaji", label: "Izvještaji" },
+  { href: "/kalendar", label: "Kalendar" },
   { href: "/elaborat", label: "Elaborat" },
   { href: "/postavke", label: "Postavke" },
 ];

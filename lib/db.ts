@@ -228,6 +228,60 @@ export async function getMjesecniRezime() {
   );
 }
 
+export async function getMjesecniRezimeMoj(inzinjerId: string) {
+  const now = new Date();
+  const od = new Date(now.getFullYear(), now.getMonth(), 1);
+  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  do_.setHours(23, 59, 59, 999);
+
+  const unosi = await queryCol('unosi', [
+    where('datum', '>=', Timestamp.fromDate(od)),
+    where('datum', '<=', Timestamp.fromDate(do_)),
+  ]);
+
+  return unosi
+    .filter((u) => u.inzinjerId === inzinjerId)
+    .reduce(
+      (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number }, u) => {
+        const vrsta = u.vrsta as string;
+        if (vrsta === 'DOZNAKA') { acc.ha += Number(u.hektari) || 0; acc.stabala += Number(u.brojStabala) || 0; }
+        else if (vrsta === 'VLAKA') acc.km += Number(u.kilometri) || 0;
+        else if (vrsta === 'GODISNJI') acc.godisnji++;
+        else if (vrsta === 'KANCELARIJA') acc.kancelarija++;
+        else if (vrsta === 'BOLOVANJE') acc.bolovanje++;
+        else if (vrsta === 'TEREN') acc.teren++;
+        acc.ukupno++;
+        return acc;
+      },
+      { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, ukupno: 0 }
+    );
+}
+
+export async function getUnosiZaMjesec(year: number, month: number): Promise<UnosRada[]> {
+  const od = new Date(year, month - 1, 1);
+  const do_ = new Date(year, month, 0);
+  do_.setHours(23, 59, 59, 999);
+
+  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+      orderBy('datum', 'asc'),
+    ]),
+    getAll('inzinjeri'),
+    getAll('odjeli'),
+  ]);
+
+  const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+
+  return unosiRaw.map((u) => ({
+    ...(u as unknown as UnosRada),
+    inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
+    odjel: odMap[u.odjelId as string] as unknown as Odjel,
+  }));
+}
+
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
 function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje'): {

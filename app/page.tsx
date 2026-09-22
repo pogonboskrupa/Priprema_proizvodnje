@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMjesecniRezime } from "@/lib/db";
+import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjerByKorisnikId } from "@/lib/db";
 
 type Rezime = {
   ha: number; stabala: number; km: number;
@@ -14,19 +14,31 @@ export default function Home() {
   const { session, loading } = useAuth();
   const router = useRouter();
   const [rezime, setRezime] = useState<Rezime | null>(null);
+  const [myRezime, setMyRezime] = useState<Rezime | null>(null);
+  const isWorker = session?.role === "worker";
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
   }, [session, loading]);
 
   useEffect(() => {
-    if (session) getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
+    if (!session) return;
+    if (!isWorker) {
+      getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
+    } else {
+      getInzinjerByKorisnikId(session.userId).then((inz) => {
+        if (inz) getMjesecniRezimeMoj(inz.id).then((r) => setMyRezime(r as Rezime)).catch(() => {});
+      });
+    }
   }, [session]);
 
   if (loading || !session) return null;
 
-  const odsustva = rezime ? (rezime.godisnji + rezime.kancelarija + rezime.bolovanje) : 0;
   const mesec = new Date().toLocaleString("bs-BA", { month: "long", year: "numeric" });
+
+  const displayRezime = isWorker ? myRezime : rezime;
+  const odsustva = displayRezime ? (displayRezime.godisnji + displayRezime.kancelarija + displayRezime.bolovanje) : 0;
+  const statsLabel = isWorker ? "Moj učinak" : "Svi projektanti";
 
   return (
     <div className="py-8">
@@ -46,16 +58,18 @@ export default function Home() {
         <p className="text-gray-500 dark:text-gray-400 mt-2">Evidencija učinka projektanata po odjelima</p>
       </div>
 
-      {rezime && (
+      {displayRezime && (
         <div className="mb-8">
-          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 capitalize">
-            {mesec}
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 capitalize flex items-center gap-2">
+            <span>{statsLabel}</span>
+            <span className="normal-case font-normal">·</span>
+            <span className="normal-case font-normal">{mesec}</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <MiniStat label="Hektara" value={rezime.ha.toFixed(2)} unit="ha" color="green" />
-            <MiniStat label="Stabala" value={rezime.stabala.toString()} unit="st" color="emerald" />
-            <MiniStat label="Vlake" value={rezime.km.toFixed(2)} unit="km" color="amber" />
-            <MiniStat label="Teren" value={rezime.teren.toString()} unit="dana" color="orange" />
+            <MiniStat label="Hektara" value={displayRezime.ha.toFixed(2)} unit="ha" color="green" />
+            <MiniStat label="Stabala" value={displayRezime.stabala.toString()} unit="st" color="emerald" />
+            <MiniStat label="Vlake" value={displayRezime.km.toFixed(2)} unit="km" color="amber" />
+            <MiniStat label="Teren" value={displayRezime.teren.toString()} unit="dana" color="orange" />
             <MiniStat label="Odsustva" value={odsustva.toString()} unit="dana" color="sky" />
           </div>
         </div>
@@ -75,6 +89,13 @@ export default function Home() {
           title="Izvještaji"
           desc="Sedmično, mjesečno i godišnje po projektantu i odjelu"
           color="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900"
+        />
+        <QuickCard
+          href="/kalendar"
+          icon="📅"
+          title="Kalendar"
+          desc="Pregled radnih dana — ko je radio šta koji dan"
+          color="bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900"
         />
         {session.role === "admin" && (
           <>
@@ -136,23 +157,12 @@ function MiniStat({
 }
 
 function QuickCard({
-  href,
-  icon,
-  title,
-  desc,
-  color,
+  href, icon, title, desc, color,
 }: {
-  href: string;
-  icon: string;
-  title: string;
-  desc: string;
-  color: string;
+  href: string; icon: string; title: string; desc: string; color: string;
 }) {
   return (
-    <Link
-      href={href}
-      className={`block rounded-xl border-2 shadow-sm p-5 transition-colors ${color}`}
-    >
+    <Link href={href} className={`block rounded-xl border-2 shadow-sm p-5 transition-colors ${color}`}>
       <div className="text-3xl mb-2">{icon}</div>
       <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{title}</h2>
       <p className="text-sm text-gray-600 dark:text-gray-300">{desc}</p>
