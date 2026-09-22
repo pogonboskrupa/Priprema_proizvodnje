@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getInzinjeri, getOdjeli, createInzinjer, updateInzinjer, deleteInzinjer } from "@/lib/db";
+import { getInzinjeri, getOdjeli, getKorisnici, createInzinjer, updateInzinjer, deleteInzinjer } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Inzinjer, Odjel } from "@/lib/types";
+import type { Inzinjer, Odjel, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
 export default function InzinjeriPage() {
@@ -11,7 +11,8 @@ export default function InzinjeriPage() {
   const router = useRouter();
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
-  const [form, setForm] = useState({ ime: "", prezime: "", email: "", odjelId: "" });
+  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
+  const [form, setForm] = useState({ ime: "", prezime: "", email: "", odjelId: "", korisnikId: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
@@ -22,9 +23,10 @@ export default function InzinjeriPage() {
   }, [session, authLoading]);
 
   async function load() {
-    const [inz, od] = await Promise.all([getInzinjeri(), getOdjeli()]);
+    const [inz, od, kor] = await Promise.all([getInzinjeri(), getOdjeli(), getKorisnici()]);
     setInzinjeri(inz);
     setOdjeli(od);
+    setKorisnici(kor);
   }
 
   useEffect(() => { load(); }, []);
@@ -35,12 +37,13 @@ export default function InzinjeriPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = { ...form, korisnikId: form.korisnikId || null };
       if (editId) {
-        await updateInzinjer(editId, form);
+        await updateInzinjer(editId, payload);
       } else {
-        await createInzinjer(form);
+        await createInzinjer(payload);
       }
-      setForm({ ime: "", prezime: "", email: "", odjelId: "" });
+      setForm({ ime: "", prezime: "", email: "", odjelId: "", korisnikId: "" });
       setEditId(null);
     } catch {
       // forma ostaje popunjena da korisnik može ponoviti
@@ -52,7 +55,7 @@ export default function InzinjeriPage() {
 
   function startEdit(i: Inzinjer) {
     setEditId(i.id);
-    setForm({ ime: i.ime, prezime: i.prezime, email: i.email || "", odjelId: i.odjelId });
+    setForm({ ime: i.ime, prezime: i.prezime, email: i.email || "", odjelId: i.odjelId, korisnikId: i.korisnikId || "" });
   }
 
   function handleDelete(id: string) {
@@ -72,7 +75,7 @@ export default function InzinjeriPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3"
+        className="bg-white rounded-xl border shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3"
       >
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Ime</label>
@@ -117,6 +120,21 @@ export default function InzinjeriPage() {
             ))}
           </select>
         </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Korisnički nalog (opciono)</label>
+          <select
+            className="w-full border rounded-lg px-3 py-2 text-sm"
+            value={form.korisnikId}
+            onChange={(e) => setForm({ ...form, korisnikId: e.target.value })}
+          >
+            <option value="">— Bez naloga —</option>
+            {korisnici.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.fullName} ({k.ime})
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-end gap-2">
           <button
             type="submit"
@@ -128,7 +146,7 @@ export default function InzinjeriPage() {
           {editId && (
             <button
               type="button"
-              onClick={() => { setEditId(null); setForm({ ime: "", prezime: "", email: "", odjelId: "" }); }}
+              onClick={() => { setEditId(null); setForm({ ime: "", prezime: "", email: "", odjelId: "", korisnikId: "" }); }}
               className="border px-4 py-2 rounded-lg text-sm"
             >
               Odustani

@@ -36,6 +36,7 @@ export interface Inzinjer {
   prezime: string;
   email: string | null;
   odjelId: string;
+  korisnikId?: string | null;
   createdAt: string;
   updatedAt: string;
   odjel?: Odjel;

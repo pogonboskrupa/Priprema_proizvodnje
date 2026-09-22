@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getIzvjestaj } from "@/lib/db";
+import { getIzvjestaj, getInzinjerByKorisnikId } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
@@ -41,14 +41,29 @@ type IzvjestajData = {
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isWorker = session?.role === "worker";
   const [period, setPeriod] = useState<Period>("mjesecno");
-  const [tip, setTip] = useState<Tip>("odjel");
+  const [tip, setTip] = useState<Tip>(isWorker ? "inzinjer" : "odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
+  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
+
+  // For workers, look up their linked inzinjer record once
+  useEffect(() => {
+    if (!session || session.role !== "worker") {
+      setMyInzinjerLoaded(true);
+      return;
+    }
+    getInzinjerByKorisnikId(session.userId).then((inz) => {
+      setMyInzinjerId(inz?.id ?? null);
+      setMyInzinjerLoaded(true);
+    });
+  }, [session]);
 
   async function load(p: Period = period, t: Tip = tip) {
     setLoading(true);
@@ -62,9 +77,11 @@ export default function IzvjestajiPage() {
     }
   }
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (myInzinjerLoaded) load();
+  }, [myInzinjerLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (authLoading || !session) return null;
+  if (authLoading || !session || !myInzinjerLoaded) return null;
 
   function handlePeriod(p: Period) {
     setPeriod(p);
@@ -103,24 +120,26 @@ export default function IzvjestajiPage() {
           </div>
         </div>
 
-        <div>
-          <span className="block text-xs text-gray-500 mb-1 font-medium">Grupiranje</span>
-          <div className="flex gap-2">
-            {(["odjel", "inzinjer"] as Tip[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => handleTip(t)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  tip === t
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
-                }`}
-              >
-                {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po inžinjeru"}
-              </button>
-            ))}
+        {!isWorker && (
+          <div>
+            <span className="block text-xs text-gray-500 mb-1 font-medium">Grupiranje</span>
+            <div className="flex gap-2">
+              {(["odjel", "inzinjer"] as Tip[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => handleTip(t)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                    tip === t
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po inžinjeru"}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {data && (
           <div className="ml-auto flex items-end">
@@ -138,7 +157,11 @@ export default function IzvjestajiPage() {
       )}
 
       {!loading && data?.tip === "inzinjer" && (
-        <InzinjerIzvjestaj rows={data.data as InzinjerRow[]} period={data.period} />
+        <InzinjerIzvjestaj
+          rows={data.data as InzinjerRow[]}
+          period={data.period}
+          filterInzinjerId={isWorker ? myInzinjerId : null}
+        />
       )}
     </div>
   );
@@ -234,16 +257,30 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
   );
 }
 
-function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Period }) {
-  const aktivni = rows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0 || r.ukupnoStabala > 0);
-  const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
-  const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
-  const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
-  const ukupnoOdsustvo = rows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaKancelarija ?? 0) + (r.danaBolovanje ?? 0), 0);
-  const ukupnoTeren = rows.reduce((s, r) => s + (r.danaTeren ?? 0), 0);
+function InzinjerIzvjestaj({
+  rows,
+  period,
+  filterInzinjerId,
+}: {
+  rows: InzinjerRow[];
+  period: Period;
+  filterInzinjerId?: string | null;
+}) {
+  const visibleRows = filterInzinjerId
+    ? rows.filter((r) => r.inzinjer.id === filterInzinjerId)
+    : rows;
+
+  const aktivni = visibleRows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0 || r.ukupnoStabala > 0);
+  const ukupnoHa = visibleRows.reduce((s, r) => s + r.ukupnoHektara, 0);
+  const ukupnoSt = visibleRows.reduce((s, r) => s + r.ukupnoStabala, 0);
+  const ukupnoKm = visibleRows.reduce((s, r) => s + r.ukupnoKm, 0);
+  const ukupnoOdsustvo = visibleRows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaKancelarija ?? 0) + (r.danaBolovanje ?? 0), 0);
+  const ukupnoTeren = visibleRows.reduce((s, r) => s + (r.danaTeren ?? 0), 0);
+
+  const isPersonal = !!filterInzinjerId;
 
   function handleExport() {
-    const data = rows.map((r) => ({
+    const data = visibleRows.map((r) => ({
       Inžinjer: `${r.inzinjer.prezime} ${r.inzinjer.ime}`,
       Odjel: r.inzinjer.odjel.broj,
       "Hektara (ha)": r.ukupnoHektara,
@@ -258,6 +295,15 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
     exportXlsx(data, `izvjestaj-inzinjeri-${period}`);
   }
 
+  if (isPersonal && visibleRows.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border shadow-sm p-8 text-center text-gray-500">
+        <p className="text-lg font-medium mb-1">Nema podataka</p>
+        <p className="text-sm">Vaš korisnički nalog nije povezan s nijednim inžinjerom. Obratite se administratoru.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -270,9 +316,13 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700">Pregled po inžinjerima</h2>
+          <h2 className="font-semibold text-gray-700">
+            {isPersonal ? "Moji podaci" : "Pregled po inžinjerima"}
+          </h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
+            {!isPersonal && (
+              <span className="text-xs text-gray-500">{aktivni.length} inžinjera sa aktivnošću</span>
+            )}
             <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
               Export XLSX
             </button>
@@ -295,7 +345,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, idx) => (
+              {visibleRows.map((r, idx) => (
                 <tr
                   key={idx}
                   className={`border-t hover:bg-gray-50 ${r.brojUnosa === 0 ? "opacity-40" : ""}`}
