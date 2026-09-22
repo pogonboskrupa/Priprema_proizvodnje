@@ -232,6 +232,43 @@ export async function deleteUnos(id: string): Promise<void> {
   await remove('unosi', id);
 }
 
+export async function updateUnos(id: string, data: {
+  vrsta?: string;
+  inzinjerId?: string;
+  odjelId?: string;
+  brojStabala?: number | null;
+  hektari?: number | null;
+  kilometri?: number | null;
+  napomena?: string | null;
+}): Promise<void> {
+  await update('unosi', id, data as Record<string, unknown>);
+}
+
+export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const od = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const do_ = new Date(y, m - 1, d, 23, 59, 59, 999);
+
+  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+      orderBy('datum', 'asc'),
+    ]),
+    getAll('inzinjeri'),
+    getAll('odjeli'),
+  ]);
+
+  const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+
+  return unosiRaw.map((u) => ({
+    ...(u as unknown as UnosRada),
+    inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
+    odjel: odMap[u.odjelId as string] as unknown as Odjel,
+  }));
+}
+
 // ── Rezime (početna stranica) ─────────────────────────────────────────────────
 
 export async function getMjesecniRezime() {

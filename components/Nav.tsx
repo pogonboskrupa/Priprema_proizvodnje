@@ -39,7 +39,7 @@ function useConnectionStatus(): Status {
 
 const adminLinks = [
   { href: "/", label: "Početna" },
-  { href: "/unos", label: "Unos rada" },
+  { href: "/unos-ucinka", label: "Unos učinka" },
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/kalendar", label: "Kalendar" },
   { href: "/odjeli", label: "Odjeli" },
@@ -97,7 +97,12 @@ export default function Nav() {
   const { session, logout } = useAuth();
   const toast = useNewEntryNotifier();
 
-  const links = session?.role === "admin" ? adminLinks : workerLinks;
+  const links =
+    session?.role === "admin"
+      ? adminLinks
+      : session?.operater
+      ? [...workerLinks, { href: "/unos-ucinka", label: "Unos učinka" }]
+      : workerLinks;
 
   const dot =
     status === "online"

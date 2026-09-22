@@ -374,6 +374,22 @@ export default function PostavkePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      {k.role === "worker" && (
+                        <button
+                          onClick={async () => {
+                            await updateKorisnik(k.id, { operater: !k.operater });
+                            loadKorisnici();
+                          }}
+                          className={`text-xs mr-3 px-2 py-0.5 rounded-full font-medium border transition-colors ${
+                            k.operater
+                              ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800"
+                              : "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400"
+                          }`}
+                          title={k.operater ? "Ukloni operaterska prava" : "Dodaj operaterska prava"}
+                        >
+                          Operater
+                        </button>
+                      )}
                       <button onClick={() => resetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">
                         Reset PIN
                       </button>

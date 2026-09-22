@@ -42,7 +42,7 @@ export default function LoginPage() {
       if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
       if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
       saveSession(
-        { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, avatar: found.avatar },
+        { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, avatar: found.avatar },
         remember
       );
       refresh();

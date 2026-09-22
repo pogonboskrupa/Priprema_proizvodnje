@@ -5,11 +5,12 @@ export type UserRole = 'admin' | 'worker';
 
 export interface Korisnik {
   id: string;
-  ime: string;         // korisničko ime (za login)
-  fullName: string;    // puno ime i prezime
-  title: string;       // radno mjesto
+  ime: string;
+  fullName: string;
+  title: string;
   pin: string;
   role: UserRole;
+  operater?: boolean;
   avatar: string;
   odjeliIds: string[];
   createdAt: string;

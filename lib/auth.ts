@@ -7,6 +7,7 @@ export interface Session {
   ime: string;
   fullName: string;
   role: UserRole;
+  operater?: boolean;
   avatar: string;
 }
 
