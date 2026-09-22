@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, getInzinjeri, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getKorisnici, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
+import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fmtDate, fmtDateLong } from "@/lib/format";
 
@@ -12,7 +12,7 @@ function today() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const RECENT_INZ_KEY = "ppnext_recent_inz";
+const RECENT_KOR_KEY = "ppnext_recent_kor";
 const RECENT_ODJ_KEY = "ppnext_recent_odj";
 
 function getRecentIds(key: string): string[] {
@@ -39,6 +39,7 @@ const VRSTA_COLOR: Record<string, string> = {
   BOLOVANJE: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
 };
 
+// inzinjerId field is repurposed to store korisnikId for unos-ucinka entries
 const emptyForm = () => ({
   inzinjerId: "", odjelId: "", vrsta: "DOZNAKA" as VrstaRada,
   brojStabala: "", hektari: "", kilometri: "", napomena: "",
@@ -58,6 +59,12 @@ function nextDay(d: string) {
   return dt.toISOString().split("T")[0];
 }
 
+function displayName(u: UnosRada): string {
+  if (u.korisnik) return u.korisnik.fullName || u.korisnik.ime;
+  if (u.inzinjer) return `${u.inzinjer.prezime} ${u.inzinjer.ime}`.trim();
+  return "–";
+}
+
 export default function UnosUcinkaPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -66,7 +73,7 @@ export default function UnosUcinkaPage() {
   const [datum, setDatum] = useState(today());
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
-  const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
+  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [fetching, setFetching] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyForm());
@@ -81,9 +88,9 @@ export default function UnosUcinkaPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    Promise.all([getOdjeli(), getInzinjeri()]).then(([od, inz]) => {
+    Promise.all([getOdjeli(), getKorisnici()]).then(([od, kor]) => {
       setOdjeli(od);
-      setInzinjeri(inz);
+      setKorisnici(kor.filter((k) => k.role === "worker"));
     });
   }, []);
 
@@ -97,14 +104,16 @@ export default function UnosUcinkaPage() {
 
   if (authLoading || !session) return null;
 
-  function handleInzinjerChange(id: string, setter: (v: Partial<ReturnType<typeof emptyForm>>) => void) {
-    const inz = inzinjeri.find((i) => i.id === id);
-    setter({ inzinjerId: id, odjelId: inz?.odjelId ?? "" });
+  function handleKorisnikChange(korisnikId: string, setter: (v: Partial<ReturnType<typeof emptyForm>>) => void) {
+    const kor = korisnici.find((k) => k.id === korisnikId);
+    const odjeliIds = kor?.odjeliIds ?? [];
+    const odjelId = odjeliIds.length === 1 ? odjeliIds[0] : "";
+    setter({ inzinjerId: korisnikId, odjelId });
   }
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!addForm.inzinjerId) return;
+    if (!addForm.inzinjerId || !addForm.odjelId) return;
     setSaving(true);
     try {
       await createUnos({
@@ -174,7 +183,6 @@ export default function UnosUcinkaPage() {
 
   return (
     <div className="py-6">
-      {/* Header + navigacija datumom */}
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Unos učinka</h1>
         <button
@@ -202,7 +210,6 @@ export default function UnosUcinkaPage() {
 
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 capitalize">{fmtDateLong(datum)}</p>
 
-      {/* Forma za novi unos */}
       {showAdd && (
         <form
           onSubmit={handleAdd}
@@ -211,14 +218,14 @@ export default function UnosUcinkaPage() {
           <div className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide mb-1">Novi unos</div>
           <EntryFields
             form={addForm}
-            inzinjeri={inzinjeri}
+            korisnici={korisnici}
             odjeli={odjeli}
-            showInzinjer
+            showProjektant
             onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
-            onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setAddForm((f) => ({ ...f, ...patch })))}
+            onKorisnikChange={(id) => handleKorisnikChange(id, (patch) => setAddForm((f) => ({ ...f, ...patch })))}
           />
           <div className="flex gap-2 pt-1">
-            <button type="submit" disabled={saving || !addForm.inzinjerId} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 disabled:opacity-50">
+            <button type="submit" disabled={saving || !addForm.inzinjerId || !addForm.odjelId} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 disabled:opacity-50">
               {saving ? "Snimam..." : "Sačuvaj"}
             </button>
             <button type="button" onClick={() => setShowAdd(false)} className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -228,7 +235,6 @@ export default function UnosUcinkaPage() {
         </form>
       )}
 
-      {/* Tabela unosa */}
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         {fetching ? (
           <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-500">Učitavanje...</div>
@@ -257,11 +263,11 @@ export default function UnosUcinkaPage() {
                         <form onSubmit={handleSaveEdit} className="space-y-3">
                           <EntryFields
                             form={editForm}
-                            inzinjeri={inzinjeri}
+                            korisnici={korisnici}
                             odjeli={odjeli}
-                            showInzinjer
+                            showProjektant
                             onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
-                            onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setEditForm((f) => ({ ...f, ...patch })))}
+                            onKorisnikChange={(id) => handleKorisnikChange(id, (patch) => setEditForm((f) => ({ ...f, ...patch })))}
                           />
                           <div className="flex gap-2">
                             <button type="submit" disabled={saving} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800 disabled:opacity-50">
@@ -277,7 +283,7 @@ export default function UnosUcinkaPage() {
                   ) : (
                     <tr key={u.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {u.inzinjer?.prezime} {u.inzinjer?.ime}
+                        {displayName(u)}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
                         {u.odjel?.gj}/{u.odjel?.broj}
@@ -326,28 +332,34 @@ export default function UnosUcinkaPage() {
 type FormPatch = Partial<ReturnType<typeof emptyForm>>;
 
 function EntryFields({
-  form, inzinjeri, odjeli, showInzinjer, onChange, onInzinjerChange,
+  form, korisnici, odjeli, showProjektant, onChange, onKorisnikChange,
 }: {
   form: ReturnType<typeof emptyForm>;
-  inzinjeri: Inzinjer[];
+  korisnici: Korisnik[];
   odjeli: Odjel[];
-  showInzinjer: boolean;
+  showProjektant: boolean;
   onChange: (patch: FormPatch) => void;
-  onInzinjerChange: (id: string) => void;
+  onKorisnikChange: (id: string) => void;
 }) {
-  const recentInzIds = typeof window !== "undefined" ? getRecentIds(RECENT_INZ_KEY) : [];
+  const recentKorIds = typeof window !== "undefined" ? getRecentIds(RECENT_KOR_KEY) : [];
   const recentOdjIds = typeof window !== "undefined" ? getRecentIds(RECENT_ODJ_KEY) : [];
 
-  const sortedInzinjeri = [...inzinjeri].sort((a, b) => {
-    const ai = recentInzIds.indexOf(a.id);
-    const bi = recentInzIds.indexOf(b.id);
+  const sortedKorisnici = [...korisnici].sort((a, b) => {
+    const ai = recentKorIds.indexOf(a.id);
+    const bi = recentKorIds.indexOf(b.id);
     if (ai >= 0 && bi >= 0) return ai - bi;
     if (ai >= 0) return -1;
     if (bi >= 0) return 1;
-    return `${a.prezime} ${a.ime}`.localeCompare(`${b.prezime} ${b.ime}`);
+    return (a.fullName || a.ime).localeCompare(b.fullName || b.ime);
   });
 
-  const sortedOdjeli = [...odjeli].sort((a, b) => {
+  const selectedKorisnik = korisnici.find((k) => k.id === form.inzinjerId);
+  const availableOdjeliIds = selectedKorisnik?.odjeliIds ?? [];
+  const availableOdjeli = availableOdjeliIds.length > 0
+    ? odjeli.filter((o) => availableOdjeliIds.includes(o.id))
+    : odjeli;
+
+  const sortedOdjeli = [...availableOdjeli].sort((a, b) => {
     const ai = recentOdjIds.indexOf(a.id);
     const bi = recentOdjIds.indexOf(b.id);
     if (ai >= 0 && bi >= 0) return ai - bi;
@@ -358,28 +370,28 @@ function EntryFields({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-      {showInzinjer && (
+      {showProjektant && (
         <div>
           <label className={labelCls}>Projektant</label>
           <select
             className={inputCls}
             value={form.inzinjerId}
             onChange={(e) => {
-              if (e.target.value) pushRecentId(RECENT_INZ_KEY, e.target.value);
-              onInzinjerChange(e.target.value);
+              if (e.target.value) pushRecentId(RECENT_KOR_KEY, e.target.value);
+              onKorisnikChange(e.target.value);
             }}
             required
           >
             <option value="">Odaberi projektanta...</option>
-            {sortedInzinjeri.map((inz) => (
-              <option key={inz.id} value={inz.id}>
-                {inz.prezime} {inz.ime}
+            {sortedKorisnici.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.fullName || k.ime}
               </option>
             ))}
           </select>
         </div>
       )}
-      {showInzinjer && (
+      {showProjektant && (
         <div>
           <label className={labelCls}>Odjel</label>
           <select

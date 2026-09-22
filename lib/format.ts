@@ -30,9 +30,11 @@ export function monthYearLabel(year: number, month: number): string {
   return `${MONTHS_BS[month - 1]} ${year}`;
 }
 
+const DAYS_BS = ["nedjelja", "ponedjeljak", "utorak", "srijeda", "četvrtak", "petak", "subota"];
+
 /** "2026-09-15" → "ponedjeljak, 15. august" */
 export function fmtDateLong(dateStr: string): string {
   const [y, m, d] = dateStr.slice(0, 10).split("-").map(Number);
-  const weekday = new Date(y, m - 1, d).toLocaleDateString("bs-BA", { weekday: "long" });
+  const weekday = DAYS_BS[new Date(y, m - 1, d).getDay()];
   return `${weekday}, ${d}. ${MONTHS_BS[m - 1]}`;
 }

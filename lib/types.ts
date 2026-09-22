@@ -58,6 +58,7 @@ export interface UnosRada {
   createdAt: string;
   updatedAt: string;
   inzinjer?: Inzinjer;
+  korisnik?: Korisnik;
   odjel?: Odjel;
 }
 
