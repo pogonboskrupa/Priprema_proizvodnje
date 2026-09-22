@@ -68,7 +68,7 @@ export default function RealizacijaPage() {
       {/* Kartice po odjelu */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.length === 0 && (
-          <div className="col-span-3 text-center py-12 text-gray-400">Nema rezultata.</div>
+          <div className="col-span-3 text-center py-12 text-gray-500">Nema rezultata.</div>
         )}
         {filtered.map((o) => {
           const plan = (o.plan_cet || 0) + (o.plan_lis || 0);
@@ -77,7 +77,7 @@ export default function RealizacijaPage() {
           const st = getStatus(o);
 
           return (
-            <div key={o.id} className="bg-white rounded-xl border p-4 space-y-3">
+            <div key={o.id} className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="font-bold text-gray-800">{o.broj}</div>
@@ -94,25 +94,25 @@ export default function RealizacijaPage() {
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-gray-50 rounded p-2">
-                  <div className="text-gray-400 mb-0.5">Plan m³ čet.</div>
+                  <div className="text-gray-500 mb-0.5">Plan m³ čet.</div>
                   <div className="font-semibold">{fmt(o.plan_cet || 0)}</div>
                 </div>
                 <div className="bg-green-50 rounded p-2">
-                  <div className="text-gray-400 mb-0.5">Real. m³ čet.</div>
+                  <div className="text-gray-500 mb-0.5">Real. m³ čet.</div>
                   <div className="font-semibold text-green-700">{fmt(o.real_cet || 0)}</div>
                 </div>
                 <div className="bg-gray-50 rounded p-2">
-                  <div className="text-gray-400 mb-0.5">Plan m³ liš.</div>
+                  <div className="text-gray-500 mb-0.5">Plan m³ liš.</div>
                   <div className="font-semibold">{fmt(o.plan_lis || 0)}</div>
                 </div>
                 <div className="bg-green-50 rounded p-2">
-                  <div className="text-gray-400 mb-0.5">Real. m³ liš.</div>
+                  <div className="text-gray-500 mb-0.5">Real. m³ liš.</div>
                   <div className="font-semibold text-green-700">{fmt(o.real_lis || 0)}</div>
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between text-xs text-gray-400 mb-1">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>Ukupni napredak</span>
                   <span className="font-mono">{p.toFixed(1)}%</span>
                 </div>

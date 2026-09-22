@@ -82,7 +82,7 @@ export default function IzvjestajiPage() {
     <div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Izvještaji</h1>
 
-      <div className="bg-white rounded-xl border p-4 mb-6 flex flex-wrap gap-4">
+      <div className="bg-white rounded-xl border shadow-sm p-4 mb-6 flex flex-wrap gap-4">
         <div>
           <span className="block text-xs text-gray-500 mb-1 font-medium">Period</span>
           <div className="flex gap-2">
@@ -173,7 +173,7 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
       </div>
 
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">Pregled po odjelima</h2>
           <div className="flex items-center gap-3">
@@ -264,7 +264,7 @@ function InzinjerIzvjestaj({ rows, period }: { rows: InzinjerRow[]; period: Peri
         <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
       </div>
 
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">Pregled po inžinjerima</h2>
           <div className="flex items-center gap-3">

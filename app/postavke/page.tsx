@@ -122,7 +122,7 @@ export default function PostavkePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profil */}
-        <div className="bg-white rounded-xl border p-5 space-y-4">
+        <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
           <h2 className="font-semibold text-gray-700">Moj profil</h2>
           <div>
             <div className="text-xs text-gray-500 mb-1">Prijavljeni kao</div>
@@ -156,7 +156,7 @@ export default function PostavkePage() {
         </div>
 
         {/* PIN */}
-        <div className="bg-white rounded-xl border p-5 space-y-4">
+        <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
           <h2 className="font-semibold text-gray-700">Promjena PIN-a</h2>
           {["old", "new1", "new2"].map((f, i) => (
             <div key={f}>
@@ -190,7 +190,7 @@ export default function PostavkePage() {
 
       {/* Admin: upravljanje korisnicima */}
       {session.role === "admin" && (
-        <div className="mt-6 bg-white rounded-xl border overflow-hidden">
+        <div className="mt-6 bg-white rounded-xl border shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
             <span className="font-semibold text-gray-700">
               Korisnici <span className="text-xs font-normal text-gray-500">— upravljanje projektantima</span>

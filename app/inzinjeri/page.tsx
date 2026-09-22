@@ -72,7 +72,7 @@ export default function InzinjeriPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border p-5 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3"
+        className="bg-white rounded-xl border shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-5 gap-3"
       >
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Ime</label>
@@ -137,7 +137,7 @@ export default function InzinjeriPage() {
         </div>
       </form>
 
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b">
             <tr>

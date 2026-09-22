@@ -147,7 +147,7 @@ function QuickCard({
   return (
     <Link
       href={href}
-      className={`block rounded-xl border-2 p-5 transition-colors ${color}`}
+      className={`block rounded-xl border-2 shadow-sm p-5 transition-colors ${color}`}
     >
       <div className="text-3xl mb-2">{icon}</div>
       <h2 className="font-semibold text-gray-800 mb-1">{title}</h2>

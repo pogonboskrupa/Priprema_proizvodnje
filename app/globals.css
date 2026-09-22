@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f2f6f3;
+  --foreground: #182b1e;
+  --surface: #ffffff;
+  --border: #d2dfd6;
+  --text-muted: #526b5c;
+  --brand: #166534;
+  --brand-light: #dcfce7;
 }
 
 @theme inline {
@@ -14,13 +19,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0e1a11;
+    --foreground: #e4ede6;
+    --surface: #172219;
+    --border: #2a3d2e;
+    --text-muted: #7fa88a;
+    --brand: #4ade80;
+    --brand-light: #14532d;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Subtle card elevation */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
 }

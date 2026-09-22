@@ -65,7 +65,7 @@ export default function PlanPage() {
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Plan sječe 2026</h1>
 
       {/* Godišnji summary */}
-      <div className="bg-white rounded-xl border p-5 mb-6">
+      <div className="bg-white rounded-xl border shadow-sm p-5 mb-6">
         <div className="text-sm font-semibold text-gray-600 mb-3">Ukupni plan doznake 2026</div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <StatBox label="Plan m³ četinara" value={`${fmt(totPlanCet)} m³`} color="blue" />
@@ -86,7 +86,7 @@ export default function PlanPage() {
       </div>
 
       {/* Tabela odjela */}
-      <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b bg-gray-50 text-sm font-semibold text-gray-700">
           Plan po odjelima
         </div>
@@ -107,7 +107,7 @@ export default function PlanPage() {
             </thead>
             <tbody>
               {odjeli.length === 0 && (
-                <tr><td colSpan={9} className="text-center py-8 text-gray-400">Nema odjela.</td></tr>
+                <tr><td colSpan={9} className="text-center py-8 text-gray-500">Nema odjela.</td></tr>
               )}
               {odjeli.map((o) => {
                 const plan = (o.plan_cet || 0) + (o.plan_lis || 0);
@@ -138,7 +138,7 @@ export default function PlanPage() {
                           <button onClick={saveEdit} disabled={saving} className="text-green-700 text-xs font-medium hover:underline mr-2">
                             {saving ? "..." : "Sačuvaj"}
                           </button>
-                          <button onClick={() => setEditId(null)} className="text-gray-400 text-xs hover:underline">Odustani</button>
+                          <button onClick={() => setEditId(null)} className="text-gray-500 text-xs hover:underline">Odustani</button>
                         </td>
                       </>
                     ) : (
@@ -155,7 +155,7 @@ export default function PlanPage() {
                                 style={{ width: `${p.toFixed(1)}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-400 w-10 text-right">{p.toFixed(0)}%</span>
+                            <span className="text-xs text-gray-500 w-10 text-right">{p.toFixed(0)}%</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right">

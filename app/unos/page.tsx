@@ -138,7 +138,7 @@ export default function UnosPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl border p-5 space-y-4">
+          <form onSubmit={handleSubmit} className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
             <h2 className="font-semibold text-gray-700">Novi unos</h2>
 
             <div>
@@ -288,7 +288,7 @@ export default function UnosPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border overflow-hidden">
+          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-3">
               <h2 className="font-semibold text-gray-700 mr-auto">Unosi</h2>
               <select

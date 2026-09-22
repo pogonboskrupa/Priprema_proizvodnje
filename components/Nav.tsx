@@ -72,7 +72,7 @@ export default function Nav() {
   if (!session) return null;
 
   return (
-    <nav className="bg-green-800 text-white shadow-md">
+    <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14 overflow-x-auto">
         <span className="font-bold text-sm mr-3 whitespace-nowrap flex-shrink-0">🌲 PP</span>
         {links.map((l) => (

@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href={`${BASE}/icons/icon-192.png`} />
       </head>
-      <body className={`${geist.className} bg-gray-50 min-h-screen`}>
+      <body className={`${geist.className} min-h-screen`}>
         <AuthProvider>
           <Nav />
           <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
