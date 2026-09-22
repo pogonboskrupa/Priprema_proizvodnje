@@ -329,7 +329,8 @@ export default function PostavkePage() {
             </div>
           )}
 
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <tr>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
@@ -382,6 +383,7 @@ export default function PostavkePage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
