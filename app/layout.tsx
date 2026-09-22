@@ -9,7 +9,7 @@ const geist = Geist({ subsets: ["latin"] });
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 export const metadata: Metadata = {
-  title: "Šumska Priprema Proizvodnje",
+  title: "Priprema Proizvodnje",
   description: "Evidencija učinka inžinjera šumarstva",
   manifest: `${BASE}/manifest.json`,
   appleWebApp: {

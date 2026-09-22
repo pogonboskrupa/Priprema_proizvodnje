@@ -30,12 +30,21 @@ export default function Home() {
 
   return (
     <div className="py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">
-        Šumska Priprema Proizvodnje
-      </h1>
-      <p className="text-gray-500 mb-6">
-        Evidencija učinka inžinjera po šumskim odjelima
-      </p>
+      <div className="mb-6">
+        <h1
+          className="inline-block text-3xl font-extrabold tracking-tight mb-1"
+          style={{
+            background: "linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%)",
+            color: "#fff",
+            padding: "6px 20px 8px",
+            borderRadius: 10,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Priprema Proizvodnje
+        </h1>
+        <p className="text-gray-500 mt-2">Evidencija učinka inžinjera po odjelima</p>
+      </div>
 
       {rezime && (
         <div className="mb-8">
@@ -71,7 +80,7 @@ export default function Home() {
             <QuickCard
               href="/odjeli"
               icon="🗺️"
-              title="Šumski odjeli"
+              title="Odjeli"
               desc="Upravljanje odjelima i površinama"
               color="bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
             />
