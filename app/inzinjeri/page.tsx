@@ -71,43 +71,43 @@ export default function InzinjeriPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Projektanti</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Projektanti</h1>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-xl border shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3"
+        className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3"
       >
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Ime</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Ime</label>
           <input
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={form.ime}
             onChange={(e) => setForm({ ...form, ime: e.target.value })}
             required
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Prezime</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Prezime</label>
           <input
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={form.prezime}
             onChange={(e) => setForm({ ...form, prezime: e.target.value })}
             required
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">E-mail (opciono)</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">E-mail (opciono)</label>
           <input
             type="email"
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Odjel</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Odjel</label>
           <select
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={form.odjelId}
             onChange={(e) => setForm({ ...form, odjelId: e.target.value })}
             required
@@ -121,9 +121,9 @@ export default function InzinjeriPage() {
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Korisnički nalog (opciono)</label>
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Korisnički nalog (opciono)</label>
           <select
-            className="w-full border rounded-lg px-3 py-2 text-sm"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
             value={form.korisnikId}
             onChange={(e) => setForm({ ...form, korisnikId: e.target.value })}
           >
@@ -147,7 +147,7 @@ export default function InzinjeriPage() {
             <button
               type="button"
               onClick={() => { setEditId(null); setForm({ ime: "", prezime: "", email: "", odjelId: "", korisnikId: "" }); }}
-              className="border px-4 py-2 rounded-lg text-sm"
+              className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
               Odustani
             </button>
@@ -155,36 +155,36 @@ export default function InzinjeriPage() {
         </div>
       </form>
 
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <tr>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">Ime i prezime</th>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">E-mail</th>
-              <th className="text-left px-4 py-3 text-gray-600 font-medium">Odjel</th>
+              <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Ime i prezime</th>
+              <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">E-mail</th>
+              <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {inzinjeri.length === 0 && (
               <tr>
-                <td colSpan={4} className="text-center py-8 text-gray-500">
+                <td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
                   Nema projektanata. Dodajte prvog projektanta.
                 </td>
               </tr>
             )}
             {inzinjeri.map((i) => (
-              <tr key={i.id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{i.prezime} {i.ime}</td>
-                <td className="px-4 py-3 text-gray-500">{i.email || "–"}</td>
+              <tr key={i.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{i.prezime} {i.ime}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{i.email || "–"}</td>
                 <td className="px-4 py-3">
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                  <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
                     {i.odjel?.gj} / {i.odjel?.broj}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => startEdit(i)} className="text-blue-600 hover:underline mr-3 text-xs">Uredi</button>
-                  <button onClick={() => handleDelete(i.id)} className="text-red-500 hover:underline text-xs">Obriši</button>
+                  <button onClick={() => startEdit(i)} className="text-blue-600 dark:text-blue-400 hover:underline mr-3 text-xs">Uredi</button>
+                  <button onClick={() => handleDelete(i.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">Obriši</button>
                 </td>
               </tr>
             ))}

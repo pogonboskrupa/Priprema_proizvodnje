@@ -25,14 +25,14 @@ export function ConfirmModal({
       onClick={onCancel}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-xs"
+        className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-6 w-full max-w-xs border border-gray-200 dark:border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-gray-800 text-sm leading-relaxed mb-6">{msg}</p>
+        <p className="text-gray-800 dark:text-gray-100 text-sm leading-relaxed mb-6">{msg}</p>
         <div className="flex gap-3 justify-end">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Odustani
           </button>

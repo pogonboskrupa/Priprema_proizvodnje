@@ -10,7 +10,6 @@ import { exportXlsx } from "@/lib/export";
 const today = () => new Date().toISOString().split("T")[0];
 
 function getDayOfWeek(dateStr: string): number {
-  // Parse as local date to avoid UTC offset issues
   const [y, m, d] = dateStr.split("-").map(Number);
   return new Date(y, m - 1, d).getDay(); // 0=Sun, 6=Sat
 }
@@ -60,7 +59,6 @@ export default function UnosPage() {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
-  // Workers: find their linked engineer and pre-fill the form
   useEffect(() => {
     if (!session || session.role !== "worker") {
       setMyInzinjerLoaded(true);
@@ -166,46 +164,49 @@ export default function UnosPage() {
       ? inzinjeri.filter((i) => i.odjelId === form.odjelId)
       : inzinjeri;
 
+  const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
+  const labelCls = "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1";
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Unos rada</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Unos rada</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <form onSubmit={handleSubmit} className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
-            <h2 className="font-semibold text-gray-700">Novi unos</h2>
+          <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-200">Novi unos</h2>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Datum</label>
+              <label className={labelCls}>Datum</label>
               <input
                 type="date"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={form.datum}
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
               />
               {isSunday && (
-                <div className="mt-1.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs font-medium text-red-700">
+                <div className="mt-1.5 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-xs font-medium text-red-700 dark:text-red-300">
                   ⛔ Nedjelja je neradni dan — unos nije moguć.
                 </div>
               )}
               {isSaturday && (
-                <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs font-medium text-amber-800">
+                <div className="mt-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ℹ️ Subota je inače neradni dan — unos je moguć ako je bila radna subota.
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Vrsta rada</label>
+              <label className={labelCls}>Vrsta rada</label>
               <div className="grid grid-cols-2 gap-2 mb-2">
                 {(["DOZNAKA", "VLAKA"] as VrstaRada[]).map((v) => (
                   <label
                     key={v}
                     className={`flex items-center justify-center gap-2 py-2 rounded-lg border-2 cursor-pointer text-sm font-medium transition-colors ${
                       form.vrsta === v
-                        ? "border-green-600 bg-green-50 text-green-700"
-                        : "border-gray-300 text-gray-700 hover:border-gray-400"
+                        ? "border-green-600 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"
+                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500"
                     }`}
                   >
                     <input type="radio" className="hidden" value={v} checked={form.vrsta === v} onChange={() => setForm({ ...form, vrsta: v })} />
@@ -219,8 +220,8 @@ export default function UnosPage() {
                     key={v}
                     className={`flex items-center justify-center gap-1 py-2 rounded-lg border-2 cursor-pointer text-xs font-medium transition-colors text-center ${
                       form.vrsta === v
-                        ? "border-amber-500 bg-amber-50 text-amber-700"
-                        : "border-gray-300 text-gray-700 hover:border-gray-400"
+                        ? "border-amber-500 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300"
+                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500"
                     }`}
                   >
                     <input type="radio" className="hidden" value={v} checked={form.vrsta === v} onChange={() => setForm({ ...form, vrsta: v })} />
@@ -231,9 +232,9 @@ export default function UnosPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Odjel</label>
+              <label className={labelCls}>Odjel</label>
               <select
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={form.odjelId}
                 onChange={(e) => setForm({ ...form, odjelId: e.target.value, inzinjerId: "" })}
               >
@@ -247,9 +248,9 @@ export default function UnosPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Projektant</label>
+              <label className={labelCls}>Projektant</label>
               <select
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className={inputCls}
                 value={form.inzinjerId}
                 onChange={(e) => handleInzinjerChange(e.target.value)}
                 required
@@ -266,23 +267,23 @@ export default function UnosPage() {
             {form.vrsta === "DOZNAKA" && (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Broj stabala</label>
+                  <label className={labelCls}>Broj stabala</label>
                   <input
                     type="number"
                     min="1"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    className={inputCls}
                     value={form.brojStabala}
                     onChange={(e) => setForm({ ...form, brojStabala: e.target.value })}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Hektari (ha)</label>
+                  <label className={labelCls}>Hektari (ha)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    className={inputCls}
                     value={form.hektari}
                     onChange={(e) => setForm({ ...form, hektari: e.target.value })}
                     required
@@ -292,12 +293,12 @@ export default function UnosPage() {
             )}
             {form.vrsta === "VLAKA" && (
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Kilometri vlaka (km)</label>
+                <label className={labelCls}>Kilometri vlaka (km)</label>
                 <input
                   type="number"
                   step="0.01"
                   min="0.01"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                  className={inputCls}
                   value={form.kilometri}
                   onChange={(e) => setForm({ ...form, kilometri: e.target.value })}
                   required
@@ -306,9 +307,9 @@ export default function UnosPage() {
             )}
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Napomena (opciono)</label>
+              <label className={labelCls}>Napomena (opciono)</label>
               <textarea
-                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+                className={`${inputCls} resize-none`}
                 rows={2}
                 value={form.napomena}
                 onChange={(e) => setForm({ ...form, napomena: e.target.value })}
@@ -324,7 +325,7 @@ export default function UnosPage() {
             </button>
 
             {msg && (
-              <div className={`text-sm text-center py-2 rounded-lg ${msg.includes("Greška") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700"}`}>
+              <div className={`text-sm text-center py-2 rounded-lg ${msg.includes("Greška") ? "bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-300" : "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300"}`}>
                 {msg}
               </div>
             )}
@@ -332,11 +333,11 @@ export default function UnosPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b bg-gray-50 flex flex-wrap items-center gap-3">
-              <h2 className="font-semibold text-gray-700 mr-auto">Unosi</h2>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-wrap items-center gap-3">
+              <h2 className="font-semibold text-gray-700 dark:text-gray-200 mr-auto">Unosi</h2>
               <select
-                className="border rounded-lg px-2 py-1.5 text-xs"
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 value={filterMjesec}
                 onChange={(e) => setFilterMjesec(e.target.value)}
               >
@@ -354,56 +355,56 @@ export default function UnosPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                   <tr>
-                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Datum</th>
-                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Projektant</th>
-                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Odjel</th>
-                    <th className="text-left px-4 py-2 text-gray-600 font-medium">Vrsta</th>
-                    <th className="text-right px-4 py-2 text-gray-600 font-medium">Količina</th>
+                    <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-300 font-medium">Datum</th>
+                    <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-300 font-medium">Projektant</th>
+                    <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
+                    <th className="text-left px-4 py-2 text-gray-600 dark:text-gray-300 font-medium">Vrsta</th>
+                    <th className="text-right px-4 py-2 text-gray-600 dark:text-gray-300 font-medium">Količina</th>
                     <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUnosi.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-gray-500">
+                      <td colSpan={6} className="text-center py-10 text-gray-500 dark:text-gray-400">
                         {unosi.length === 0 ? "Nema unosa. Dodajte prvi unos." : "Nema unosa za odabrani mjesec."}
                       </td>
                     </tr>
                   )}
                   {filteredUnosi.map((u) => (
-                    <tr key={u.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-2 font-mono text-xs">
+                    <tr key={u.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-4 py-2 font-mono text-xs text-gray-700 dark:text-gray-300">
                         {new Date(u.datum).toLocaleDateString("bs-BA")}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2 text-gray-900 dark:text-gray-100">
                         {u.inzinjer?.prezime} {u.inzinjer?.ime}
                       </td>
-                      <td className="px-4 py-2 text-gray-500 text-xs">{u.odjel?.broj}</td>
+                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{u.odjel?.broj}</td>
                       <td className="px-4 py-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${vrstaBadgeClass(u.vrsta)}`}>
                           {vrstaLabel(u.vrsta)}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-right text-xs text-gray-600">
+                      <td className="px-4 py-2 text-right text-xs text-gray-600 dark:text-gray-300">
                         {u.vrsta === "DOZNAKA" ? (
                           <span>
-                            <span className="font-semibold text-gray-800">{u.brojStabala}</span> st /{" "}
-                            <span className="font-semibold text-gray-800">{u.hektari?.toFixed(2)}</span> ha
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{u.brojStabala}</span> st /{" "}
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{u.hektari?.toFixed(2)}</span> ha
                           </span>
                         ) : u.vrsta === "VLAKA" ? (
                           <span>
-                            <span className="font-semibold text-gray-800">{u.kilometri?.toFixed(2)}</span> km
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">{u.kilometri?.toFixed(2)}</span> km
                           </span>
                         ) : (
-                          <span className="text-gray-400">–</span>
+                          <span className="text-gray-400 dark:text-gray-500">–</span>
                         )}
                       </td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => handleDelete(u.id)}
-                          className="text-red-500 hover:text-red-700 text-xs"
+                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
                         >
                           Obriši
                         </button>
@@ -442,12 +443,12 @@ function vrstaLabel(vrsta: string): string {
 
 function vrstaBadgeClass(vrsta: string): string {
   const map: Record<string, string> = {
-    DOZNAKA: "bg-green-100 text-green-800",
-    VLAKA: "bg-amber-100 text-amber-800",
-    TEREN: "bg-orange-100 text-orange-800",
-    GODISNJI: "bg-sky-100 text-sky-800",
-    KANCELARIJA: "bg-violet-100 text-violet-800",
-    BOLOVANJE: "bg-red-100 text-red-800",
+    DOZNAKA: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200",
+    VLAKA: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200",
+    TEREN: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200",
+    GODISNJI: "bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200",
+    KANCELARIJA: "bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200",
+    BOLOVANJE: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
   };
-  return map[vrsta] ?? "bg-gray-100 text-gray-700";
+  return map[vrsta] ?? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200";
 }

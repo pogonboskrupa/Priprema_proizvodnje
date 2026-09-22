@@ -95,7 +95,7 @@ export default function Nav() {
           <span className="text-green-200 text-xs hidden sm:block whitespace-nowrap">
             {session.ime}
           </span>
-          <span className="text-green-300 text-xs hidden md:block">v{VERSION}</span>
+          <span className="text-green-300 text-xs">v{VERSION}</span>
 
           <div className="relative group">
             <span className={`block w-3 h-3 rounded-full flex-shrink-0 ${dot.color}`} />

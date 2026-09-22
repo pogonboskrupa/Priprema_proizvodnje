@@ -129,36 +129,36 @@ export default function PostavkePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Postavke</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Postavke</h1>
 
       {msg && (
-        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 rounded-lg px-4 py-2 text-sm">
+        <div className="mb-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg px-4 py-2 text-sm">
           {msg}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Profil */}
-        <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
-          <h2 className="font-semibold text-gray-700">Moj profil</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Moj profil</h2>
           <div>
-            <div className="text-xs text-gray-500 mb-1">Prijavljeni kao</div>
-            <div className="font-bold text-gray-800 text-lg">{session.ime}</div>
-            <div className="text-xs text-gray-600 uppercase tracking-wide">{session.role}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Prijavljeni kao</div>
+            <div className="font-bold text-gray-800 dark:text-gray-100 text-lg">{session.ime}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">{session.role}</div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Puno ime i prezime</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={profForm.fullName}
               onChange={(e) => setProfForm({ ...profForm, fullName: e.target.value })}
               maxLength={60}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Titula / radno mjesto</label>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Titula / radno mjesto</label>
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={profForm.title}
               onChange={(e) => setProfForm({ ...profForm, title: e.target.value })}
               maxLength={60}
@@ -173,18 +173,18 @@ export default function PostavkePage() {
         </div>
 
         {/* PIN */}
-        <div className="bg-white rounded-xl border shadow-sm p-5 space-y-4">
-          <h2 className="font-semibold text-gray-700">Promjena PIN-a</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Promjena PIN-a</h2>
           {["old", "new1", "new2"].map((f, i) => (
             <div key={f}>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                 {i === 0 ? "Trenutni PIN" : i === 1 ? "Novi PIN (4 cifre)" : "Potvrdi novi PIN"}
               </label>
               <input
                 type="password"
                 inputMode="numeric"
                 maxLength={4}
-                className="w-full border rounded-lg px-3 py-2 text-sm"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 value={pinForm[f as "old" | "new1" | "new2"]}
                 onChange={(e) => setPinForm({ ...pinForm, [f]: e.target.value })}
                 placeholder="••••"
@@ -210,10 +210,10 @@ export default function PostavkePage() {
 
       {/* Admin: upravljanje korisnicima */}
       {session.role === "admin" && (
-        <div className="mt-6 bg-white rounded-xl border shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b bg-gray-50 flex items-center justify-between">
-            <span className="font-semibold text-gray-700">
-              Korisnici <span className="text-xs font-normal text-gray-500">— upravljanje projektantima</span>
+        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
+            <span className="font-semibold text-gray-700 dark:text-gray-200">
+              Korisnici <span className="text-xs font-normal text-gray-500 dark:text-gray-400">— upravljanje projektantima</span>
             </span>
             <button
               onClick={() => setShowAdd((v) => !v)}
@@ -224,30 +224,30 @@ export default function PostavkePage() {
           </div>
 
           {showAdd && (
-            <div className="p-4 border-b bg-gray-50 space-y-3">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Korisničko ime (za prijavu)</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Korisničko ime (za prijavu)</label>
                   <input
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     value={addForm.ime}
                     onChange={(e) => setAddForm({ ...addForm, ime: e.target.value })}
                     maxLength={30}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Puno ime i prezime</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
                   <input
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     value={addForm.fullName}
                     onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })}
                     maxLength={60}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Radno mjesto</label>
+                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Radno mjesto</label>
                   <input
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     value={addForm.title}
                     onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
                     maxLength={60}
@@ -258,7 +258,7 @@ export default function PostavkePage() {
                 <button onClick={addKorisnik} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
                   Dodaj (PIN: 1234)
                 </button>
-                <button onClick={() => setShowAdd(false)} className="border px-4 py-2 rounded-lg text-sm text-gray-600">
+                <button onClick={() => setShowAdd(false)} className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   Odustani
                 </button>
               </div>
@@ -266,32 +266,32 @@ export default function PostavkePage() {
           )}
 
           <table className="w-full text-sm">
-            <thead className="border-b bg-gray-50">
+            <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="text-left px-4 py-3 text-gray-600 font-medium">Korisnik</th>
-                <th className="text-left px-4 py-3 text-gray-600 font-medium">Puno ime</th>
-                <th className="text-left px-4 py-3 text-gray-600 font-medium">Uloga</th>
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {korisnici.map((k) => (
-                <tr key={k.id} className="border-t hover:bg-gray-50">
+                <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
-                  <td className="px-4 py-3 text-gray-600">{k.fullName || "–"}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      k.role === "admin" ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
+                      k.role === "admin" ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                     }`}>
                       {k.role}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => resetPin(k)} className="text-amber-600 hover:underline text-xs mr-3">
+                    <button onClick={() => resetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">
                       Reset PIN
                     </button>
                     {k.id !== session.userId && (
-                      <button onClick={() => handleDelete(k)} className="text-red-500 hover:underline text-xs">
+                      <button onClick={() => handleDelete(k)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
                         Obriši
                       </button>
                     )}
@@ -350,12 +350,12 @@ function ApkDownload() {
   }
 
   return (
-    <div className="mt-6 bg-white rounded-xl border shadow-sm overflow-hidden">
+    <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-3 border-b bg-gray-50 flex items-center gap-2">
+      <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center gap-2">
         <span className="text-base">📱</span>
-        <span className="font-semibold text-gray-700">Android aplikacija</span>
-        <span className="ml-1 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
+        <span className="font-semibold text-gray-700 dark:text-gray-200">Android aplikacija</span>
+        <span className="ml-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 rounded-full font-medium">
           v{APK_VERSION} · Novo
         </span>
       </div>
@@ -374,32 +374,32 @@ function ApkDownload() {
 
           {/* Meta */}
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-gray-800 text-lg leading-tight">Priprema Proizvodnje</div>
+            <div className="font-bold text-gray-800 dark:text-gray-100 text-lg leading-tight">Priprema Proizvodnje</div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400 dark:fill-gray-500"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
                 v{APK_VERSION}
               </span>
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400 dark:fill-gray-500"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                 {APK_SIZE}
               </span>
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-gray-400 dark:fill-gray-500"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
                 {APK_DATE}
               </span>
             </div>
 
             {/* Changelog */}
-            <div className="mt-3 bg-green-50 border border-green-100 rounded-xl p-3.5">
+            <div className="mt-3 bg-green-50 dark:bg-green-950 border border-green-100 dark:border-green-800 rounded-xl p-3.5">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="text-sm">🆕</span>
-                <span className="text-xs font-semibold text-green-800">Šta je novo</span>
+                <span className="text-xs font-semibold text-green-800 dark:text-green-300">Šta je novo</span>
               </div>
               <ul className="space-y-1.5">
                 {APK_CHANGES.map((c, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-green-900">
-                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-green-600 flex-shrink-0 mt-0.5">
+                  <li key={i} className="flex items-start gap-2 text-xs text-green-900 dark:text-green-200">
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-green-600 dark:fill-green-400 flex-shrink-0 mt-0.5">
                       <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
                     </svg>
                     {c}
@@ -413,7 +413,7 @@ function ApkDownload() {
         {/* Download button */}
         <div className="mt-5 space-y-2.5">
           {!APK_AVAILABLE ? (
-            <div className="w-full rounded-xl h-12 flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 text-gray-400 text-sm font-medium cursor-not-allowed select-none">
+            <div className="w-full rounded-xl h-12 flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 text-sm font-medium cursor-not-allowed select-none">
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
                 <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
               </svg>
@@ -487,11 +487,11 @@ function ApkDownload() {
           )}
 
           {/* Install note */}
-          <div className="flex gap-2 items-start rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-amber-500 flex-shrink-0 mt-0.5">
+          <div className="flex gap-2 items-start rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-100 dark:border-amber-800 px-3 py-2.5">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-amber-500 dark:fill-amber-400 flex-shrink-0 mt-0.5">
               <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
             </svg>
-            <p className="text-xs text-amber-800 leading-relaxed">
+            <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
               APK nije dostupan u Google Play-u. Prije instalacije idite na{" "}
               <strong>Postavke → Aplikacije → Instaliraj nepoznate aplikacije</strong> i omogućite
               instalaciju iz preglednika ili file managera.

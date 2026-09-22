@@ -40,7 +40,7 @@ export default function RealizacijaPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Realizacija</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Realizacija</h1>
 
       {/* Stat kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -57,7 +57,7 @@ export default function RealizacijaPage() {
             key={f}
             onClick={() => setFilt(f)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filt === f ? "bg-green-700 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+              filt === f ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
             }`}
           >
             {f === "sve" ? "Sve" : f === "plan" ? "📋 Plan" : f === "u_toku" ? "🔵 U toku" : "✅ Završeno"}
@@ -68,7 +68,7 @@ export default function RealizacijaPage() {
       {/* Kartice po odjelu */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.length === 0 && (
-          <div className="col-span-3 text-center py-12 text-gray-500">Nema rezultata.</div>
+          <div className="col-span-3 text-center py-12 text-gray-500 dark:text-gray-400">Nema rezultata.</div>
         )}
         {filtered.map((o) => {
           const plan = (o.plan_cet || 0) + (o.plan_lis || 0);
@@ -77,46 +77,46 @@ export default function RealizacijaPage() {
           const st = getStatus(o);
 
           return (
-            <div key={o.id} className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
+            <div key={o.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-bold text-gray-800">{o.broj}</div>
-                  <div className="text-xs text-gray-500">{o.gj}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-100">{o.broj}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{o.gj}</div>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  st === "zavrseno" ? "bg-green-100 text-green-700" :
-                  st === "u_toku" ? "bg-blue-100 text-blue-700" :
-                  "bg-gray-100 text-gray-500"
+                  st === "zavrseno" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" :
+                  st === "u_toku" ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" :
+                  "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                 }`}>
                   {st === "zavrseno" ? "✅ Završeno" : st === "u_toku" ? "🔵 U toku" : "📋 Plan"}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-gray-50 rounded p-2">
-                  <div className="text-gray-500 mb-0.5">Plan m³ čet.</div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded p-2">
+                  <div className="text-gray-500 dark:text-gray-400 mb-0.5">Plan m³ čet.</div>
                   <div className="font-semibold">{fmt(o.plan_cet || 0)}</div>
                 </div>
-                <div className="bg-green-50 rounded p-2">
-                  <div className="text-gray-500 mb-0.5">Real. m³ čet.</div>
-                  <div className="font-semibold text-green-700">{fmt(o.real_cet || 0)}</div>
+                <div className="bg-green-50 dark:bg-green-950 rounded p-2">
+                  <div className="text-gray-500 dark:text-gray-400 mb-0.5">Real. m³ čet.</div>
+                  <div className="font-semibold text-green-700 dark:text-green-400">{fmt(o.real_cet || 0)}</div>
                 </div>
-                <div className="bg-gray-50 rounded p-2">
-                  <div className="text-gray-500 mb-0.5">Plan m³ liš.</div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded p-2">
+                  <div className="text-gray-500 dark:text-gray-400 mb-0.5">Plan m³ liš.</div>
                   <div className="font-semibold">{fmt(o.plan_lis || 0)}</div>
                 </div>
-                <div className="bg-green-50 rounded p-2">
-                  <div className="text-gray-500 mb-0.5">Real. m³ liš.</div>
-                  <div className="font-semibold text-green-700">{fmt(o.real_lis || 0)}</div>
+                <div className="bg-green-50 dark:bg-green-950 rounded p-2">
+                  <div className="text-gray-500 dark:text-gray-400 mb-0.5">Real. m³ liš.</div>
+                  <div className="font-semibold text-green-700 dark:text-green-400">{fmt(o.real_lis || 0)}</div>
                 </div>
               </div>
 
               <div>
-                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                   <span>Ukupni napredak</span>
                   <span className="font-mono">{p.toFixed(1)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full ${p >= 100 ? "bg-green-500" : p >= 60 ? "bg-amber-500" : "bg-blue-500"}`}
                     style={{ width: `${p.toFixed(1)}%` }}
@@ -133,10 +133,10 @@ export default function RealizacijaPage() {
 
 function StatCard({ label, value, color }: { label: string; value: string; color: "blue" | "green" | "amber" | "emerald" }) {
   const styles = {
-    blue:    { card: "bg-blue-50 border-blue-300",     label: "text-blue-800",    value: "text-blue-900" },
-    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900" },
-    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950" },
-    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900" },
+    blue:    { card: "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-800",       label: "text-blue-800 dark:text-blue-200",    value: "text-blue-900 dark:text-blue-100" },
+    green:   { card: "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-800",   label: "text-green-800 dark:text-green-200",   value: "text-green-900 dark:text-green-100" },
+    amber:   { card: "bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800",   label: "text-amber-900 dark:text-amber-200",   value: "text-amber-950 dark:text-amber-100" },
+    emerald: { card: "bg-emerald-50 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-800", label: "text-emerald-800 dark:text-emerald-200", value: "text-emerald-900 dark:text-emerald-100" },
   }[color];
   return (
     <div className={`rounded-xl border p-4 ${styles.card}`}>

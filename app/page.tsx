@@ -43,12 +43,12 @@ export default function Home() {
         >
           Priprema Proizvodnje
         </h1>
-        <p className="text-gray-500 mt-2">Evidencija učinka projektanata po odjelima</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-2">Evidencija učinka projektanata po odjelima</p>
       </div>
 
       {rezime && (
         <div className="mb-8">
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 capitalize">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 capitalize">
             {mesec}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -67,14 +67,14 @@ export default function Home() {
           icon="📋"
           title="Unos rada"
           desc="Doznaka stabala ili projektovanje vlaka"
-          color="bg-blue-50 border-blue-200 hover:bg-blue-100"
+          color="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900"
         />
         <QuickCard
           href="/izvjestaji"
           icon="📊"
           title="Izvještaji"
           desc="Sedmično, mjesečno i godišnje po projektantu i odjelu"
-          color="bg-green-50 border-green-200 hover:bg-green-100"
+          color="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900"
         />
         {session.role === "admin" && (
           <>
@@ -83,28 +83,28 @@ export default function Home() {
               icon="🗺️"
               title="Odjeli"
               desc="Upravljanje odjelima i površinama"
-              color="bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
+              color="bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900"
             />
             <QuickCard
               href="/inzinjeri"
               icon="👷"
               title="Projektanti"
               desc="Upravljanje projektantima i nalozima"
-              color="bg-purple-50 border-purple-200 hover:bg-purple-100"
+              color="bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900"
             />
             <QuickCard
               href="/plan"
               icon="📅"
               title="Plan sječe"
               desc="Godišnji plan i realizacija po odjelima"
-              color="bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+              color="bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900"
             />
             <QuickCard
               href="/realizacija"
               icon="📈"
               title="Realizacija"
               desc="Praćenje napretka realizacije plana"
-              color="bg-teal-50 border-teal-200 hover:bg-teal-100"
+              color="bg-teal-50 dark:bg-teal-950 border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900"
             />
           </>
         )}
@@ -113,7 +113,7 @@ export default function Home() {
           icon="⚙️"
           title="Postavke"
           desc="Profil, PIN i upravljanje korisnicima"
-          color="bg-gray-50 border-gray-200 hover:bg-gray-100"
+          color="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
         />
       </div>
     </div>
@@ -127,11 +127,11 @@ function MiniStat({
   color: "green" | "emerald" | "amber" | "sky" | "orange";
 }) {
   const styles = {
-    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900",   unit: "text-green-700" },
-    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900", unit: "text-emerald-700" },
-    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950",   unit: "text-amber-800" },
-    sky:     { card: "bg-sky-50 border-sky-300",       label: "text-sky-800",     value: "text-sky-900",     unit: "text-sky-700" },
-    orange:  { card: "bg-orange-50 border-orange-300", label: "text-orange-800",  value: "text-orange-900",  unit: "text-orange-700" },
+    green:   { card: "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-800",   label: "text-green-800 dark:text-green-200",   value: "text-green-900 dark:text-green-100",   unit: "text-green-700 dark:text-green-300" },
+    emerald: { card: "bg-emerald-50 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-800", label: "text-emerald-800 dark:text-emerald-200", value: "text-emerald-900 dark:text-emerald-100", unit: "text-emerald-700 dark:text-emerald-300" },
+    amber:   { card: "bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800",   label: "text-amber-900 dark:text-amber-200",   value: "text-amber-950 dark:text-amber-100",   unit: "text-amber-800 dark:text-amber-300" },
+    sky:     { card: "bg-sky-50 dark:bg-sky-950 border-sky-300 dark:border-sky-800",       label: "text-sky-800 dark:text-sky-200",     value: "text-sky-900 dark:text-sky-100",     unit: "text-sky-700 dark:text-sky-300" },
+    orange:  { card: "bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-800", label: "text-orange-800 dark:text-orange-200",  value: "text-orange-900 dark:text-orange-100",  unit: "text-orange-700 dark:text-orange-300" },
   }[color];
   return (
     <div className={`rounded-xl border p-4 ${styles.card}`}>
@@ -161,8 +161,8 @@ function QuickCard({
       className={`block rounded-xl border-2 shadow-sm p-5 transition-colors ${color}`}
     >
       <div className="text-3xl mb-2">{icon}</div>
-      <h2 className="font-semibold text-gray-800 mb-1">{title}</h2>
-      <p className="text-sm text-gray-600">{desc}</p>
+      <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{title}</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300">{desc}</p>
     </Link>
   );
 }

@@ -53,7 +53,6 @@ export default function IzvjestajiPage() {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
-  // For workers, force inzinjer view and look up their linked engineer record
   useEffect(() => {
     if (!session || session.role !== "worker") {
       setMyInzinjerLoaded(true);
@@ -99,11 +98,11 @@ export default function IzvjestajiPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Izvještaji</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Izvještaji</h1>
 
-      <div className="bg-white rounded-xl border shadow-sm p-4 mb-6 flex flex-wrap gap-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4">
         <div>
-          <span className="block text-xs text-gray-500 mb-1 font-medium">Period</span>
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Period</span>
           <div className="flex gap-2">
             {(["sedmicno", "mjesecno", "godisnje"] as Period[]).map((p) => (
               <button
@@ -112,7 +111,7 @@ export default function IzvjestajiPage() {
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   period === p
                     ? "bg-green-700 text-white"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                 }`}
               >
                 {p === "sedmicno" ? "Sedmično" : p === "mjesecno" ? "Mjesečno" : "Godišnje"}
@@ -123,7 +122,7 @@ export default function IzvjestajiPage() {
 
         {!isWorker && (
           <div>
-            <span className="block text-xs text-gray-500 mb-1 font-medium">Grupiranje</span>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">Grupiranje</span>
             <div className="flex gap-2">
               {(["odjel", "inzinjer"] as Tip[]).map((t) => (
                 <button
@@ -132,7 +131,7 @@ export default function IzvjestajiPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     tip === t
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                      : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
                   }`}
                 >
                   {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po projektantu"}
@@ -144,14 +143,14 @@ export default function IzvjestajiPage() {
 
         {data && (
           <div className="ml-auto flex items-end">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               Period: {formatDate(data.od)} – {data.do_ ? formatDate(data.do_) : ""}
             </span>
           </div>
         )}
       </div>
 
-      {loading && <div className="text-center py-16 text-gray-500">Učitavam...</div>}
+      {loading && <div className="text-center py-16 text-gray-500 dark:text-gray-400">Učitavam...</div>}
 
       {!loading && data?.tip === "odjel" && (
         <OdjelIzvjestaj rows={data.data as OdjelRow[]} period={data.period} />
@@ -198,11 +197,11 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
       </div>
 
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700">Pregled po odjelima</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Pregled po odjelima</h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">{aktivni.length} odjela sa aktivnošću</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{aktivni.length} odjela sa aktivnošću</span>
             <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
               Export XLSX
             </button>
@@ -210,42 +209,42 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b">
+            <thead className="border-b border-gray-200 dark:border-gray-700">
               <tr className="text-left">
-                <th className="px-4 py-3 text-gray-600 font-medium">Odjel</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Površina (ha)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Obrađeno (ha)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Preostalo (ha)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Stabala</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Vlake (km)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium">Napredak</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Površina (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Obrađeno (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Preostalo (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Stabala</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Vlake (km)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Napredak</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r, idx) => (
-                <tr key={idx} className="border-t hover:bg-gray-50">
+                <tr key={idx} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-4 py-3">
-                    <span className="font-medium">{r.odjel.broj}</span>
-                    <span className="text-gray-500 ml-2 text-xs">{r.odjel.gj}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{r.odjel.broj}</span>
+                    <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs">{r.odjel.gj}</span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500">{r.odjel.povrsina.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{r.odjel.povrsina.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                     {r.ukupnoHektara.toFixed(2)}
                   </td>
-                  <td className={`px-4 py-3 text-right font-medium ${r.preostalo <= 0 ? "text-green-600" : "text-gray-700"}`}>
+                  <td className={`px-4 py-3 text-right font-medium ${r.preostalo <= 0 ? "text-green-600 dark:text-green-400" : "text-gray-700 dark:text-gray-200"}`}>
                     {r.preostalo <= 0 ? "✓ Završeno" : r.preostalo.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
-                  <td className="px-4 py-3 text-right">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-1.5 min-w-[80px]">
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 min-w-[80px]">
                         <div
                           className={`h-1.5 rounded-full ${r.postotak >= 100 ? "bg-green-500" : r.postotak >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
                           style={{ width: `${Math.min(r.postotak, 100)}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-500 w-10 text-right">{r.postotak}%</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">{r.postotak}%</span>
                     </div>
                   </td>
                 </tr>
@@ -298,7 +297,7 @@ function InzinjerIzvjestaj({
 
   if (isPersonal && visibleRows.length === 0) {
     return (
-      <div className="bg-white rounded-xl border shadow-sm p-8 text-center text-gray-500">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
         <p className="text-lg font-medium mb-1">Nema podataka</p>
         <p className="text-sm">Vaš korisnički nalog nije povezan s nijednim projektantom. Obratite se administratoru.</p>
       </div>
@@ -315,14 +314,14 @@ function InzinjerIzvjestaj({
         <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
       </div>
 
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b bg-gray-50 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-200">
             {isPersonal ? "Moji podaci" : "Pregled po projektantima"}
           </h2>
           <div className="flex items-center gap-3">
             {!isPersonal && (
-              <span className="text-xs text-gray-500">{aktivni.length} projektanata sa aktivnošću</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{aktivni.length} projektanata sa aktivnošću</span>
             )}
             <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
               Export XLSX
@@ -331,44 +330,44 @@ function InzinjerIzvjestaj({
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b">
+            <thead className="border-b border-gray-200 dark:border-gray-700">
               <tr className="text-left">
-                <th className="px-4 py-3 text-gray-600 font-medium">Projektant</th>
-                <th className="px-4 py-3 text-gray-600 font-medium">Odjel</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Hektara (ha)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Stabala</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Vlake (km)</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Teren</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">God.</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Kanc.</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Bol.</th>
-                <th className="px-4 py-3 text-gray-600 font-medium text-right">Unosa</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Projektant</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Hektara (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Stabala</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Vlake (km)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Teren</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">God.</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Kanc.</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Bol.</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Unosa</th>
               </tr>
             </thead>
             <tbody>
               {visibleRows.map((r, idx) => (
                 <tr
                   key={idx}
-                  className={`border-t hover:bg-gray-50 ${r.brojUnosa === 0 ? "opacity-40" : ""}`}
+                  className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${r.brojUnosa === 0 ? "opacity-40" : ""}`}
                 >
-                  <td className="px-4 py-3 font-medium">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                     {r.inzinjer.prezime} {r.inzinjer.ime}
                   </td>
                   <td className="px-4 py-3">
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                    <span className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
                       {r.inzinjer.odjel.broj}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">
+                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                     {r.ukupnoHektara > 0 ? r.ukupnoHektara.toFixed(2) : "–"}
                   </td>
-                  <td className="px-4 py-3 text-right">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
-                  <td className="px-4 py-3 text-right">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
-                  <td className="px-4 py-3 text-right text-orange-600">{(r.danaTeren ?? 0) > 0 ? r.danaTeren : "–"}</td>
-                  <td className="px-4 py-3 text-right text-sky-600">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
-                  <td className="px-4 py-3 text-right text-violet-600">{(r.danaKancelarija ?? 0) > 0 ? r.danaKancelarija : "–"}</td>
-                  <td className="px-4 py-3 text-right text-red-500">{(r.danaBolovanje ?? 0) > 0 ? r.danaBolovanje : "–"}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{r.brojUnosa}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">{(r.danaTeren ?? 0) > 0 ? r.danaTeren : "–"}</td>
+                  <td className="px-4 py-3 text-right text-sky-600 dark:text-sky-400">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
+                  <td className="px-4 py-3 text-right text-violet-600 dark:text-violet-400">{(r.danaKancelarija ?? 0) > 0 ? r.danaKancelarija : "–"}</td>
+                  <td className="px-4 py-3 text-right text-red-500 dark:text-red-400">{(r.danaBolovanje ?? 0) > 0 ? r.danaBolovanje : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{r.brojUnosa}</td>
                 </tr>
               ))}
             </tbody>
@@ -389,11 +388,11 @@ function StatCard({
   color: "green" | "blue" | "emerald" | "amber" | "orange";
 }) {
   const colors = {
-    green:   { card: "bg-green-50 border-green-300",   label: "text-green-800",   value: "text-green-900" },
-    blue:    { card: "bg-blue-50 border-blue-300",     label: "text-blue-800",    value: "text-blue-900" },
-    emerald: { card: "bg-emerald-50 border-emerald-300", label: "text-emerald-800", value: "text-emerald-900" },
-    amber:   { card: "bg-amber-50 border-amber-300",   label: "text-amber-900",   value: "text-amber-950" },
-    orange:  { card: "bg-orange-50 border-orange-300", label: "text-orange-800",  value: "text-orange-900" },
+    green:   { card: "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-800",   label: "text-green-800 dark:text-green-200",   value: "text-green-900 dark:text-green-100" },
+    blue:    { card: "bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-800",     label: "text-blue-800 dark:text-blue-200",    value: "text-blue-900 dark:text-blue-100" },
+    emerald: { card: "bg-emerald-50 dark:bg-emerald-950 border-emerald-300 dark:border-emerald-800", label: "text-emerald-800 dark:text-emerald-200", value: "text-emerald-900 dark:text-emerald-100" },
+    amber:   { card: "bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800",   label: "text-amber-900 dark:text-amber-200",   value: "text-amber-950 dark:text-amber-100" },
+    orange:  { card: "bg-orange-50 dark:bg-orange-950 border-orange-300 dark:border-orange-800", label: "text-orange-800 dark:text-orange-200",  value: "text-orange-900 dark:text-orange-100" },
   };
   const c = colors[color];
   return (

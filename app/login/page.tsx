@@ -59,17 +59,17 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: "100dvh", display: "flex", alignItems: "center",
-      justifyContent: "center", padding: 16, background: "var(--bg, #f0f4f1)"
+      justifyContent: "center", padding: 16, background: "var(--background)"
     }}>
       <div style={{
-        background: "#fff", border: "1px solid #ccd8d0", borderRadius: 18,
+        background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18,
         boxShadow: "0 12px 48px rgba(0,0,0,.16)", padding: "28px 22px",
         width: "100%", maxWidth: 360
       }}>
-        <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: "#26613e", marginBottom: 4 }}>
+        <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: "var(--brand)", marginBottom: 4 }}>
           🌲 Priprema Proizvodnje
         </div>
-        <div style={{ textAlign: "center", color: "#4a6657", fontSize: 12, marginBottom: 18 }}>
+        <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, marginBottom: 18 }}>
           Unesi ime i PIN
         </div>
 
@@ -88,10 +88,10 @@ export default function LoginPage() {
             onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 4) doLogin(); }}
             style={{
               width: "100%", padding: "10px 12px", border: "2px solid",
-              borderColor: ime.trim() ? "#26613e" : "#ccd8d0",
-              borderRadius: 8, background: "#f6f9f7", fontSize: 15,
+              borderColor: ime.trim() ? "var(--brand)" : "var(--border)",
+              borderRadius: 8, background: "var(--background)", fontSize: 15,
               fontWeight: 700, fontFamily: "inherit", outline: "none",
-              color: "#1c2e22", boxSizing: "border-box",
+              color: "var(--foreground)", boxSizing: "border-box",
               letterSpacing: "0.05em", textTransform: "uppercase",
             }}
           />
@@ -102,8 +102,8 @@ export default function LoginPage() {
           {dots.map((on, i) => (
             <span key={i} style={{
               width: 14, height: 14, borderRadius: "50%",
-              border: `2px solid ${err ? "#b92b20" : submitting ? "#9ab0a2" : on ? "#26613e" : "#ccd8d0"}`,
-              background: on ? (err ? "#b92b20" : submitting ? "#9ab0a2" : "#26613e") : "transparent",
+              border: `2px solid ${err ? "#b92b20" : submitting ? "var(--text-muted)" : on ? "var(--brand)" : "var(--border)"}`,
+              background: on ? (err ? "#b92b20" : submitting ? "var(--text-muted)" : "var(--brand)") : "transparent",
               transition: "all .13s",
               display: "inline-block"
             }} />
@@ -123,24 +123,24 @@ export default function LoginPage() {
           ))}
           <button style={{ ...btnStyle, opacity: 0.3, cursor: "default" }} disabled />
           <button onClick={() => addDigit("0")} disabled={submitting} style={btnStyle}>0</button>
-          <button onClick={delDigit} disabled={submitting} style={{ ...btnStyle, fontSize: 15, color: "#4a6657" }}>⌫</button>
+          <button onClick={delDigit} disabled={submitting} style={{ ...btnStyle, fontSize: 15, color: "var(--text-muted)" }}>⌫</button>
         </div>
 
         {/* Zapamti me */}
         <label style={{
           display: "flex", alignItems: "center", justifyContent: "center",
-          gap: 7, marginTop: 12, fontSize: 12, color: "#4a6657", cursor: "pointer", userSelect: "none"
+          gap: 7, marginTop: 12, fontSize: 12, color: "var(--text-muted)", cursor: "pointer", userSelect: "none"
         }}>
           <input
             type="checkbox"
             checked={remember}
             onChange={(e) => setRemember(e.target.checked)}
-            style={{ width: 15, height: 15, accentColor: "#26613e", cursor: "pointer" }}
+            style={{ width: 15, height: 15, accentColor: "var(--brand)", cursor: "pointer" }}
           />
           Zapamti me
         </label>
 
-        <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, color: "#9ab0a2", letterSpacing: ".04em" }}>
+        <div style={{ textAlign: "center", marginTop: 14, fontSize: 11, color: "var(--text-muted)", letterSpacing: ".04em" }}>
           v{VERSION}
         </div>
       </div>
@@ -150,12 +150,13 @@ export default function LoginPage() {
 
 const btnStyle: React.CSSProperties = {
   padding: "15px 8px",
-  background: "#f6f9f7",
-  border: "1px solid #ccd8d0",
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
   borderRadius: 10,
   fontSize: 18,
   fontWeight: 600,
   fontFamily: "inherit",
   cursor: "pointer",
   userSelect: "none",
+  color: "var(--foreground)",
 };
