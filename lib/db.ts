@@ -369,6 +369,13 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
 
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
+function localDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje'): {
   od: Date;
   do_: Date;
@@ -440,7 +447,7 @@ export async function getIzvjestaj(
         };
       });
 
-    return { period, od: od.toISOString(), do_: do_.toISOString(), tip, data };
+    return { period, od: localDateStr(od), do_: localDateStr(do_), tip, data };
   } else {
     const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
     const grouped: Record<string, { ha: number; stabala: number; km: number; count: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number }> = {};
@@ -482,6 +489,6 @@ export async function getIzvjestaj(
         };
       });
 
-    return { period, od: od.toISOString(), do_: do_.toISOString(), tip, data };
+    return { period, od: localDateStr(od), do_: localDateStr(do_), tip, data };
   }
 }
