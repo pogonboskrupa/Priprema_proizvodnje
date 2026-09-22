@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, getInzinjeri, getKorisnici, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getInzinjeri, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Odjel, Inzinjer, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
+import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fmtDate, fmtDateLong } from "@/lib/format";
 
@@ -67,7 +67,6 @@ export default function UnosUcinkaPage() {
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
-  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [fetching, setFetching] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyForm());
@@ -82,10 +81,9 @@ export default function UnosUcinkaPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    Promise.all([getOdjeli(), getInzinjeri(), getKorisnici()]).then(([od, inz, kor]) => {
+    Promise.all([getOdjeli(), getInzinjeri()]).then(([od, inz]) => {
       setOdjeli(od);
       setInzinjeri(inz);
-      setKorisnici(kor);
     });
   }, []);
 
