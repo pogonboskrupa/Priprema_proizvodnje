@@ -1,13 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, getInzinjeri, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getInzinjeri, getKorisnici, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
+import type { Odjel, Inzinjer, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fmtDate, fmtDateLong } from "@/lib/format";
 
-const today = () => new Date().toISOString().split("T")[0];
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const RECENT_KEY = "ppnext_recent_inz";
+function getRecentIds(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); } catch { return []; }
+}
+function pushRecentId(id: string) {
+  try {
+    const arr = [id, ...getRecentIds().filter((r) => r !== id)].slice(0, 20);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(arr));
+  } catch {}
+}
 
 const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
 const VRSTA_LABEL: Record<string, string> = {
@@ -51,6 +65,7 @@ export default function UnosUcinkaPage() {
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
+  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [fetching, setFetching] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyForm());
@@ -65,9 +80,10 @@ export default function UnosUcinkaPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    Promise.all([getOdjeli(), getInzinjeri()]).then(([od, inz]) => {
+    Promise.all([getOdjeli(), getInzinjeri(), getKorisnici()]).then(([od, inz, kor]) => {
       setOdjeli(od);
       setInzinjeri(inz);
+      setKorisnici(kor);
     });
   }, []);
 
@@ -196,6 +212,7 @@ export default function UnosUcinkaPage() {
           <EntryFields
             form={addForm}
             inzinjeri={inzinjeri}
+            korisnici={korisnici}
             showInzinjer
             onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
             onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setAddForm((f) => ({ ...f, ...patch })))}
@@ -241,6 +258,7 @@ export default function UnosUcinkaPage() {
                           <EntryFields
                             form={editForm}
                             inzinjeri={inzinjeri}
+                            korisnici={korisnici}
                             showInzinjer
                             onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
                             onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setEditForm((f) => ({ ...f, ...patch })))}
@@ -308,14 +326,31 @@ export default function UnosUcinkaPage() {
 type FormPatch = Partial<ReturnType<typeof emptyForm>>;
 
 function EntryFields({
-  form, inzinjeri, showInzinjer, onChange, onInzinjerChange,
+  form, inzinjeri, korisnici, showInzinjer, onChange, onInzinjerChange,
 }: {
   form: ReturnType<typeof emptyForm>;
   inzinjeri: Inzinjer[];
+  korisnici: Korisnik[];
   showInzinjer: boolean;
   onChange: (patch: FormPatch) => void;
   onInzinjerChange: (id: string) => void;
 }) {
+  // Build sorted option list: all workers with most-recently-used first
+  const recentIds = typeof window !== "undefined" ? getRecentIds() : [];
+  const workers = korisnici.filter((k) => k.role === "worker");
+  const items = workers.map((k) => ({
+    korisnik: k,
+    inz: inzinjeri.find((i) => i.korisnikId === k.id) ?? null,
+  }));
+  items.sort((a, b) => {
+    const ai = a.inz ? recentIds.indexOf(a.inz.id) : -1;
+    const bi = b.inz ? recentIds.indexOf(b.inz.id) : -1;
+    if (ai >= 0 && bi >= 0) return ai - bi;
+    if (ai >= 0) return -1;
+    if (bi >= 0) return 1;
+    return (a.korisnik.fullName || a.korisnik.ime).localeCompare(b.korisnik.fullName || b.korisnik.ime);
+  });
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {showInzinjer && (
@@ -324,13 +359,17 @@ function EntryFields({
           <select
             className={inputCls}
             value={form.inzinjerId}
-            onChange={(e) => onInzinjerChange(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value) pushRecentId(e.target.value);
+              onInzinjerChange(e.target.value);
+            }}
             required
           >
-            <option value="">Odaberi...</option>
-            {inzinjeri.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.prezime} {i.ime} ({i.odjel?.broj ?? "—"})
+            <option value="">Odaberi projektanta...</option>
+            {items.map(({ korisnik, inz }) => (
+              <option key={korisnik.id} value={inz?.id ?? ""} disabled={!inz}>
+                {korisnik.fullName || korisnik.ime}
+                {inz ? ` (${inz.odjel?.gj ?? ""}/${inz.odjel?.broj ?? "—"})` : " — nema odjela"}
               </option>
             ))}
           </select>
