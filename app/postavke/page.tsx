@@ -12,7 +12,7 @@ const APK_AVAILABLE = false;
 // Eksterna URL za APK (GitHub Releases ili prazan string = koristi public/app-release.apk)
 const APK_URL = '';
 
-const APK_VERSION = '1.2.0';
+const APK_VERSION = '1.3.0';
 const APK_DATE = '22. 09. 2026.';
 const APK_SIZE = '8.4 MB';
 const APK_CHANGES = [

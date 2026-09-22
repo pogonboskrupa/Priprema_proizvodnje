@@ -50,10 +50,29 @@ export default function UnosPage() {
   });
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
+  const [multiDay, setMultiDay] = useState(false);
+  const [datumDo, setDatumDo] = useState("");
 
   const dayOfWeek = getDayOfWeek(form.datum);
   const isSunday = dayOfWeek === 0;
   const isSaturday = dayOfWeek === 6;
+
+  function getWorkDays(od: string, do_: string): string[] {
+    const days: string[] = [];
+    const end = new Date(do_);
+    const cur = new Date(od);
+    while (cur <= end) {
+      if (cur.getDay() !== 0) {
+        days.push(cur.toISOString().split("T")[0]);
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+    return days;
+  }
+
+  const multiDayDates = multiDay && datumDo && datumDo >= form.datum
+    ? getWorkDays(form.datum, datumDo)
+    : [];
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -98,8 +117,7 @@ export default function UnosPage() {
     setLoading(true);
     setMsg("");
     try {
-      await createUnos({
-        datum: form.datum,
+      const base = {
         vrsta: form.vrsta,
         inzinjerId: form.inzinjerId,
         odjelId: form.odjelId,
@@ -107,8 +125,10 @@ export default function UnosPage() {
         hektari: form.hektari ? Number(form.hektari) : undefined,
         kilometri: form.kilometri ? Number(form.kilometri) : undefined,
         napomena: form.napomena || undefined,
-      });
-      setMsg("Unos je sačuvan!");
+      };
+      const dates = multiDay && multiDayDates.length > 0 ? multiDayDates : [form.datum];
+      await Promise.all(dates.map((datum) => createUnos({ ...base, datum })));
+      setMsg(dates.length > 1 ? `Sačuvano ${dates.length} unosa!` : "Unos je sačuvan!");
       setForm({
         datum: today(),
         vrsta: form.vrsta,
@@ -119,6 +139,8 @@ export default function UnosPage() {
         kilometri: "",
         napomena: "",
       });
+      setMultiDay(false);
+      setDatumDo("");
       load();
     } catch {
       setMsg("Greška pri unosu.");
@@ -193,6 +215,37 @@ export default function UnosPage() {
               {isSaturday && (
                 <div className="mt-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ℹ️ Subota je inače neradni dan — unos je moguć ako je bila radna subota.
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer select-none text-gray-700 dark:text-gray-300">
+                <input
+                  type="checkbox"
+                  checked={multiDay}
+                  onChange={(e) => { setMultiDay(e.target.checked); if (!e.target.checked) setDatumDo(""); }}
+                  className="w-4 h-4 accent-green-700"
+                />
+                Ponovi za više dana
+              </label>
+              {multiDay && (
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <label className={labelCls}>Datum do</label>
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={datumDo}
+                      min={form.datum}
+                      onChange={(e) => setDatumDo(e.target.value)}
+                    />
+                  </div>
+                  {multiDayDates.length > 0 && (
+                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
+                      Kreiraće se <strong>{multiDayDates.length}</strong> unosa (nedjelje preskočene)
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -321,7 +374,7 @@ export default function UnosPage() {
               disabled={loading || isSunday}
               className="w-full bg-green-700 text-white py-2.5 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
             >
-              {loading ? "Čuvanje..." : "Sačuvaj unos"}
+              {loading ? "Čuvanje..." : multiDay && multiDayDates.length > 1 ? `Sačuvaj ${multiDayDates.length} unosa` : "Sačuvaj unos"}
             </button>
 
             {msg && (
