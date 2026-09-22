@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getInzinjeri, getUnosi, createUnos, deleteUnos, getInzinjerByKorisnikId } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel, Inzinjer, UnosRada, VrstaRada } from "@/lib/types";
@@ -25,6 +25,9 @@ function getMonthOptions() {
 export default function UnosPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
+  const isWorker = session?.role === "worker";
+  const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
+  const [myInzinjerLoaded, setMyInzinjerLoaded] = useState(false);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [inzinjeri, setInzinjeri] = useState<Inzinjer[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
@@ -47,6 +50,21 @@ export default function UnosPage() {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
+  // Workers: find their linked engineer and pre-fill the form
+  useEffect(() => {
+    if (!session || session.role !== "worker") {
+      setMyInzinjerLoaded(true);
+      return;
+    }
+    getInzinjerByKorisnikId(session.userId).then((inz) => {
+      setMyInzinjerId(inz?.id ?? null);
+      if (inz) {
+        setForm((f) => ({ ...f, inzinjerId: inz.id, odjelId: inz.odjelId }));
+      }
+      setMyInzinjerLoaded(true);
+    });
+  }, [session]);
+
   async function load() {
     const [od, inz, un] = await Promise.all([getOdjeli(), getInzinjeri(), getUnosi()]);
     setOdjeli(od);
@@ -56,7 +74,7 @@ export default function UnosPage() {
 
   useEffect(() => { load(); }, []);
 
-  if (authLoading || !session) return null;
+  if (authLoading || !session || (isWorker && !myInzinjerLoaded)) return null;
 
   function handleInzinjerChange(id: string) {
     const inz = inzinjeri.find((i) => i.id === id);
@@ -112,7 +130,11 @@ export default function UnosPage() {
     });
   }
 
-  const filteredUnosi = unosi.filter((u) => u.datum.slice(0, 7) === filterMjesec);
+  const filteredUnosi = unosi.filter((u) => {
+    if (u.datum.slice(0, 7) !== filterMjesec) return false;
+    if (isWorker && myInzinjerId && u.inzinjerId !== myInzinjerId) return false;
+    return true;
+  });
 
   function handleExport() {
     const rows = filteredUnosi.map((u) => ({
@@ -128,9 +150,11 @@ export default function UnosPage() {
     exportXlsx(rows, `unosi-${filterMjesec}`);
   }
 
-  const filteredInzinjeri = form.odjelId
-    ? inzinjeri.filter((i) => i.odjelId === form.odjelId)
-    : inzinjeri;
+  const filteredInzinjeri = isWorker
+    ? inzinjeri.filter((i) => i.id === myInzinjerId)
+    : form.odjelId
+      ? inzinjeri.filter((i) => i.odjelId === form.odjelId)
+      : inzinjeri;
 
   return (
     <div>

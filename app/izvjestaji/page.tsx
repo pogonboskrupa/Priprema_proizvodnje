@@ -43,7 +43,7 @@ export default function IzvjestajiPage() {
   const router = useRouter();
   const isWorker = session?.role === "worker";
   const [period, setPeriod] = useState<Period>("mjesecno");
-  const [tip, setTip] = useState<Tip>(isWorker ? "inzinjer" : "odjel");
+  const [tip, setTip] = useState<Tip>("odjel");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [loading, setLoading] = useState(false);
   const [myInzinjerId, setMyInzinjerId] = useState<string | null>(null);
@@ -53,12 +53,13 @@ export default function IzvjestajiPage() {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading]);
 
-  // For workers, look up their linked inzinjer record once
+  // For workers, force inzinjer view and look up their linked engineer record
   useEffect(() => {
     if (!session || session.role !== "worker") {
       setMyInzinjerLoaded(true);
       return;
     }
+    setTip("inzinjer");
     getInzinjerByKorisnikId(session.userId).then((inz) => {
       setMyInzinjerId(inz?.id ?? null);
       setMyInzinjerLoaded(true);

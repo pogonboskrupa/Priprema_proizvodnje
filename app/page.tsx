@@ -7,7 +7,7 @@ import { getMjesecniRezime } from "@/lib/db";
 
 type Rezime = {
   ha: number; stabala: number; km: number;
-  godisnji: number; kancelarija: number; bolovanje: number; ukupno: number;
+  godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number;
 };
 
 export default function Home() {
@@ -51,10 +51,11 @@ export default function Home() {
           <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 capitalize">
             {mesec}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <MiniStat label="Hektara" value={rezime.ha.toFixed(2)} unit="ha" color="green" />
             <MiniStat label="Stabala" value={rezime.stabala.toString()} unit="st" color="emerald" />
             <MiniStat label="Vlake" value={rezime.km.toFixed(2)} unit="km" color="amber" />
+            <MiniStat label="Teren" value={rezime.teren.toString()} unit="dana" color="orange" />
             <MiniStat label="Odsustva" value={odsustva.toString()} unit="dana" color="sky" />
           </div>
         </div>
@@ -123,13 +124,14 @@ function MiniStat({
   label, value, unit, color,
 }: {
   label: string; value: string; unit: string;
-  color: "green" | "emerald" | "amber" | "sky";
+  color: "green" | "emerald" | "amber" | "sky" | "orange";
 }) {
   const c = {
     green: "bg-green-50 border-green-200 text-green-700",
     emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
     amber: "bg-amber-50 border-amber-200 text-amber-700",
     sky: "bg-sky-50 border-sky-200 text-sky-700",
+    orange: "bg-orange-50 border-orange-200 text-orange-700",
   }[color];
   return (
     <div className={`rounded-xl border p-4 ${c}`}>
