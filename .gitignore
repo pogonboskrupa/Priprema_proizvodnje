@@ -46,6 +46,9 @@ prisma/dev.db-journal
 *.tsbuildinfo
 next-env.d.ts
 
+# Android signing keystore — ne commitati, čuva se kao GitHub Secret
+.github/android-release.keystore
+
 # SQLite database
 prisma/dev.db
 prisma/dev.db-journal

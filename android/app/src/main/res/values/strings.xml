@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Priprema Proizvodnje</string>
+    <string name="title_activity_main">Priprema Proizvodnje</string>
+    <string name="package_name">com.pogonboskrupa.pp</string>
+    <string name="custom_url_scheme">com.pogonboskrupa.pp</string>
+</resources>

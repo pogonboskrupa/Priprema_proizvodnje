@@ -1,0 +1,88 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'lib/version.ts'
+      - '.github/workflows/build-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync Capacitor
+        run: npx cap sync android --no-open
+
+      - name: Čitaj verziju iz version.ts
+        id: version
+        run: |
+          VER=$(grep "VERSION" lib/version.ts | grep -oP "'\K[^']+")
+          echo "version=$VER" >> $GITHUB_OUTPUT
+
+      - name: Pripremi keystore iz GitHub Secret
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/release.keystore
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          KEYSTORE_PATH: /tmp/release.keystore
+          KEY_ALIAS: pp-release
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
+          STORE_PASS: ${{ secrets.ANDROID_STORE_PASS }}
+        run: |
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$KEYSTORE_PATH \
+            -Pandroid.injected.signing.store.password=$STORE_PASS \
+            -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$KEY_PASS
+
+      - name: Preimenuj APK
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/priprema-proizvodnje-v${{ steps.version.outputs.version }}.apk
+
+      - name: Kreiraj GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Priprema Proizvodnje v${{ steps.version.outputs.version }}
+          body: |
+            ## Priprema Proizvodnje v${{ steps.version.outputs.version }}
+
+            ### Instalacija
+            1. Preuzmi APK fajl ispod
+            2. Otvori na Android uređaju → dozvoli instalaciju iz nepoznatih izvora
+            3. Instaliraj
+
+            > App učitava live verziju sa GitHub Pages. Potrebna internet konekcija pri prvom otvaranju.
+          files: |
+            android/app/build/outputs/apk/release/priprema-proizvodnje-v${{ steps.version.outputs.version }}.apk
+          make_latest: true
+          fail_on_unmatched_files: true
