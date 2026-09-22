@@ -7,6 +7,9 @@ import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
+// Postavi na true tek kad pravi APK fajl bude na public/app-release.apk
+const APK_AVAILABLE = false;
+
 const APK_VERSION = '1.0.0';
 const APK_DATE = '22. 09. 2026.';
 const APK_SIZE = '8.4 MB';
@@ -407,70 +410,79 @@ function ApkDownload() {
 
         {/* Download button */}
         <div className="mt-5 space-y-2.5">
-          <button
-            onClick={handleDownload}
-            disabled={dlState !== "idle"}
-            className="relative w-full rounded-xl h-12 overflow-hidden font-semibold text-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-shadow"
-            style={{
-              backgroundColor:
-                dlState === "done" ? "#14532d" : dlState === "progress" ? "#15803d" : "#166534",
-              boxShadow:
-                dlState === "idle"
-                  ? "0 4px 14px 0 rgba(22, 101, 52, 0.4)"
-                  : "none",
-            }}
-          >
-            {/* Animated progress fill */}
-            {dlState === "progress" && (
-              <div
-                className="absolute inset-y-0 left-0 bg-green-950 transition-[width] duration-75"
-                style={{ width: `${progress}%` }}
-              />
-            )}
-
-            {/* Shimmer when idle */}
-            {dlState === "idle" && (
-              <div
-                className="absolute inset-0 opacity-20"
-                style={{
-                  background:
-                    "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%)",
-                  animation: "shimmer 2.5s infinite",
-                }}
-              />
-            )}
-
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              {dlState === "idle" && (
-                <>
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                    <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-                  </svg>
-                  Preuzmi APK &nbsp;·&nbsp; Android
-                </>
-              )}
+          {!APK_AVAILABLE ? (
+            <div className="w-full rounded-xl h-12 flex items-center justify-center gap-2 bg-gray-100 border border-gray-200 text-gray-400 text-sm font-medium cursor-not-allowed select-none">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
+              </svg>
+              APK uskoro dostupan
+            </div>
+          ) : (
+            <button
+              onClick={handleDownload}
+              disabled={dlState !== "idle"}
+              className="relative w-full rounded-xl h-12 overflow-hidden font-semibold text-sm text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-shadow"
+              style={{
+                backgroundColor:
+                  dlState === "done" ? "#14532d" : dlState === "progress" ? "#15803d" : "#166534",
+                boxShadow:
+                  dlState === "idle"
+                    ? "0 4px 14px 0 rgba(22, 101, 52, 0.4)"
+                    : "none",
+              }}
+            >
+              {/* Animated progress fill */}
               {dlState === "progress" && (
-                <>
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-5 h-5 fill-current"
-                    style={{ animation: "spin 1s linear infinite" }}
-                  >
-                    <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z" />
-                  </svg>
-                  Priprema preuzimanja&nbsp; {Math.round(progress)}%
-                </>
+                <div
+                  className="absolute inset-y-0 left-0 bg-green-950 transition-[width] duration-75"
+                  style={{ width: `${progress}%` }}
+                />
               )}
-              {dlState === "done" && (
-                <>
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
-                  </svg>
-                  Preuzimanje počelo!
-                </>
+
+              {/* Shimmer when idle */}
+              {dlState === "idle" && (
+                <div
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    background:
+                      "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.6) 50%, transparent 60%)",
+                    animation: "shimmer 2.5s infinite",
+                  }}
+                />
               )}
-            </span>
-          </button>
+
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {dlState === "idle" && (
+                  <>
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                      <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+                    </svg>
+                    Preuzmi APK &nbsp;·&nbsp; Android
+                  </>
+                )}
+                {dlState === "progress" && (
+                  <>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-5 h-5 fill-current"
+                      style={{ animation: "spin 1s linear infinite" }}
+                    >
+                      <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z" />
+                    </svg>
+                    Priprema preuzimanja&nbsp; {Math.round(progress)}%
+                  </>
+                )}
+                {dlState === "done" && (
+                  <>
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+                    </svg>
+                    Preuzimanje počelo!
+                  </>
+                )}
+              </span>
+            </button>
+          )}
 
           {/* Install note */}
           <div className="flex gap-2 items-start rounded-lg bg-amber-50 border border-amber-100 px-3 py-2.5">
