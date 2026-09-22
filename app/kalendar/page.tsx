@@ -25,10 +25,6 @@ const VRSTA_LABEL: Record<string, string> = {
   BOLOVANJE: "Bol",
 };
 
-function initials(inz?: { ime?: string; prezime?: string } | null): string {
-  if (!inz) return "?";
-  return `${(inz.prezime || "")[0] || ""}${(inz.ime || "")[0] || ""}`.toUpperCase();
-}
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -181,7 +177,7 @@ export default function KalendarPage() {
                       <div key={i} className="flex items-center gap-1">
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${VRSTA_COLOR[u.vrsta] ?? "bg-gray-400"}`} />
                         <span className="text-[9px] leading-tight text-gray-600 dark:text-gray-400 truncate">
-                          {isWorker ? VRSTA_LABEL[u.vrsta] : `${initials(u.inzinjer)} ${VRSTA_LABEL[u.vrsta]}`}
+                          {VRSTA_LABEL[u.vrsta]}
                         </span>
                       </div>
                     ))}
@@ -211,8 +207,7 @@ export default function KalendarPage() {
                   <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${VRSTA_COLOR[u.vrsta] ?? "bg-gray-400"}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                      {u.inzinjer?.prezime} {u.inzinjer?.ime}
-                      <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">({u.odjel?.broj})</span>
+                      {u.odjel?.broj && <span className="text-xs text-gray-500 dark:text-gray-400">Odjel {u.odjel.broj}</span>}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-3 mt-0.5">
                       <span>{u.vrsta}</span>

@@ -94,7 +94,7 @@ export default function Home() {
           href="/kalendar"
           icon="📅"
           title="Kalendar"
-          desc="Pregled radnih dana — ko je radio šta koji dan"
+          desc="Pregled aktivnosti po danima i odjelima"
           color="bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900"
         />
         {session.role === "admin" && (
