@@ -467,12 +467,13 @@ export async function getIzvjestaj(
     const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
     const grouped: Record<string, {
       ha: number; stabala: number; km: number; count: number;
-      godisnji: number; kancelarija: number; bolovanje: number; teren: number;
+      godisnji: number; kancelarija: number; bolovanje: number;
       odjeliIds: Set<string>;
+      terenDani: Set<string>;
     }> = {};
     for (const u of unosiRaw) {
       const key = u.inzinjerId as string;
-      if (!grouped[key]) grouped[key] = { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, odjeliIds: new Set() };
+      if (!grouped[key]) grouped[key] = { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, odjeliIds: new Set(), terenDani: new Set() };
       grouped[key].ha += Number(u.hektari) || 0;
       grouped[key].stabala += Number(u.brojStabala) || 0;
       grouped[key].km += Number(u.kilometri) || 0;
@@ -481,7 +482,9 @@ export async function getIzvjestaj(
       if (u.vrsta === 'GODISNJI') grouped[key].godisnji++;
       else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija++;
       else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje++;
-      else if (u.vrsta === 'TEREN') grouped[key].teren++;
+      else if (u.vrsta === 'TEREN' || u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') {
+        grouped[key].terenDani.add((u.datum as string).slice(0, 10));
+      }
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])
@@ -489,7 +492,7 @@ export async function getIzvjestaj(
       .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
     const data = workers.map((k) => {
-        const g = grouped[k.id] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, odjeliIds: new Set<string>() };
+        const g = grouped[k.id] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, odjeliIds: new Set<string>(), terenDani: new Set<string>() };
         const odjeli = Array.from(g.odjeliIds)
           .map((id) => (odMap[id] as Record<string, unknown>)?.broj as string ?? id)
           .sort((a, b) => a.localeCompare(b));
@@ -506,7 +509,7 @@ export async function getIzvjestaj(
           danaGodisnji: g.godisnji,
           danaKancelarija: g.kancelarija,
           danaBolovanje: g.bolovanje,
-          danaTeren: g.teren,
+          danaTeren: g.terenDani.size,
           brojUnosa: g.count,
         };
       });
