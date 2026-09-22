@@ -57,6 +57,7 @@ const workerLinks = [
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/kalendar", label: "Kalendar" },
   { href: "/elaborat", label: "Elaborat" },
+  { href: "/moji-odjeli", label: "Moji odjeli" },
   { href: "/postavke", label: "Postavke" },
 ];
 

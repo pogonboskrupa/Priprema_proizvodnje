@@ -379,6 +379,39 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
   }));
 }
 
+// ── Moji odjeli ──────────────────────────────────────────────────────────────
+
+export async function getMojiOdjeliData(): Promise<{
+  odjeli: Odjel[];
+  korisnici: Korisnik[];
+  statsPerOdjel: Record<string, { ha: number; stabala: number; km: number }>;
+}> {
+  const [odjeliRaw, korisnaciRaw, unosiRaw] = await Promise.all([
+    getAll('odjeli'),
+    getAll('users'),
+    getAll('unosi'),
+  ]);
+
+  const odjeli = (odjeliRaw as unknown as Odjel[]).sort((a, b) =>
+    String(a.broj).localeCompare(String(b.broj))
+  );
+  const korisnici = korisnaciRaw as unknown as Korisnik[];
+
+  const statsPerOdjel: Record<string, { ha: number; stabala: number; km: number }> = {};
+  for (const u of unosiRaw) {
+    const odjelId = u.odjelId as string;
+    if (!statsPerOdjel[odjelId]) statsPerOdjel[odjelId] = { ha: 0, stabala: 0, km: 0 };
+    if (u.vrsta === 'DOZNAKA') {
+      statsPerOdjel[odjelId].ha += Number(u.hektari) || 0;
+      statsPerOdjel[odjelId].stabala += Number(u.brojStabala) || 0;
+    } else if (u.vrsta === 'VLAKA') {
+      statsPerOdjel[odjelId].km += Number(u.kilometri) || 0;
+    }
+  }
+
+  return { odjeli, korisnici, statsPerOdjel };
+}
+
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
 function localDateStr(d: Date): string {
