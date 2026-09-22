@@ -214,7 +214,6 @@ export default function UnosUcinkaPage() {
           <EntryFields
             form={addForm}
             inzinjeri={inzinjeri}
-            korisnici={korisnici}
             odjeli={odjeli}
             showInzinjer
             onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
@@ -261,7 +260,6 @@ export default function UnosUcinkaPage() {
                           <EntryFields
                             form={editForm}
                             inzinjeri={inzinjeri}
-                            korisnici={korisnici}
                             odjeli={odjeli}
                             showInzinjer
                             onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
@@ -330,11 +328,10 @@ export default function UnosUcinkaPage() {
 type FormPatch = Partial<ReturnType<typeof emptyForm>>;
 
 function EntryFields({
-  form, inzinjeri, korisnici, odjeli, showInzinjer, onChange, onInzinjerChange,
+  form, inzinjeri, odjeli, showInzinjer, onChange, onInzinjerChange,
 }: {
   form: ReturnType<typeof emptyForm>;
   inzinjeri: Inzinjer[];
-  korisnici: Korisnik[];
   odjeli: Odjel[];
   showInzinjer: boolean;
   onChange: (patch: FormPatch) => void;
@@ -343,18 +340,13 @@ function EntryFields({
   const recentInzIds = typeof window !== "undefined" ? getRecentIds(RECENT_INZ_KEY) : [];
   const recentOdjIds = typeof window !== "undefined" ? getRecentIds(RECENT_ODJ_KEY) : [];
 
-  const workers = korisnici.filter((k) => k.role === "worker");
-  const items = workers.map((k) => ({
-    korisnik: k,
-    inz: inzinjeri.find((i) => i.korisnikId === k.id) ?? null,
-  }));
-  items.sort((a, b) => {
-    const ai = a.inz ? recentInzIds.indexOf(a.inz.id) : -1;
-    const bi = b.inz ? recentInzIds.indexOf(b.inz.id) : -1;
+  const sortedInzinjeri = [...inzinjeri].sort((a, b) => {
+    const ai = recentInzIds.indexOf(a.id);
+    const bi = recentInzIds.indexOf(b.id);
     if (ai >= 0 && bi >= 0) return ai - bi;
     if (ai >= 0) return -1;
     if (bi >= 0) return 1;
-    return (a.korisnik.fullName || a.korisnik.ime).localeCompare(b.korisnik.fullName || b.korisnik.ime);
+    return `${a.prezime} ${a.ime}`.localeCompare(`${b.prezime} ${b.ime}`);
   });
 
   const sortedOdjeli = [...odjeli].sort((a, b) => {
@@ -381,9 +373,9 @@ function EntryFields({
             required
           >
             <option value="">Odaberi projektanta...</option>
-            {items.map(({ korisnik, inz }) => (
-              <option key={korisnik.id} value={inz?.id ?? ""} disabled={!inz}>
-                {korisnik.fullName || korisnik.ime}
+            {sortedInzinjeri.map((inz) => (
+              <option key={inz.id} value={inz.id}>
+                {inz.prezime} {inz.ime}
               </option>
             ))}
           </select>
