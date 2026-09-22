@@ -213,6 +213,7 @@ export default function UnosUcinkaPage() {
             form={addForm}
             inzinjeri={inzinjeri}
             korisnici={korisnici}
+            odjeli={odjeli}
             showInzinjer
             onChange={(patch) => setAddForm((f) => ({ ...f, ...patch }))}
             onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setAddForm((f) => ({ ...f, ...patch })))}
@@ -259,6 +260,7 @@ export default function UnosUcinkaPage() {
                             form={editForm}
                             inzinjeri={inzinjeri}
                             korisnici={korisnici}
+                            odjeli={odjeli}
                             showInzinjer
                             onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
                             onInzinjerChange={(id) => handleInzinjerChange(id, (patch) => setEditForm((f) => ({ ...f, ...patch })))}
@@ -326,16 +328,16 @@ export default function UnosUcinkaPage() {
 type FormPatch = Partial<ReturnType<typeof emptyForm>>;
 
 function EntryFields({
-  form, inzinjeri, korisnici, showInzinjer, onChange, onInzinjerChange,
+  form, inzinjeri, korisnici, odjeli, showInzinjer, onChange, onInzinjerChange,
 }: {
   form: ReturnType<typeof emptyForm>;
   inzinjeri: Inzinjer[];
   korisnici: Korisnik[];
+  odjeli: Odjel[];
   showInzinjer: boolean;
   onChange: (patch: FormPatch) => void;
   onInzinjerChange: (id: string) => void;
 }) {
-  // Build sorted option list: all workers with most-recently-used first
   const recentIds = typeof window !== "undefined" ? getRecentIds() : [];
   const workers = korisnici.filter((k) => k.role === "worker");
   const items = workers.map((k) => ({
@@ -369,8 +371,24 @@ function EntryFields({
             {items.map(({ korisnik, inz }) => (
               <option key={korisnik.id} value={inz?.id ?? ""} disabled={!inz}>
                 {korisnik.fullName || korisnik.ime}
-                {inz ? ` (${inz.odjel?.gj ?? ""}/${inz.odjel?.broj ?? "—"})` : " — nema odjela"}
+                {!inz ? " — nema odjela" : ""}
               </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {showInzinjer && (
+        <div>
+          <label className={labelCls}>Odjel</label>
+          <select
+            className={inputCls}
+            value={form.odjelId}
+            onChange={(e) => onChange({ odjelId: e.target.value })}
+            required
+          >
+            <option value="">Odaberi odjel...</option>
+            {odjeli.map((o) => (
+              <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
             ))}
           </select>
         </div>
