@@ -110,6 +110,22 @@ export default function PostavkePage() {
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
+  function fmtLastLogin(iso: string | undefined): string {
+    if (!iso) return "–";
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffH = Math.floor(diffMin / 60);
+    const diffD = Math.floor(diffH / 24);
+    if (diffMin < 1) return "Upravo";
+    if (diffMin < 60) return `${diffMin} min ago`;
+    if (diffH < 24) return `Danas ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
+    if (diffD === 1) return `Jučer ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
+    if (diffD < 7) return `${diffD} dana ago`;
+    return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
   if (loading || !session) return null;
 
 
@@ -255,6 +271,7 @@ export default function PostavkePage() {
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium hidden sm:table-cell">Zadnja prijava</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -270,6 +287,9 @@ export default function PostavkePage() {
                       }`}>
                         {k.role}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell whitespace-nowrap">
+                      {fmtLastLogin(k.lastLoginAt)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {k.role === "worker" && (

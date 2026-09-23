@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getKorisnikByIme } from "@/lib/db";
+import { getKorisnikByIme, updateKorisnik } from "@/lib/db";
 import { saveSession, getSession } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import { VERSION } from "@/lib/version";
@@ -41,6 +41,8 @@ export default function LoginPage() {
       setSubmitting(false);
       if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
       if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
+      // fire-and-forget: ne blokiraj login zbog zapisa
+      updateKorisnik(found.id, { lastLoginAt: new Date().toISOString() }).catch(() => {});
       saveSession(
         { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, avatar: found.avatar },
         remember

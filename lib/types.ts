@@ -14,6 +14,7 @@ export interface Korisnik {
   avatar: string;
   odjeliIds: string[];
   odjeliRjesenjaIds?: string[];
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
