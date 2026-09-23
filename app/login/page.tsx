@@ -41,8 +41,11 @@ export default function LoginPage() {
       setSubmitting(false);
       if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
       if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
-      // fire-and-forget: ne blokiraj login zbog zapisa
-      updateKorisnik(found.id, { lastLoginAt: new Date().toISOString() }).catch(() => {});
+      // Čekaj write, ali ne blokiraj login duže od 2s
+      await Promise.race([
+        updateKorisnik(found.id, { lastLoginAt: new Date().toISOString() }),
+        new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+      ]).catch(() => {});
       saveSession(
         { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, avatar: found.avatar },
         remember

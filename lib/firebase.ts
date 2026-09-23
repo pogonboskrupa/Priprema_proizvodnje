@@ -124,6 +124,7 @@ export async function create(col: string, data: Record<string, unknown>) {
 }
 
 export async function update(col: string, id: string, data: Record<string, unknown>) {
+  await _authReady;
   await updateDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() });
   return getById(col, id);
 }
