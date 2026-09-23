@@ -1,5 +1,6 @@
 import {
   getAll,
+  getAllFresh,
   getById,
   create,
   update,
@@ -14,7 +15,7 @@ import type { Odjel, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types'
 // ── Korisnici ─────────────────────────────────────────────────────────────────
 
 export async function getKorisnici(): Promise<Korisnik[]> {
-  const raw = await getAll('users');
+  const raw = await getAllFresh('users');
   return (raw as unknown as Korisnik[]).sort((a, b) => a.ime.localeCompare(b.ime));
 }
 

@@ -96,6 +96,12 @@ export async function getAll(col: string) {
   return snaps.docs.map(docToObj);
 }
 
+export async function getAllFresh(col: string) {
+  await _authReady;
+  const snaps = await getDocs(collection(db, col));
+  return snaps.docs.map(docToObj);
+}
+
 export async function getById(col: string, id: string) {
   await _authReady;
   const ref = doc(db, col, id);
