@@ -9,6 +9,8 @@ import {
   doc,
   getDocs,
   getDoc,
+  getDocsFromCache,
+  getDocFromCache,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -53,15 +55,20 @@ export const db = initDb();
 let _authReady: Promise<void>;
 if (typeof window !== 'undefined') {
   const auth = getAuth(getApps()[0] ?? initializeApp(firebaseConfig));
-  _authReady = new Promise<void>((resolve) => {
+  const authPromise = new Promise<void>((resolve) => {
     onAuthStateChanged(auth, (user) => {
       if (!user) {
-        signInAnonymously(auth).catch(() => resolve()); // resolve anyway on error
+        signInAnonymously(auth).then(() => resolve()).catch(() => resolve());
       } else {
         resolve();
       }
     });
   });
+  // Ne blokiraj više od 4s — pri slabom signalu nastavi s cache-om
+  _authReady = Promise.race([
+    authPromise,
+    new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+  ]);
 } else {
   _authReady = Promise.resolve();
 }
@@ -80,13 +87,23 @@ export function docToObj(snap: QueryDocumentSnapshot<DocumentData>) {
 
 export async function getAll(col: string) {
   await _authReady;
-  const snaps = await getDocs(collection(db, col));
+  const ref = collection(db, col);
+  try {
+    const cached = await getDocsFromCache(ref);
+    if (!cached.empty) return cached.docs.map(docToObj);
+  } catch { /* cache miss — nastavi na server */ }
+  const snaps = await getDocs(ref);
   return snaps.docs.map(docToObj);
 }
 
 export async function getById(col: string, id: string) {
   await _authReady;
-  const snap = await getDoc(doc(db, col, id));
+  const ref = doc(db, col, id);
+  try {
+    const cached = await getDocFromCache(ref);
+    if (cached.exists()) return docToObj(cached as QueryDocumentSnapshot<DocumentData>);
+  } catch { /* cache miss */ }
+  const snap = await getDoc(ref);
   if (!snap.exists()) return null;
   return docToObj(snap as QueryDocumentSnapshot<DocumentData>);
 }
@@ -118,6 +135,10 @@ export async function queryCol(
   const q: Query<DocumentData> = constraints.length
     ? query(ref, ...constraints)
     : ref;
+  try {
+    const cached = await getDocsFromCache(q);
+    if (!cached.empty) return cached.docs.map(docToObj);
+  } catch { /* cache miss */ }
   const snaps = await getDocs(q);
   return snaps.docs.map(docToObj);
 }
