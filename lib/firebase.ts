@@ -10,6 +10,7 @@ import {
   getDocs,
   getDoc,
   getDocsFromCache,
+  getDocsFromServer,
   getDocFromCache,
   addDoc,
   updateDoc,
@@ -98,7 +99,7 @@ export async function getAll(col: string) {
 
 export async function getAllFresh(col: string) {
   await _authReady;
-  const snaps = await getDocs(collection(db, col));
+  const snaps = await getDocsFromServer(collection(db, col));
   return snaps.docs.map(docToObj);
 }
 
