@@ -73,7 +73,7 @@ export async function createOdjel(data: {
 
 export async function updateOdjel(
   id: string,
-  data: { gj?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number }
+  data: { gj?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number; doznaceno?: boolean; vlakeProjektovane?: boolean }
 ): Promise<Odjel> {
   const raw = await update('odjeli', id, data as Record<string, unknown>);
   return raw as unknown as Odjel;

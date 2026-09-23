@@ -8,6 +8,40 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 
 type BulkRow = { broj: string; povrsina: string };
 
+function StatusToggle({
+  active, spinning, activeClass, inactiveClass, onClick,
+}: {
+  active: boolean;
+  spinning: boolean;
+  activeClass: string;
+  inactiveClass: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={spinning}
+      title={active ? "Označeno — klikni za uklanjanje" : "Nije urađeno — klikni za označavanje"}
+      className={`inline-flex items-center justify-center w-7 h-7 rounded-full border transition-colors disabled:opacity-60 ${active ? activeClass : inactiveClass}`}
+    >
+      {spinning ? (
+        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+      ) : active ? (
+        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function OdjeliPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -26,6 +60,7 @@ export default function OdjeliPage() {
   ]);
 
   const [loading, setLoading] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null); // "<odjelId>-doz" | "<odjelId>-vlak"
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
   useEffect(() => {
@@ -119,6 +154,23 @@ export default function OdjeliPage() {
     setBulkMode(bulk);
     setEditId(null);
     setForm({ gj: "", broj: "", povrsina: "" });
+  }
+
+  async function toggleStatus(o: Odjel, field: "doznaceno" | "vlakeProjektovane") {
+    const key = `${o.id}-${field === "doznaceno" ? "doz" : "vlak"}`;
+    if (toggling === key) return;
+    const newVal = !o[field];
+    // optimistični update
+    setOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: newVal } : x));
+    setToggling(key);
+    try {
+      await updateOdjel(o.id, { [field]: newVal });
+    } catch {
+      // rollback
+      setOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: !newVal } : x));
+    } finally {
+      setToggling(null);
+    }
   }
 
   function handleDelete(id: string) {
@@ -299,6 +351,30 @@ export default function OdjeliPage() {
         </form>
       )}
 
+      {/* ── Status summary ────────────────────────────────────────────── */}
+      {odjeli.length > 0 && (() => {
+        const total = odjeli.length;
+        const dozDone = odjeli.filter(o => o.doznaceno).length;
+        const vlakDone = odjeli.filter(o => o.vlakeProjektovane).length;
+        const bothDone = odjeli.filter(o => o.doznaceno && o.vlakeProjektovane).length;
+        return (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Doznaka: {dozDone}/{total}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Vlake: {vlakDone}/{total}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+              <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Oboje: {bothDone}/{total}
+            </span>
+          </div>
+        );
+      })()}
+
       {/* ── Tabela grupirana po GJ ──────────────────────────────────────── */}
       {odjeli.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-8 text-center text-gray-600 dark:text-gray-400 text-sm">
@@ -329,6 +405,8 @@ export default function OdjeliPage() {
                         <tr>
                           <th className="text-left px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Odjel br.</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Površina (ha)</th>
+                          <th className="text-center px-2 py-2 text-green-700 dark:text-green-400 font-medium text-xs">Doznaka</th>
+                          <th className="text-center px-2 py-2 text-amber-600 dark:text-amber-400 font-medium text-xs">Vlake</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Proj.</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Unosi</th>
                           <th className="px-3 py-2 w-20"></th>
@@ -339,6 +417,24 @@ export default function OdjeliPage() {
                           <tr key={o.id} className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${editId === o.id ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
                             <td className="px-3 py-2.5 font-mono font-semibold text-gray-900 dark:text-gray-100">{o.broj}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 dark:text-gray-200">{o.povrsina.toFixed(2)}</td>
+                            <td className="px-2 py-2 text-center">
+                              <StatusToggle
+                                active={!!o.doznaceno}
+                                spinning={toggling === `${o.id}-doz`}
+                                activeClass="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-green-300 dark:border-green-700"
+                                inactiveClass="bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 border-gray-300 dark:border-gray-600"
+                                onClick={() => toggleStatus(o, "doznaceno")}
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <StatusToggle
+                                active={!!o.vlakeProjektovane}
+                                spinning={toggling === `${o.id}-vlak`}
+                                activeClass="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-amber-300 dark:border-amber-700"
+                                inactiveClass="bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 border-gray-300 dark:border-gray-600"
+                                onClick={() => toggleStatus(o, "vlakeProjektovane")}
+                              />
+                            </td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.inzinjeri ?? 0}</td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.unosi ?? 0}</td>
                             <td className="px-3 py-2.5 text-right w-20">

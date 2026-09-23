@@ -27,6 +27,8 @@ export interface Odjel {
   plan_lis: number;   // plan m³ lišćara
   real_cet: number;   // realizacija m³ četinara
   real_lis: number;   // realizacija m³ lišćara
+  doznaceno?: boolean;
+  vlakeProjektovane?: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: { inzinjeri: number; unosi: number };
