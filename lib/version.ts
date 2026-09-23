@@ -1,1 +1,1 @@
-export const VERSION = '1.5.38-debug';
+export const VERSION = '1.5.38';

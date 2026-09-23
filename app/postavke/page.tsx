@@ -272,7 +272,7 @@ export default function PostavkePage() {
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                 <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium hidden sm:table-cell">Zadnja prijava</th>
+                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnja prijava</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
@@ -289,7 +289,7 @@ export default function PostavkePage() {
                         {k.role}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hidden sm:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {fmtLastLogin(k.lastLoginAt)}
                     </td>
                     <td className="px-4 py-3 text-right">
