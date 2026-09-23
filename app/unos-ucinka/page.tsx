@@ -199,7 +199,7 @@ function BatchRowItem({
             <div>
               <label className={labelCls}>Broj stabala</label>
               <input
-                type="number" min="1" className={inputSmCls} value={row.brojStabala}
+                type="text" inputMode="decimal" className={inputSmCls} value={row.brojStabala}
                 placeholder="0"
                 onChange={(e) => onChange({ brojStabala: e.target.value })}
               />
@@ -207,7 +207,7 @@ function BatchRowItem({
             <div>
               <label className={labelCls}>Hektari (ha)</label>
               <input
-                type="number" step="0.01" min="0" className={inputSmCls} value={row.hektari}
+                type="text" inputMode="decimal" className={inputSmCls} value={row.hektari}
                 placeholder="0.00"
                 onChange={(e) => onChange({ hektari: e.target.value })}
               />
@@ -218,7 +218,7 @@ function BatchRowItem({
           <div>
             <label className={labelCls}>Kilometri (km)</label>
             <input
-              type="number" step="0.01" min="0" className={inputSmCls} value={row.kilometri}
+              type="text" inputMode="decimal" className={inputSmCls} value={row.kilometri}
               placeholder="0.00"
               onChange={(e) => onChange({ kilometri: e.target.value })}
             />
@@ -317,12 +317,12 @@ function EntryFields({
         <>
           <div>
             <label className={labelCls}>Broj stabala</label>
-            <input type="number" min="1" className={inputCls} value={form.brojStabala}
+            <input type="text" inputMode="decimal" className={inputCls} value={form.brojStabala}
               onChange={(e) => onChange({ brojStabala: e.target.value })} />
           </div>
           <div>
             <label className={labelCls}>Hektari (ha)</label>
-            <input type="number" step="0.01" min="0" className={inputCls} value={form.hektari}
+            <input type="text" inputMode="decimal" className={inputCls} value={form.hektari}
               onChange={(e) => onChange({ hektari: e.target.value })} />
           </div>
         </>
@@ -330,7 +330,7 @@ function EntryFields({
       {form.vrsta === "VLAKA" && (
         <div>
           <label className={labelCls}>Kilometri (km)</label>
-          <input type="number" step="0.01" min="0" className={inputCls} value={form.kilometri}
+          <input type="text" inputMode="decimal" className={inputCls} value={form.kilometri}
             onChange={(e) => onChange({ kilometri: e.target.value })} />
         </div>
       )}
@@ -438,9 +438,9 @@ export default function UnosUcinkaPage() {
             vrsta: r.vrsta,
             inzinjerId: r.inzinjerId,
             odjelId: r.odjelId,
-            brojStabala: r.vrsta === "DOZNAKA" && r.brojStabala ? Number(r.brojStabala) : undefined,
-            hektari: r.vrsta === "DOZNAKA" && r.hektari ? Number(r.hektari) : undefined,
-            kilometri: r.vrsta === "VLAKA" && r.kilometri ? Number(r.kilometri) : undefined,
+            brojStabala: r.vrsta === "DOZNAKA" && r.brojStabala ? Number(r.brojStabala.replace(",", ".")) : undefined,
+            hektari: r.vrsta === "DOZNAKA" && r.hektari ? Number(r.hektari.replace(",", ".")) : undefined,
+            kilometri: r.vrsta === "VLAKA" && r.kilometri ? Number(r.kilometri.replace(",", ".")) : undefined,
             napomena: r.napomena || undefined,
             createdById: session!.userId,
             createdByRole: session!.role,
@@ -483,9 +483,9 @@ export default function UnosUcinkaPage() {
         vrsta: editForm.vrsta,
         inzinjerId: editForm.inzinjerId,
         odjelId: editForm.odjelId,
-        brojStabala: editForm.vrsta === "DOZNAKA" && editForm.brojStabala ? Number(editForm.brojStabala) : null,
-        hektari: editForm.vrsta === "DOZNAKA" && editForm.hektari ? Number(editForm.hektari) : null,
-        kilometri: editForm.vrsta === "VLAKA" && editForm.kilometri ? Number(editForm.kilometri) : null,
+        brojStabala: editForm.vrsta === "DOZNAKA" && editForm.brojStabala ? Number(editForm.brojStabala.replace(",", ".")) : null,
+        hektari: editForm.vrsta === "DOZNAKA" && editForm.hektari ? Number(editForm.hektari.replace(",", ".")) : null,
+        kilometri: editForm.vrsta === "VLAKA" && editForm.kilometri ? Number(editForm.kilometri.replace(",", ".")) : null,
         napomena: editForm.napomena || null,
       });
       setEditId(null);

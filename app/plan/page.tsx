@@ -38,10 +38,10 @@ export default function PlanPage() {
     if (!editId) return;
     setSaving(true);
     await updateOdjel(editId, {
-      plan_cet: Number(form.plan_cet) || 0,
-      plan_lis: Number(form.plan_lis) || 0,
-      real_cet: Number(form.real_cet) || 0,
-      real_lis: Number(form.real_lis) || 0,
+      plan_cet: Number(form.plan_cet.replace(",", ".")) || 0,
+      plan_lis: Number(form.plan_lis.replace(",", ".")) || 0,
+      real_cet: Number(form.real_cet.replace(",", ".")) || 0,
+      real_lis: Number(form.real_lis.replace(",", ".")) || 0,
     });
     setEditId(null);
     setSaving(false);
@@ -126,7 +126,8 @@ export default function PlanPage() {
                         {(["plan_cet","plan_lis","real_cet","real_lis"] as const).map((f) => (
                           <td key={f} className="px-2 py-2">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="decimal"
                               className="w-24 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                               value={form[f]}
                               onChange={(e) => setForm({ ...form, [f]: e.target.value })}

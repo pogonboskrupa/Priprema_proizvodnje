@@ -85,13 +85,13 @@ export default function OdjeliPage() {
         await updateOdjel(editId, {
           gj: form.gj,
           broj: form.broj,
-          povrsina: parseFloat(form.povrsina),
+          povrsina: parseFloat(form.povrsina.replace(",", ".")),
         });
       } else {
         await createOdjel({
           gj: form.gj,
           broj: form.broj,
-          povrsina: parseFloat(form.povrsina),
+          povrsina: parseFloat(form.povrsina.replace(",", ".")),
         });
       }
       setForm({ gj: "", broj: "", povrsina: "" });
@@ -114,7 +114,7 @@ export default function OdjeliPage() {
     try {
       await Promise.all(
         valid.map((r) =>
-          createOdjel({ gj: bulkGj.trim(), broj: r.broj.trim(), povrsina: parseFloat(r.povrsina) })
+          createOdjel({ gj: bulkGj.trim(), broj: r.broj.trim(), povrsina: parseFloat(r.povrsina.replace(",", ".")) })
         )
       );
       setBulkGj("");
@@ -239,9 +239,8 @@ export default function OdjeliPage() {
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Površina (ha)</label>
             <input
-              type="number"
-              step="0.01"
-              min="0"
+              type="text"
+              inputMode="decimal"
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.povrsina}
               onChange={(e) => setForm({ ...form, povrsina: e.target.value })}
@@ -303,9 +302,8 @@ export default function OdjeliPage() {
                   placeholder=""
                 />
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   value={row.povrsina}
                   onChange={(e) => updateBulkRow(idx, "povrsina", e.target.value)}

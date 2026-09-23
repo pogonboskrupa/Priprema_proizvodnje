@@ -113,9 +113,9 @@ export default function UnosPage() {
         vrsta: form.vrsta,
         inzinjerId: form.inzinjerId,
         odjelId: form.odjelId,
-        brojStabala: form.brojStabala ? Number(form.brojStabala) : undefined,
-        hektari: form.hektari ? Number(form.hektari) : undefined,
-        kilometri: form.kilometri ? Number(form.kilometri) : undefined,
+        brojStabala: form.brojStabala ? Number(form.brojStabala.replace(",", ".")) : undefined,
+        hektari: form.hektari ? Number(form.hektari.replace(",", ".")) : undefined,
+        kilometri: form.kilometri ? Number(form.kilometri.replace(",", ".")) : undefined,
         napomena: form.napomena || undefined,
         createdById: session!.userId,
         createdByRole: session!.role,
@@ -352,8 +352,8 @@ export default function UnosPage() {
                 <div>
                   <label className={labelCls}>Broj stabala</label>
                   <input
-                    type="number"
-                    min="1"
+                    type="text"
+                    inputMode="decimal"
                     className={inputCls}
                     value={form.brojStabala}
                     onChange={(e) => setForm({ ...form, brojStabala: e.target.value })}
@@ -363,9 +363,8 @@ export default function UnosPage() {
                 <div>
                   <label className={labelCls}>Hektari (ha)</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
+                    type="text"
+                    inputMode="decimal"
                     className={inputCls}
                     value={form.hektari}
                     onChange={(e) => setForm({ ...form, hektari: e.target.value })}
@@ -378,9 +377,8 @@ export default function UnosPage() {
               <div>
                 <label className={labelCls}>Kilometri vlaka (km)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                  type="text"
+                  inputMode="decimal"
                   className={inputCls}
                   value={form.kilometri}
                   onChange={(e) => setForm({ ...form, kilometri: e.target.value })}

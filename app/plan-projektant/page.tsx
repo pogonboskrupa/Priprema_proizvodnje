@@ -57,7 +57,7 @@ export default function PlanPoProjectantPage() {
 
   async function savePlan(id: string) {
     setSaving(true);
-    await updateInzinjer(id, { planHa: Number(editPlan) || 0 });
+    await updateInzinjer(id, { planHa: Number(editPlan.replace(",", ".")) || 0 });
     setEditId(null);
     setSaving(false);
     const data = await getGodisnjePlanPoInzinjeru(year);
@@ -143,9 +143,8 @@ export default function PlanPoProjectantPage() {
                       <td className="px-4 py-3 text-right">
                         {isEditing ? (
                           <input
-                            type="number"
-                            step="0.1"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             autoFocus
                             className="w-20 text-right border border-green-400 rounded px-2 py-1 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                             value={editPlan}
