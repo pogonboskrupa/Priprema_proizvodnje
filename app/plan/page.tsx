@@ -10,7 +10,7 @@ export default function PlanPage() {
   const router = useRouter();
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ plan_cet: "", plan_lis: "", real_cet: "", real_lis: "" });
+  const [form, setForm] = useState({ povrsina: "", plan_cet: "", plan_lis: "", real_cet: "", real_lis: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -27,6 +27,7 @@ export default function PlanPage() {
   function startEdit(o: Odjel) {
     setEditId(o.id);
     setForm({
+      povrsina: String(o.povrsina || ""),
       plan_cet: String(o.plan_cet || ""),
       plan_lis: String(o.plan_lis || ""),
       real_cet: String(o.real_cet || ""),
@@ -38,6 +39,7 @@ export default function PlanPage() {
     if (!editId) return;
     setSaving(true);
     await updateOdjel(editId, {
+      povrsina: parseFloat(form.povrsina.replace(",", ".")) || 0,
       plan_cet: Number(form.plan_cet.replace(",", ".")) || 0,
       plan_lis: Number(form.plan_lis.replace(",", ".")) || 0,
       real_cet: Number(form.real_cet.replace(",", ".")) || 0,
@@ -119,7 +121,19 @@ export default function PlanPage() {
                   <tr key={o.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-mono font-semibold">{o.broj}</td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{o.gj}</td>
-                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{o.povrsina?.toFixed(2)}</td>
+                    {isEditing ? (
+                      <td className="px-2 py-2">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          className="w-20 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                          value={form.povrsina}
+                          onChange={(e) => setForm({ ...form, povrsina: e.target.value })}
+                        />
+                      </td>
+                    ) : (
+                      <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{o.povrsina?.toFixed(2)}</td>
+                    )}
 
                     {isEditing ? (
                       <>
