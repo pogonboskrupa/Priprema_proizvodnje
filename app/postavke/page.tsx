@@ -40,7 +40,6 @@ export default function PostavkePage() {
 
   async function loadKorisnici() {
     const k = await getKorisnici();
-    console.log("[postavke] korisnici:", k.map(u => ({ ime: u.ime, lastLoginAt: u.lastLoginAt })));
     setKorisnici(k);
   }
 
