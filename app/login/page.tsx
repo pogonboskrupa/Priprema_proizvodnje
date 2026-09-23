@@ -41,11 +41,18 @@ export default function LoginPage() {
       setSubmitting(false);
       if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
       if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
-      // Čekaj write, ali ne blokiraj login duže od 2s
-      await Promise.race([
-        updateKorisnik(found.id, { lastLoginAt: new Date().toISOString() }),
-        new Promise<void>((resolve) => setTimeout(resolve, 2000)),
-      ]).catch(() => {});
+      // DEBUG: pratimo write
+      const loginAt = new Date().toISOString();
+      console.log("[login] writing lastLoginAt:", loginAt, "for id:", found.id);
+      try {
+        const updated = await Promise.race([
+          updateKorisnik(found.id, { lastLoginAt: loginAt }),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
+        ]);
+        console.log("[login] write OK, returned:", updated);
+      } catch (e) {
+        console.warn("[login] write failed or timed out:", e);
+      }
       saveSession(
         { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, avatar: found.avatar },
         remember
