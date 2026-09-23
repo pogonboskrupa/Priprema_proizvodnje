@@ -150,6 +150,25 @@ export default function OdjeliPage() {
     setForm({ gj: "", broj: "", povrsina: "" });
   }
 
+  async function saveInlineEdit() {
+    if (!editId) return;
+    setLoading(true);
+    try {
+      await updateOdjel(editId, {
+        gj: form.gj,
+        broj: form.broj,
+        povrsina: parseFloat(form.povrsina.replace(",", ".")),
+      });
+      setEditId(null);
+      setForm({ gj: "", broj: "", povrsina: "" });
+    } catch {
+      // forma ostaje
+    } finally {
+      setLoading(false);
+      load();
+    }
+  }
+
   function switchMode(bulk: boolean) {
     setBulkMode(bulk);
     setEditId(null);
@@ -413,8 +432,28 @@ export default function OdjeliPage() {
                       <tbody>
                         {items.map((o) => (
                           <tr key={o.id} className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${editId === o.id ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
-                            <td className="px-3 py-2.5 font-mono font-semibold text-gray-900 dark:text-gray-100">{o.broj}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 dark:text-gray-200">{o.povrsina.toFixed(2)}</td>
+                            <td className="px-3 py-2.5 font-mono font-semibold text-gray-900 dark:text-gray-100">
+                              {editId === o.id ? (
+                                <input
+                                  type="text"
+                                  value={form.broj}
+                                  onChange={(e) => setForm((f) => ({ ...f, broj: e.target.value }))}
+                                  className="w-full border border-blue-400 rounded px-1.5 py-0.5 text-sm font-mono bg-white dark:bg-gray-800 dark:text-gray-100 outline-none"
+                                />
+                              ) : o.broj}
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 dark:text-gray-200">
+                              {editId === o.id ? (
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={form.povrsina}
+                                  onChange={(e) => setForm((f) => ({ ...f, povrsina: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") cancelEdit(); }}
+                                  className="w-full border border-blue-400 rounded px-1.5 py-0.5 text-sm text-right bg-white dark:bg-gray-800 dark:text-gray-100 outline-none"
+                                />
+                              ) : o.povrsina.toFixed(2)}
+                            </td>
                             <td className="px-2 py-2 text-center">
                               <StatusToggle
                                 active={!!o.doznaceno}
@@ -436,14 +475,25 @@ export default function OdjeliPage() {
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.inzinjeri ?? 0}</td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.unosi ?? 0}</td>
                             <td className="px-3 py-2.5 text-right w-20">
-                              <div className="flex flex-col items-end gap-0.5">
-                                <button onClick={() => startEdit(o)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
-                                  Uredi
-                                </button>
-                                <button onClick={() => handleDelete(o.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
-                                  Obriši
-                                </button>
-                              </div>
+                              {editId === o.id ? (
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <button onClick={saveInlineEdit} disabled={loading} className="text-green-600 dark:text-green-400 hover:underline text-xs font-semibold">
+                                    Sačuvaj
+                                  </button>
+                                  <button onClick={cancelEdit} className="text-gray-500 dark:text-gray-400 hover:underline text-xs">
+                                    Odustani
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <button onClick={() => startEdit(o)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
+                                    Uredi
+                                  </button>
+                                  <button onClick={() => handleDelete(o.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
+                                    Obriši
+                                  </button>
+                                </div>
+                              )}
                             </td>
                           </tr>
                         ))}
