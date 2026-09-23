@@ -134,7 +134,7 @@ export default function Home() {
           href="/postavke"
           icon="⚙️"
           title="Postavke"
-          desc="Profil, PIN i upravljanje korisnicima"
+          desc="Profil, PIN"
           color="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
         />
       </div>
