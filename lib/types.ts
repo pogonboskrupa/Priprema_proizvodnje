@@ -16,6 +16,8 @@ export interface Korisnik {
   odjeliRjesenjaIds?: string[];
   lastLoginAt?: string;
   arhiviran?: boolean;
+  /** Godišnji plan doznake u ha, ključ je godina ("2026") */
+  planHaPoGodini?: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }

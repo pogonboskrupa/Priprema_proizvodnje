@@ -55,6 +55,7 @@ export default function StatistikaPage() {
   const [odjeliMjesec, setOdjeliMjesec]   = useState<number>(0);
 
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -68,16 +69,20 @@ export default function StatistikaPage() {
 
   useEffect(() => {
     if (!session) return;
+    // zastarjeli odgovor (brza promjena taba/godine) ne smije prepisati noviji
+    let cancelled = false;
+    const guard = <T,>(set: (v: T) => void) => (v: T) => { if (!cancelled) set(v); };
     setBusy(true);
-    if (tab === "prisutnost") {
-      getStatistikaPrisutnosti(year).then(setPrisutnostData).finally(() => setBusy(false));
-    } else if (tab === "ucanak") {
-      getStatistikaUcinka(year, filterRadnik || undefined).then(setUcinakData).finally(() => setBusy(false));
-    } else if (tab === "usporedba") {
-      getUporedbaUcinka(year, upoMjesec || undefined).then(setUporedbaData).finally(() => setBusy(false));
-    } else {
-      getStatistikaPoOdjelima(year, odjeliMjesec || undefined).then(setOdjeliData).finally(() => setBusy(false));
-    }
+    setErr("");
+    const req =
+      tab === "prisutnost" ? getStatistikaPrisutnosti(year).then(guard(setPrisutnostData))
+      : tab === "ucanak" ? getStatistikaUcinka(year, filterRadnik || undefined).then(guard(setUcinakData))
+      : tab === "usporedba" ? getUporedbaUcinka(year, upoMjesec || undefined).then(guard(setUporedbaData))
+      : getStatistikaPoOdjelima(year, odjeliMjesec || undefined).then(guard(setOdjeliData));
+    req
+      .catch(() => { if (!cancelled) setErr("Greška pri učitavanju statistike. Provjeri internet i pokušaj ponovo."); })
+      .finally(() => { if (!cancelled) setBusy(false); });
+    return () => { cancelled = true; };
   }, [session, tab, year, filterRadnik, upoMjesec, odjeliMjesec]);
 
   if (loading || !session || session.role !== "admin") return null;
@@ -129,6 +134,12 @@ export default function StatistikaPage() {
         </div>
         {busy && <span className="text-xs text-gray-400 animate-pulse">Učitava…</span>}
       </div>
+
+      {err && (
+        <div className="rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {err}
+        </div>
+      )}
 
       {/* ── PRISUTNOST ── */}
       {tab === "prisutnost" && (
@@ -326,7 +337,7 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
             <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[130px]">Mjesec</th>
             <th className="px-4 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[90px]">Ha</th>
             <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[90px]">Stabala</th>
-            <th className="px-4 py-3 text-right font-semibold text-sky-700 dark:text-sky-400 min-w-[90px]">Km vlaka</th>
+            <th className="px-4 py-3 text-right font-semibold text-amber-700 dark:text-amber-400 min-w-[90px]">Km vlaka</th>
             <th className="px-4 py-3 min-w-[140px]"></th>
           </tr>
         </thead>
@@ -344,14 +355,14 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
                 <td className={`px-4 py-3 text-right tabular-nums font-mono text-sm ${m.stabala > 0 ? "text-green-700 dark:text-green-300 font-semibold" : "text-gray-300 dark:text-gray-700"}`}>
                   {m.stabala > 0 ? m.stabala.toLocaleString("bs-BA") : "—"}
                 </td>
-                <td className={`px-4 py-3 text-right tabular-nums font-mono text-sm ${m.km > 0 ? "text-sky-700 dark:text-sky-300 font-semibold" : "text-gray-300 dark:text-gray-700"}`}>
+                <td className={`px-4 py-3 text-right tabular-nums font-mono text-sm ${m.km > 0 ? "text-amber-700 dark:text-amber-300 font-semibold" : "text-gray-300 dark:text-gray-700"}`}>
                   {m.km > 0 ? m.km.toFixed(2) : "—"}
                 </td>
                 <td className="px-4 py-3">
                   {hasData && (
                     <div className="flex flex-col gap-1">
                       {m.ha > 0 && <MiniBar ratio={m.ha / maxHa} color="bg-emerald-400 dark:bg-emerald-500" track="bg-emerald-100 dark:bg-emerald-900/50" />}
-                      {m.km > 0 && <MiniBar ratio={m.km / maxKm} color="bg-sky-400 dark:bg-sky-500"     track="bg-sky-100 dark:bg-sky-900/50" />}
+                      {m.km > 0 && <MiniBar ratio={m.km / maxKm} color="bg-amber-400 dark:bg-amber-500"     track="bg-amber-100 dark:bg-amber-900/50" />}
                     </div>
                   )}
                 </td>
@@ -364,7 +375,7 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
             <td className="px-4 py-3 font-extrabold text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wide">Godišnji ∑</td>
             <td className="px-4 py-3 text-right tabular-nums font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">{totalHa.toFixed(2)}</td>
             <td className="px-4 py-3 text-right tabular-nums font-extrabold text-green-700 dark:text-green-300 font-mono">{totalStabala.toLocaleString("bs-BA")}</td>
-            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-sky-700 dark:text-sky-300 font-mono">{totalKm.toFixed(2)}</td>
+            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-amber-700 dark:text-amber-300 font-mono">{totalKm.toFixed(2)}</td>
             <td />
           </tr>
         </tfoot>
@@ -398,7 +409,7 @@ function UporedbaView({ data, sortKey, year, mjesec }: {
           const stRatio  = maxStabala > 0 ? row.stabala / maxStabala : 0;
           const kmRatio  = maxKm      > 0 ? row.km      / maxKm      : 0;
           const isEmpty  = row.ha === 0 && row.stabala === 0 && row.km === 0;
-          const medal    = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null;
+          const medal    = row[sortKey] <= 0 ? null : idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null;
 
           return (
             <div
@@ -432,7 +443,7 @@ function UporedbaView({ data, sortKey, year, mjesec }: {
                     </span>
                   )}
                   {row.km > 0 && (
-                    <span className="text-xs font-bold text-sky-700 dark:text-sky-300 tabular-nums bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold text-amber-700 dark:text-amber-300 tabular-nums bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full">
                       {row.km.toFixed(2)} km
                     </span>
                   )}
@@ -472,13 +483,13 @@ function UporedbaView({ data, sortKey, year, mjesec }: {
                   {hasKm && (
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 w-16 text-right flex-shrink-0">Km vlaka</span>
-                      <div className="flex-1 h-2.5 rounded-full bg-sky-100 dark:bg-sky-950 overflow-hidden">
+                      <div className="flex-1 h-2.5 rounded-full bg-amber-100 dark:bg-amber-950 overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 dark:from-sky-500 dark:to-sky-400 transition-all duration-500"
+                          className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 dark:from-amber-500 dark:to-amber-400 transition-all duration-500"
                           style={{ width: `${kmRatio * 100}%` }}
                         />
                       </div>
-                      <span className="text-[11px] font-mono text-sky-700 dark:text-sky-300 w-14 text-right flex-shrink-0 tabular-nums">
+                      <span className="text-[11px] font-mono text-amber-700 dark:text-amber-300 w-14 text-right flex-shrink-0 tabular-nums">
                         {row.km > 0 ? row.km.toFixed(2) : "—"}
                       </span>
                     </div>
@@ -514,6 +525,7 @@ function OdjeliView({ data, year, mjesec }: { data: OdjelStatistika[]; year: num
         {data.map((odjel) => {
           const maxHa = Math.max(...odjel.projektanti.map((p) => p.ha), 0.01);
           const maxKm = Math.max(...odjel.projektanti.map((p) => p.km), 0.01);
+          const maxSt = Math.max(...odjel.projektanti.map((p) => p.stabala), 1);
           const hasHa = odjel.projektanti.some((p) => p.ha > 0);
           const hasKm = odjel.projektanti.some((p) => p.km > 0);
 
@@ -538,7 +550,7 @@ function OdjeliView({ data, year, mjesec }: { data: OdjelStatistika[]; year: num
                     </span>
                   )}
                   {odjel.totalKm > 0 && (
-                    <span className="text-xs font-bold tabular-nums text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold tabular-nums text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full">
                       {odjel.totalKm.toFixed(2)} km
                     </span>
                   )}
@@ -550,7 +562,7 @@ function OdjeliView({ data, year, mjesec }: { data: OdjelStatistika[]; year: num
                 {odjel.projektanti.map((p, idx) => {
                   const haRatio = maxHa  > 0 ? p.ha / maxHa  : 0;
                   const kmRatio = maxKm  > 0 ? p.km / maxKm  : 0;
-                  const stRatio = odjel.totalStabala > 0 ? p.stabala / odjel.totalStabala : 0;
+                  const stRatio = p.stabala / maxSt;
 
                   return (
                     <div key={p.radnikId} className="px-4 py-3">
@@ -563,7 +575,7 @@ function OdjeliView({ data, year, mjesec }: { data: OdjelStatistika[]; year: num
                         <div className="flex items-center gap-1.5 flex-shrink-0 text-[11px] font-mono tabular-nums">
                           {p.ha > 0 && <span className="text-emerald-600 dark:text-emerald-400">{p.ha.toFixed(2)} ha</span>}
                           {p.stabala > 0 && <span className="text-green-600 dark:text-green-400">{p.stabala.toLocaleString("bs-BA")} st</span>}
-                          {p.km > 0 && <span className="text-sky-600 dark:text-sky-400">{p.km.toFixed(2)} km</span>}
+                          {p.km > 0 && <span className="text-amber-600 dark:text-amber-400">{p.km.toFixed(2)} km</span>}
                         </div>
                       </div>
 
@@ -588,8 +600,8 @@ function OdjeliView({ data, year, mjesec }: { data: OdjelStatistika[]; year: num
                         {hasKm && (
                           <div className="flex items-center gap-2">
                             <span className="text-[9px] font-bold text-gray-400 dark:text-gray-600 w-10 text-right flex-shrink-0">Km vlaka</span>
-                            <div className="flex-1 h-2 rounded-full bg-sky-100 dark:bg-sky-950 overflow-hidden">
-                              <div className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 transition-all duration-500"
+                            <div className="flex-1 h-2 rounded-full bg-amber-100 dark:bg-amber-950 overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-amber-600 transition-all duration-500"
                                 style={{ width: `${kmRatio * 100}%` }} />
                             </div>
                           </div>

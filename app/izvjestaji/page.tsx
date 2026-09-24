@@ -13,6 +13,7 @@ type Tip = "odjel" | "inzinjer";
 type OdjelRow = {
   odjel: { id: unknown; gj: string; broj: string; povrsina: number };
   ukupnoHektara: number;
+  kumulativnoHektara: number;
   ukupnoStabala: number;
   ukupnoKm: number;
   preostalo: number;
@@ -72,6 +73,8 @@ export default function IzvjestajiPage() {
   // Computed inside state initializer to avoid SSR/client timezone mismatch
   const [monthOptions] = useState(() => buildMonthOptions(24));
   const [selectedMonth, setSelectedMonth] = useState(() => buildMonthOptions(1)[0].value);
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [err, setErr] = useState("");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [tabelaData, setTabelaData] = useState<TabelaData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -85,21 +88,23 @@ export default function IzvjestajiPage() {
     if (!session) return;
     const initialTip: Tip = session.role === "worker" ? "inzinjer" : "odjel";
     if (session.role === "worker") setTip(initialTip);
-    load(period, initialTip, selectedMonth);
+    load(period, initialTip, selectedMonth, selectedYear);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function refDateFor(p: Period, monthVal: string): Date | undefined {
+  function refDateFor(p: Period, monthVal: string, yearVal: number): Date | undefined {
+    if (p === "godisnje") return new Date(yearVal, 6, 1);
     if (p !== "mjesecno") return undefined;
     const [y, m] = monthVal.split("-").map(Number);
     return new Date(y, m - 1, 15); // mid-month → getDateRange calculates correct range
   }
 
-  async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth) {
+  async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth, yearVal: number = selectedYear) {
     const gen = ++genRef.current;
     setLoading(true);
+    setErr("");
     try {
       const fetches: [Promise<unknown>, Promise<TabelaData | null>] = [
-        getIzvjestaj(p, t, refDateFor(p, monthVal)),
+        getIzvjestaj(p, t, refDateFor(p, monthVal, yearVal)),
         p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela() : Promise.resolve(null),
       ];
       const [json, tabela] = await Promise.all(fetches);
@@ -107,7 +112,7 @@ export default function IzvjestajiPage() {
       setData(json as IzvjestajData);
       setTabelaData(tabela as TabelaData | null);
     } catch {
-      // data ostaje kao prije — korisnik vidi prethodne podatke
+      if (gen === genRef.current) setErr("Greška pri učitavanju izvještaja — prikazani su prethodni podaci. Provjeri internet i pokušaj ponovo.");
     } finally {
       if (gen === genRef.current) setLoading(false);
     }
@@ -129,6 +134,13 @@ export default function IzvjestajiPage() {
     setSelectedMonth(val);
     load(period, tip, val);
   }
+
+  function handleYear(val: number) {
+    setSelectedYear(val);
+    load(period, tip, selectedMonth, val);
+  }
+
+  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   const formatDate = (d: string) => fmtDate(d);
 
@@ -173,6 +185,21 @@ export default function IzvjestajiPage() {
           </div>
         )}
 
+        {period === "godisnje" && (
+          <div>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Godina</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => handleYear(Number(e.target.value))}
+              className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Grouping — admin only */}
         {!isWorker && (
           <div>
@@ -203,6 +230,12 @@ export default function IzvjestajiPage() {
           </div>
         )}
       </div>
+
+      {err && (
+        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {err}
+        </div>
+      )}
 
       {loading && <div className="text-center py-16 text-gray-500 dark:text-gray-400">Učitavam...</div>}
 
@@ -248,7 +281,8 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
       Odjel: r.odjel.broj,
       GJ: r.odjel.gj,
       "Površina (ha)": r.odjel.povrsina,
-      "Obrađeno (ha)": r.ukupnoHektara,
+      "Obrađeno u periodu (ha)": r.ukupnoHektara,
+      "Ukupno do kraja perioda (ha)": r.kumulativnoHektara,
       "Preostalo (ha)": r.preostalo,
       Stabala: r.ukupnoStabala,
       "Vlake (km)": r.ukupnoKm,
@@ -282,7 +316,8 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
               <tr className="text-left">
                 <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
                 <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Površina (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Obrađeno (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">U periodu (ha)</th>
+                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right" title="Sva doznaka u odjelu do kraja odabranog perioda">Ukupno (ha)</th>
                 <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Preostalo (ha)</th>
                 <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Stabala</th>
                 <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Vlake (km)</th>
@@ -299,6 +334,9 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
                   <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{r.odjel.povrsina.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                     {r.ukupnoHektara.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 tabular-nums">
+                    {r.kumulativnoHektara.toFixed(2)}
                   </td>
                   <td className={`px-4 py-3 text-right font-medium ${r.preostalo <= 0 ? "text-green-600 dark:text-green-400" : "text-gray-700 dark:text-gray-200"}`}>
                     {r.preostalo <= 0 ? "✓ Završeno" : r.preostalo.toFixed(2)}
@@ -454,8 +492,8 @@ function InzinjerIzvjestaj({
   );
 }
 
-const DANI = ["Pon", "Uto", "Sri", "Čet", "Pet"] as const;
-const DANI_DOW = [1, 2, 3, 4, 5] as const; // 1=Ponedjeljak … 5=Petak
+const DANI = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub"] as const;
+const DANI_DOW = [1, 2, 3, 4, 5, 6] as const; // 1=Ponedjeljak … 6=Subota
 
 function formatAktivnost(a: DnevnaAktivnost): string {
   const prefix = a.gjBroj ?? "";
@@ -492,6 +530,9 @@ function SedmicnaTabela({
   const radnici = filterRadnikId
     ? data.radnici.filter((r) => r.id === filterRadnikId)
     : data.radnici;
+  // subota se prikazuje samo kad je neko radio tu subotu
+  const imaSubotu = radnici.some((r) => (data.entries[r.id]?.[6]?.length ?? 0) > 0);
+  const dani = DANI_DOW.map((dow, i) => ({ dow, naziv: DANI[i] })).filter((d) => d.dow !== 6 || imaSubotu);
 
   return (
     <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -507,11 +548,11 @@ function SedmicnaTabela({
               <th className="px-4 py-2.5 text-left text-gray-600 dark:text-gray-300 font-semibold w-40">
                 Ime i prezime
               </th>
-              {DANI.map((dan, i) => (
-                <th key={dan} className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300 font-semibold">
-                  {dan}
+              {dani.map(({ dow, naziv }) => (
+                <th key={dow} className="px-3 py-2.5 text-center text-gray-600 dark:text-gray-300 font-semibold">
+                  {naziv}
                   <span className="block text-[10px] font-normal text-gray-400 dark:text-gray-500">
-                    {fmtDayInTable(data.od, DANI_DOW[i])}
+                    {fmtDayInTable(data.od, dow)}
                   </span>
                 </th>
               ))}
@@ -520,7 +561,7 @@ function SedmicnaTabela({
           <tbody>
             {radnici.map((radnik) => {
               const dayMap = data.entries[radnik.id] ?? {};
-              const hasAny = DANI_DOW.some((dow) => (dayMap[dow]?.length ?? 0) > 0);
+              const hasAny = dani.some(({ dow }) => (dayMap[dow]?.length ?? 0) > 0);
               return (
                 <tr
                   key={radnik.id}
@@ -531,7 +572,7 @@ function SedmicnaTabela({
                   <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100 whitespace-nowrap">
                     {radnik.name}
                   </td>
-                  {DANI_DOW.map((dow) => {
+                  {dani.map(({ dow }) => {
                     const aktivnosti = dayMap[dow] ?? [];
                     return (
                       <td key={dow} className="px-2 py-2 text-center">
@@ -557,7 +598,7 @@ function SedmicnaTabela({
             })}
             {radnici.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
+                <td colSpan={dani.length + 1} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">
                   Nema podataka za ovu sedmicu
                 </td>
               </tr>

@@ -140,47 +140,6 @@ export async function arhivirajOdjel(id: string, arhiviran: boolean): Promise<vo
 
 // ── Inžinjeri ─────────────────────────────────────────────────────────────────
 
-export async function getInzinjeri(): Promise<Inzinjer[]> {
-  const [inzinjeriRaw, odjeliRaw] = await Promise.all([
-    getAll('inzinjeri'),
-    getAll('odjeli'),
-  ]);
-
-  const odjelMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
-
-  return inzinjeriRaw
-    .map((i) => ({
-      ...(i as unknown as Inzinjer),
-      odjel: odjelMap[i.odjelId as string] as unknown as Odjel,
-    }))
-    .sort((a, b) =>
-      `${a.prezime} ${a.ime}`.localeCompare(`${b.prezime} ${b.ime}`)
-    );
-}
-
-export async function getInzinjerByKorisnikId(korisnikId: string): Promise<Inzinjer | null> {
-  const [inzinjeriRaw, odjeliRaw] = await Promise.all([
-    queryCol('inzinjeri', [where('korisnikId', '==', korisnikId)]),
-    getAll('odjeli'),
-  ]);
-  if (!inzinjeriRaw.length) return null;
-  const i = inzinjeriRaw[0];
-  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
-  return { ...(i as unknown as Inzinjer), odjel: odMap[i.odjelId as string] as unknown as Odjel };
-}
-
-export async function createInzinjer(data: {
-  ime: string;
-  prezime: string;
-  email: string;
-  odjelId: string;
-  korisnikId?: string | null;
-}): Promise<Inzinjer> {
-  const raw = await create('inzinjeri', data as Record<string, unknown>);
-  const odjel = await getById('odjeli', data.odjelId);
-  return { ...(raw as unknown as Inzinjer), odjel: odjel as unknown as Odjel };
-}
-
 export async function getInzinjeriByKorisnikId(korisnikId: string): Promise<Inzinjer[]> {
   const [inzinjeriRaw, odjeliRaw] = await Promise.all([
     queryCol('inzinjeri', [where('korisnikId', '==', korisnikId)]),
@@ -193,54 +152,75 @@ export async function getInzinjeriByKorisnikId(korisnikId: string): Promise<Inzi
   }));
 }
 
-export async function updateInzinjer(
-  id: string,
-  data: { ime?: string; prezime?: string; email?: string; odjelId?: string; korisnikId?: string | null; planHa?: number; rjesenje?: boolean }
-): Promise<Inzinjer> {
-  const raw = await update('inzinjeri', id, data as Record<string, unknown>);
-  const odjelId = (raw as Record<string, unknown>).odjelId as string;
-  const odjel = await getById('odjeli', odjelId);
-  return { ...(raw as unknown as Inzinjer), odjel: odjel as unknown as Odjel };
+export interface PlanProjektantRed {
+  korisnikId: string;
+  ime: string;
+  odjeli: string[];
+  planHa: number;
+  odradjeno: number;
+  odradjenoKm: number;
+  arhiviran: boolean;
 }
 
-export async function deleteInzinjer(id: string): Promise<void> {
-  await remove('inzinjeri', id);
-}
-
-export async function getGodisnjePlanPoInzinjeru(year: number) {
+// Plan se čuva po godini u users.planHaPoGodini; stari plan (inzinjeri.planHa, bez godine) je fallback
+export async function getGodisnjePlanPoProjektantu(year: number): Promise<PlanProjektantRed[]> {
   const od = new Date(year, 0, 1);
-  const do_ = new Date(year, 11, 31);
-  do_.setHours(23, 59, 59, 999);
+  const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
 
-  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+  const [unosiRaw, usersRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
     queryCol('unosi', [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
+    getAllFresh('users'),
     getAll('inzinjeri'),
     getAll('odjeli'),
   ]);
 
-  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
-  const haMap: Record<string, number> = {};
-  const kmMap: Record<string, number> = {};
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
+  const inzinjeri = inzinjeriRaw as unknown as Inzinjer[];
+  // legacy unosi koriste inzinjer.id — mapiraj ih na korisnika
+  const ownerOf = new Map<string, string>();
+  for (const i of inzinjeri) if (i.korisnikId) ownerOf.set(i.id, i.korisnikId);
 
+  const acc = new Map<string, { ha: number; km: number; odjeli: Set<string> }>();
   for (const u of unosiRaw) {
-    const id = u.inzinjerId as string;
-    haMap[id] = (haMap[id] || 0) + (u.vrsta === 'DOZNAKA' ? (Number(u.hektari) || 0) : 0);
-    kmMap[id] = (kmMap[id] || 0) + (u.vrsta === 'VLAKA' ? (Number(u.kilometri) || 0) : 0);
+    const raw = u.inzinjerId as string;
+    const id = ownerOf.get(raw) ?? raw;
+    const a = acc.get(id) ?? { ha: 0, km: 0, odjeli: new Set<string>() };
+    if (u.vrsta === 'DOZNAKA') a.ha += Number(u.hektari) || 0;
+    else if (u.vrsta === 'VLAKA') a.km += Number(u.kilometri) || 0;
+    if ((u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') && u.odjelId) a.odjeli.add(u.odjelId as string);
+    acc.set(id, a);
   }
 
-  return (inzinjeriRaw as unknown as Inzinjer[])
-    .map((i) => ({
-      inzinjer: { ...i, odjel: odMap[i.odjelId] as unknown as Odjel },
-      planHa: Number(i.planHa) || 0,
-      odradjeno: haMap[i.id] || 0,
-      odradjenoKm: kmMap[i.id] || 0,
-    }))
-    .sort((a, b) =>
-      `${a.inzinjer.prezime} ${a.inzinjer.ime}`.localeCompare(`${b.inzinjer.prezime} ${b.inzinjer.ime}`)
-    );
+  return (usersRaw as unknown as Korisnik[])
+    .filter((k) => isReportWorker(k, acc.has(k.id)))
+    .map((k) => {
+      const a = acc.get(k.id);
+      const legacyPlan = inzinjeri
+        .filter((i) => i.korisnikId === k.id)
+        .reduce((s, i) => s + (Number(i.planHa) || 0), 0);
+      const planZaGodinu = k.planHaPoGodini?.[String(year)];
+      return {
+        korisnikId: k.id,
+        ime: k.fullName || k.ime,
+        odjeli: [...(a?.odjeli ?? [])]
+          .map((id) => odMap[id] ? `${odMap[id].gj}/${odMap[id].broj}` : '')
+          .filter(Boolean)
+          .sort(),
+        planHa: planZaGodinu ?? legacyPlan,
+        odradjeno: a?.ha ?? 0,
+        odradjenoKm: a?.km ?? 0,
+        arhiviran: !!k.arhiviran,
+      };
+    })
+    .sort((a, b) => a.ime.localeCompare(b.ime));
+}
+
+export async function setPlanHa(korisnikId: string, year: number, planHa: number): Promise<void> {
+  // dotted path mijenja samo tu godinu, ostale ostaju
+  await update('users', korisnikId, { [`planHaPoGodini.${year}`]: planHa });
 }
 
 // ── Unosi ─────────────────────────────────────────────────────────────────────
@@ -579,16 +559,27 @@ export async function getIzvjestaj(
 ) {
   const { od, do_ } = getDateRange(period, refDate);
 
-  const [unosiRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
+  const [unosiRaw, odjeliRaw, korisnaciRaw, doKrajaRaw] = await Promise.all([
     queryCol('unosi', [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
     getAll('odjeli'),
     getAll('users'),
+    tip === 'odjel'
+      ? queryCol('unosi', [where('datum', '<=', Timestamp.fromDate(do_))])
+      : Promise.resolve([]),
   ]);
 
   if (tip === 'odjel') {
+    // Preostalo i napredak moraju uključiti i ranije periode, ne samo odabrani
+    const kumulativnoHa: Record<string, number> = {};
+    for (const u of doKrajaRaw) {
+      if (u.vrsta !== 'DOZNAKA' || !u.odjelId) continue;
+      const k = u.odjelId as string;
+      kumulativnoHa[k] = (kumulativnoHa[k] || 0) + (Number(u.hektari) || 0);
+    }
+
     const grouped: Record<string, { ha: number; stabala: number; km: number; count: number }> = {};
     for (const u of unosiRaw) {
       const key = u.odjelId as string;
@@ -601,15 +592,17 @@ export async function getIzvjestaj(
 
     const data = odjeliRaw
       .filter((o) => !!grouped[o.id as string])  // samo odjeli s aktivnošću u periodu
-      .sort((a, b) => String(a.broj).localeCompare(String(b.broj)))
+      .sort((a, b) => String(a.gj).localeCompare(String(b.gj)) || String(a.broj).localeCompare(String(b.broj), undefined, { numeric: true }))
       .map((o) => {
         const g = grouped[o.id as string];
         const povrsina = Number(o.povrsina) || 0;
-        const preostalo = povrsina - g.ha;
-        const postotak = povrsina > 0 ? Math.round((g.ha / povrsina) * 100) : 0;
+        const kumulativno = kumulativnoHa[o.id as string] || 0;
+        const preostalo = povrsina - kumulativno;
+        const postotak = povrsina > 0 ? Math.round((kumulativno / povrsina) * 100) : 0;
         return {
           odjel: { id: o.id, gj: o.gj, broj: o.broj, povrsina },
           ukupnoHektara: g.ha,
+          kumulativnoHektara: kumulativno,
           ukupnoStabala: g.stabala,
           ukupnoKm: g.km,
           preostalo,
@@ -623,24 +616,24 @@ export async function getIzvjestaj(
     const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
     const grouped: Record<string, {
       ha: number; stabala: number; km: number; count: number;
-      godisnji: number; kancelarija: number; bolovanje: number;
+      godisnji: Set<string>; kancelarija: Set<string>; bolovanje: Set<string>;
       odjeliIds: Set<string>;
       terenDani: Set<string>;
     }> = {};
+    const emptyGroup = () => ({ ha: 0, stabala: 0, km: 0, count: 0, godisnji: new Set<string>(), kancelarija: new Set<string>(), bolovanje: new Set<string>(), odjeliIds: new Set<string>(), terenDani: new Set<string>() });
     for (const u of unosiRaw) {
       const key = u.inzinjerId as string;
-      if (!grouped[key]) grouped[key] = { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, odjeliIds: new Set(), terenDani: new Set() };
+      if (!grouped[key]) grouped[key] = emptyGroup();
+      const dan = (u.datum as string).slice(0, 10);
       grouped[key].ha += Number(u.hektari) || 0;
       grouped[key].stabala += Number(u.brojStabala) || 0;
       grouped[key].km += Number(u.kilometri) || 0;
       grouped[key].count++;
       if (u.odjelId) grouped[key].odjeliIds.add(u.odjelId as string);
-      if (u.vrsta === 'GODISNJI') grouped[key].godisnji++;
-      else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija++;
-      else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje++;
-      else if (u.vrsta === 'TEREN' || u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') {
-        grouped[key].terenDani.add((u.datum as string).slice(0, 10));
-      }
+      if (u.vrsta === 'GODISNJI') grouped[key].godisnji.add(dan);
+      else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija.add(dan);
+      else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje.add(dan);
+      else if (u.vrsta === 'TEREN' || u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') grouped[key].terenDani.add(dan);
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])
@@ -648,7 +641,7 @@ export async function getIzvjestaj(
       .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
     const data = workers.map((k) => {
-        const g = grouped[k.id] || { ha: 0, stabala: 0, km: 0, count: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, odjeliIds: new Set<string>(), terenDani: new Set<string>() };
+        const g = grouped[k.id] || emptyGroup();
         const odjeli = Array.from(g.odjeliIds)
           .map((id) => (odMap[id] as Record<string, unknown>)?.broj as string ?? id)
           .sort((a, b) => a.localeCompare(b));
@@ -662,9 +655,9 @@ export async function getIzvjestaj(
           ukupnoHektara: g.ha,
           ukupnoStabala: g.stabala,
           ukupnoKm: g.km,
-          danaGodisnji: g.godisnji,
-          danaKancelarija: g.kancelarija,
-          danaBolovanje: g.bolovanje,
+          danaGodisnji: g.godisnji.size,
+          danaKancelarija: g.kancelarija.size,
+          danaBolovanje: g.bolovanje.size,
           danaTeren: g.terenDani.size,
           brojUnosa: g.count,
         };
@@ -787,19 +780,22 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
   ]);
 
   const acc: Record<string, Record<number, { teren: number; kancelarija: number; godisnji: number; bolovanje: number }>> = {};
+  const seen = new Set<string>();
+  const KEY = { TEREN: 'teren', KANCELARIJA: 'kancelarija', GODISNJI: 'godisnji', BOLOVANJE: 'bolovanje' } as const;
 
   for (const u of unosiRaw) {
-    const vrsta = u.vrsta as string;
-    if (!['TEREN', 'KANCELARIJA', 'GODISNJI', 'BOLOVANJE'].includes(vrsta)) continue;
+    const key = KEY[u.vrsta as keyof typeof KEY];
     const id = u.inzinjerId as string;
-    if (!id) continue;
-    const m = new Date((u.datum as string).slice(0, 10)).getMonth() + 1;
+    if (!key || !id) continue;
+    const dan = (u.datum as string).slice(0, 10);
+    // isti dan i vrsta se broje jednom, i kad postoji više unosa
+    const dedupe = `${id}|${key}|${dan}`;
+    if (seen.has(dedupe)) continue;
+    seen.add(dedupe);
+    const m = Number(dan.slice(5, 7));
     if (!acc[id]) acc[id] = {};
     if (!acc[id][m]) acc[id][m] = { teren: 0, kancelarija: 0, godisnji: 0, bolovanje: 0 };
-    if (vrsta === 'TEREN') acc[id][m].teren++;
-    else if (vrsta === 'KANCELARIJA') acc[id][m].kancelarija++;
-    else if (vrsta === 'GODISNJI') acc[id][m].godisnji++;
-    else if (vrsta === 'BOLOVANJE') acc[id][m].bolovanje++;
+    acc[id][m][key]++;
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
@@ -836,7 +832,7 @@ export async function getStatistikaUcinka(year: number, inzinjerId?: string): Pr
     if (inzinjerId && u.inzinjerId !== inzinjerId) continue;
     const vrsta = u.vrsta as string;
     if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
-    const m = new Date((u.datum as string).slice(0, 10)).getMonth() + 1;
+    const m = Number((u.datum as string).slice(5, 7));
     if (vrsta === 'DOZNAKA') {
       acc[m].ha += Number(u.hektari) || 0;
       acc[m].stabala += Number(u.brojStabala) || 0;

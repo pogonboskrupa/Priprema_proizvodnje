@@ -5,6 +5,7 @@ import type { OdjelPeriodRada } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
+import { VRSTA } from "@/lib/vrste";
 
 type RFilt = "sve" | "plan" | "u_toku" | "zavrseno";
 
@@ -27,6 +28,7 @@ export default function RealizacijaPage() {
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [periodi, setperiodi] = useState<Record<string, OdjelPeriodRada>>({});
   const [filt, setFilt] = useState<RFilt>("sve");
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -34,12 +36,12 @@ export default function RealizacijaPage() {
   }, [session, loading]);
 
   useEffect(() => {
-    getOdjeli().then(setOdjeli);
+    getOdjeli().then(setOdjeli).catch(() => setErr("Greška pri učitavanju odjela."));
     getUnosiOdjelPeriod().then((arr) => {
       const map: Record<string, OdjelPeriodRada> = {};
       arr.forEach((p) => { map[p.odjelId] = p; });
       setperiodi(map);
-    });
+    }).catch(() => setErr("Greška pri učitavanju perioda rada."));
   }, []);
 
   const filtered = filt === "sve" ? odjeli : odjeli.filter((o) => getStatus(o) === filt);
@@ -55,6 +57,12 @@ export default function RealizacijaPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Realizacija</h1>
+
+      {err && (
+        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {err}
+        </div>
+      )}
 
       {/* Stat kartice */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -145,7 +153,7 @@ export default function RealizacijaPage() {
                   <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Period rada u odjelu</div>
                   {period.doznaka && (
                     <div className="flex items-center gap-1.5 text-xs">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">DOZNAKA</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${VRSTA.DOZNAKA.badge}`}>DOZNAKA</span>
                       <span className="text-gray-700 dark:text-gray-300 font-mono">
                         {fmtPeriodDate(period.doznaka.od)}
                         {period.doznaka.od !== period.doznaka.do_ && (
@@ -156,7 +164,7 @@ export default function RealizacijaPage() {
                   )}
                   {period.vlaka && (
                     <div className="flex items-center gap-1.5 text-xs">
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">VLAKA</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${VRSTA.VLAKA.badge}`}>VLAKA</span>
                       <span className="text-gray-700 dark:text-gray-300 font-mono">
                         {fmtPeriodDate(period.vlaka.od)}
                         {period.vlaka.od !== period.vlaka.do_ && (

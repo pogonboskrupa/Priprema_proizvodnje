@@ -4,6 +4,7 @@ import { getOdjeli, updateOdjel } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
+import { parseDecimal } from "@/lib/format";
 
 // Forest palette — one accent per GJ group (cycling)
 const GJ_PALETTE = [
@@ -50,6 +51,7 @@ export default function PlanPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormFields>({ povrsina: "", plan_cet: "", plan_lis: "", real_cet: "", real_lis: "" });
   const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -58,7 +60,9 @@ export default function PlanPage() {
 
   useEffect(() => { loadOdjeli(); }, []);
 
-  async function loadOdjeli() { setOdjeli(await getOdjeli()); }
+  async function loadOdjeli() {
+    try { setOdjeli(await getOdjeli()); } catch { setErr("Greška pri učitavanju odjela."); }
+  }
 
   function startEdit(o: Odjel) {
     setEditId(o.id);
@@ -67,17 +71,34 @@ export default function PlanPage() {
 
   async function saveEdit() {
     if (!editId) return;
+    const values = {
+      povrsina: parseDecimal(form.povrsina),
+      plan_cet: parseDecimal(form.plan_cet),
+      plan_lis: parseDecimal(form.plan_lis),
+      real_cet: parseDecimal(form.real_cet),
+      real_lis: parseDecimal(form.real_lis),
+    };
+    if (Object.values(values).some((v) => Number.isNaN(v))) {
+      setErr("Neispravan broj — koristi npr. 1234 ili 12,5.");
+      return;
+    }
     setSaving(true);
-    await updateOdjel(editId, {
-      povrsina: parseFloat(form.povrsina.replace(",", ".")) || 0,
-      plan_cet: Number(form.plan_cet.replace(",", ".")) || 0,
-      plan_lis: Number(form.plan_lis.replace(",", ".")) || 0,
-      real_cet: Number(form.real_cet.replace(",", ".")) || 0,
-      real_lis: Number(form.real_lis.replace(",", ".")) || 0,
-    });
-    setEditId(null);
-    setSaving(false);
-    loadOdjeli();
+    setErr("");
+    try {
+      await updateOdjel(editId, {
+        povrsina: values.povrsina ?? 0,
+        plan_cet: values.plan_cet ?? 0,
+        plan_lis: values.plan_lis ?? 0,
+        real_cet: values.real_cet ?? 0,
+        real_lis: values.real_lis ?? 0,
+      });
+      setEditId(null);
+      loadOdjeli();
+    } catch {
+      setErr("Greška pri snimanju. Pokušaj ponovo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const totPlanCet = odjeli.reduce((s, o) => s + (o.plan_cet || 0), 0);
@@ -103,7 +124,7 @@ export default function PlanPage() {
         .plan-wrap .baskerville {
           font-family: var(--font-baskerville, 'Libre Baskerville', Georgia, serif);
         }
-        :root {
+        .plan-wrap {
           --surface: #ffffff;
           --ground: #f0f4ee;
           --border: #dce5d8;
@@ -117,7 +138,7 @@ export default function PlanPage() {
           --row-hover: rgba(45,106,79,0.04);
         }
         @media (prefers-color-scheme: dark) {
-          :root:not([data-theme="light"]) {
+          :root:not([data-theme="light"]) .plan-wrap {
             --surface: #111c12;
             --ground: #0c1509;
             --border: #253127;
@@ -131,7 +152,7 @@ export default function PlanPage() {
             --row-hover: rgba(45,106,79,0.08);
           }
         }
-        :root[data-theme="dark"] {
+        :root[data-theme="dark"] .plan-wrap {
           --surface: #111c12;
           --ground: #0c1509;
           --border: #253127;
@@ -186,6 +207,12 @@ export default function PlanPage() {
             </div>
           </div>
         </div>
+
+        {err && (
+          <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 8, border: "1px solid #fca5a5", background: "rgba(239,68,68,.08)", color: "#b91c1c", fontSize: 13 }}>
+            {err}
+          </div>
+        )}
 
         {/* Summary strip */}
         <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "18px 20px", marginBottom: 24 }}>
@@ -289,7 +316,7 @@ export default function PlanPage() {
                             </>
                           ) : (
                             <>
-                              <td style={{ textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{o.povrsina?.toFixed(2) ?? "–"}</td>
+                              <td style={{ textAlign: "right", color: "var(--muted)", fontVariantNumeric: "tabular-nums" }}>{(Number(o.povrsina) || 0).toFixed(2)}</td>
                               <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(o.plan_cet || 0)}</td>
                               <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(o.plan_lis || 0)}</td>
                               <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 600, color: color.accent }}>{fmt(o.real_cet || 0)}</td>
