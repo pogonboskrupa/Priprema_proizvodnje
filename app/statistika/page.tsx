@@ -6,7 +6,8 @@ import {
   getStatistikaPrisutnosti, getStatistikaUcinka, getUporedbaUcinka, getStatistikaPoOdjelima, getKorisnici,
   PrisutnostRow, UcinakMjesec, UporedbaRed, OdjelStatistika,
 } from "@/lib/db";
-import type { Korisnik } from "@/lib/types";
+import type { Korisnik, VrstaRada } from "@/lib/types";
+import { VRSTA, heatClass } from "@/lib/vrste";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
@@ -15,15 +16,12 @@ type Tab = "prisutnost" | "ucanak" | "usporedba" | "odjeli";
 type PVrsta = "teren" | "kancelarija" | "godisnji" | "bolovanje";
 type SortKey = "ha" | "stabala" | "km";
 
-const VRSTA_CFG: Record<PVrsta, { label: string; color: string; bg: (n: number) => string }> = {
-  teren:      { label: "Teren",          color: "text-amber-700 dark:text-amber-300",
-    bg: (n) => n === 0 ? "" : n <= 2 ? "bg-amber-50 dark:bg-amber-950/40" : n <= 5 ? "bg-amber-100 dark:bg-amber-900/60" : "bg-amber-200 dark:bg-amber-800/80" },
-  kancelarija:{ label: "Kancelarija",    color: "text-violet-700 dark:text-violet-300",
-    bg: (n) => n === 0 ? "" : n <= 2 ? "bg-violet-50 dark:bg-violet-950/40" : n <= 5 ? "bg-violet-100 dark:bg-violet-900/60" : "bg-violet-200 dark:bg-violet-800/80" },
-  godisnji:   { label: "Godišnji odmor", color: "text-sky-700 dark:text-sky-300",
-    bg: (n) => n === 0 ? "" : n <= 2 ? "bg-sky-50 dark:bg-sky-950/40" : n <= 5 ? "bg-sky-100 dark:bg-sky-900/60" : "bg-sky-200 dark:bg-sky-800/80" },
-  bolovanje:  { label: "Bolovanje",      color: "text-red-700 dark:text-red-300",
-    bg: (n) => n === 0 ? "" : n <= 2 ? "bg-red-50 dark:bg-red-950/40" : n <= 5 ? "bg-red-100 dark:bg-red-900/60" : "bg-red-200 dark:bg-red-800/80" },
+const cfgFor = (v: VrstaRada) => ({ label: VRSTA[v].label, color: VRSTA[v].text, bg: (n: number) => heatClass(v, n) });
+const VRSTA_CFG: Record<PVrsta, ReturnType<typeof cfgFor>> = {
+  teren: cfgFor("TEREN"),
+  kancelarija: cfgFor("KANCELARIJA"),
+  godisnji: cfgFor("GODISNJI"),
+  bolovanje: cfgFor("BOLOVANJE"),
 };
 
 function yearOptions(current: number) {
@@ -65,7 +63,7 @@ export default function StatistikaPage() {
 
   useEffect(() => {
     if (!session) return;
-    getKorisnici().then((k) => setRadnici(k.filter((x) => x.role === "worker")));
+    getKorisnici({ ukljuciArhivirane: true }).then((k) => setRadnici(k.filter((x) => x.role === "worker")));
   }, [session]);
 
   useEffect(() => {
@@ -165,7 +163,7 @@ export default function StatistikaPage() {
               value={filterRadnik}
               onChange={(e) => setFilterRadnik(e.target.value)}>
               <option value="">Svi projektanti</option>
-              {radnici.map((r) => <option key={r.id} value={r.id}>{r.fullName || r.ime}</option>)}
+              {radnici.map((r) => <option key={r.id} value={r.id}>{r.fullName || r.ime}{r.arhiviran ? " (arhiviran)" : ""}</option>)}
             </select>
           </div>
           {ucinakData.length > 0 && <UcinakTabela data={ucinakData} year={year} />}

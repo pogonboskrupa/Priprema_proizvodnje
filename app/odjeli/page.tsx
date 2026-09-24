@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, createOdjel, updateOdjel, deleteOdjel } from "@/lib/db";
+import { getOdjeli, createOdjel, updateOdjel, arhivirajOdjel } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
@@ -46,7 +46,8 @@ function StatusToggle({
 export default function OdjeliPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [odjeli, setOdjeli] = useState<Odjel[]>([]);
+  const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
+  const [showArhiva, setShowArhiva] = useState(false);
 
   // Pojedinačni unos / edit
   const [form, setForm] = useState({ gj: "", broj: "", povrsina: "" });
@@ -62,7 +63,7 @@ export default function OdjeliPage() {
 
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null); // "<odjelId>-doz" | "<odjelId>-vlak"
-  const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
+  const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -71,12 +72,15 @@ export default function OdjeliPage() {
   }, [session, authLoading]);
 
   async function load() {
-    setOdjeli(await getOdjeli());
+    setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true }));
   }
 
   useEffect(() => { load(); }, []);
 
   if (authLoading || !session) return null;
+
+  const odjeli = sviOdjeli.filter((o) => !o.arhiviran);
+  const arhivirani = sviOdjeli.filter((o) => o.arhiviran);
 
   function validPovrsina(raw: string): number | null {
     const n = parseDecimal(raw);
@@ -181,27 +185,34 @@ export default function OdjeliPage() {
     if (toggling === key) return;
     const newVal = !o[field];
     // optimistični update
-    setOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: newVal } : x));
+    setSviOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: newVal } : x));
     setToggling(key);
     try {
       await updateOdjel(o.id, { [field]: newVal });
     } catch {
       // rollback
-      setOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: !newVal } : x));
+      setSviOdjeli((prev) => prev.map((x) => x.id === o.id ? { ...x, [field]: !newVal } : x));
     } finally {
       setToggling(null);
     }
   }
 
-  function handleDelete(id: string) {
+  function handleArhiviraj(o: Odjel) {
     setConfirmState({
-      msg: "Obrisati ovaj odjel? Ova akcija je nepovratna.",
+      msg: `Arhivirati odjel ${o.gj} / ${o.broj}? Više se neće nuditi u unosima, a unosi i izvještaji ostaju sačuvani. Odjel možeš vratiti iz arhive.`,
+      okLabel: "Arhiviraj",
+      okColor: "amber",
       onOk: async () => {
         setConfirmState(null);
-        try { await deleteOdjel(id); } catch { setErr("Greška pri brisanju odjela."); }
+        try { await arhivirajOdjel(o.id, true); } catch { setErr("Greška pri arhiviranju odjela."); }
         load();
       },
     });
+  }
+
+  async function vratiIzArhive(o: Odjel) {
+    try { await arhivirajOdjel(o.id, false); } catch { setErr("Greška pri vraćanju odjela."); }
+    load();
   }
 
   const validBulkCount = bulkRows.filter((r) => r.broj.trim() && r.povrsina.trim()).length;
@@ -496,8 +507,8 @@ export default function OdjeliPage() {
                                   <button onClick={() => startEdit(o)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
                                     Uredi
                                   </button>
-                                  <button onClick={() => handleDelete(o.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
-                                    Obriši
+                                  <button onClick={() => handleArhiviraj(o)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs">
+                                    Arhiviraj
                                   </button>
                                 </div>
                               )}
@@ -514,9 +525,37 @@ export default function OdjeliPage() {
         })()
       )}
 
+      {arhivirani.length > 0 && (
+        <div className="mt-6">
+          <button
+            onClick={() => setShowArhiva((v) => !v)}
+            className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:underline"
+          >
+            {showArhiva ? "▾" : "▸"} Arhiva ({arhivirani.length})
+          </button>
+          {showArhiva && (
+            <div className="mt-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+              {arhivirani
+                .sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj))
+                .map((o) => (
+                  <div key={o.id} className="px-4 py-2.5 flex items-center gap-3 text-sm">
+                    <span className="font-mono text-gray-500 dark:text-gray-400">{o.gj} / {o.broj}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">{(Number(o.povrsina) || 0).toFixed(2)} ha</span>
+                    <button onClick={() => vratiIzArhive(o)} className="ml-auto text-xs text-green-700 dark:text-green-400 hover:underline">
+                      Vrati
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {confirmState && (
         <ConfirmModal
           msg={confirmState.msg}
+          okLabel={confirmState.okLabel}
+          okColor={confirmState.okColor}
           onOk={confirmState.onOk}
           onCancel={() => setConfirmState(null)}
         />

@@ -51,3 +51,10 @@ export function clearSession() {
 export function isAdmin(ses: Session | null): boolean {
   return ses?.role === 'admin';
 }
+
+/** Kriptografski nasumičan 4-cifreni PIN (0000–9999) */
+export function generatePin(): string {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return String(buf[0] % 10000).padStart(4, "0");
+}

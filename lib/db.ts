@@ -10,14 +10,28 @@ import {
   Timestamp,
   where,
   orderBy,
+  db,
+  doc,
+  authReady,
+  runTransaction,
+  arrayUnion,
+  arrayRemove,
 } from './firebase';
 import type { Odjel, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
+import { localDateStr } from './format';
 
 // ── Korisnici ─────────────────────────────────────────────────────────────────
 
-export async function getKorisnici(): Promise<Korisnik[]> {
+export async function getKorisnici(opts: { ukljuciArhivirane?: boolean } = {}): Promise<Korisnik[]> {
   const raw = await getAllFresh('users');
-  return (raw as unknown as Korisnik[]).sort((a, b) => a.ime.localeCompare(b.ime));
+  return (raw as unknown as Korisnik[])
+    .filter((k) => opts.ukljuciArhivirane || !k.arhiviran)
+    .sort((a, b) => a.ime.localeCompare(b.ime));
+}
+
+// Arhivirani projektant ostaje u izvještajima samo za periode u kojima ima unose
+function isReportWorker(k: Korisnik, hasData: boolean): boolean {
+  return k.role === 'worker' && (!k.arhiviran || hasData);
 }
 
 export async function getKorisnik(id: string): Promise<Korisnik | null> {
@@ -40,13 +54,51 @@ export async function updateKorisnik(id: string, data: Partial<Omit<Korisnik, 'i
   return raw as unknown as Korisnik;
 }
 
-export async function deleteKorisnik(id: string): Promise<void> {
-  await remove('users', id);
+export async function arhivirajKorisnika(k: Korisnik, arhiviran: boolean): Promise<void> {
+  if (arhiviran) {
+    // oslobodi rješenja da ih drugi projektant može preuzeti
+    for (const odjelId of k.odjeliRjesenjaIds ?? []) await otpustiRjesenje(k.id, odjelId);
+  }
+  await update('users', k.id, { arhiviran });
+}
+
+// ── Rješenja (jedan projektant po odjelu) ─────────────────────────────────────
+// Lock dokument rjesenja/{odjelId} se upisuje u transakciji, pa dva istovremena
+// preuzimanja ne mogu oba proći. Stariji vlasnici postoje samo u users.odjeliRjesenjaIds.
+
+export type RjesenjeResult = { ok: true } | { ok: false; ownerId: string };
+
+export async function preuzmiRjesenje(korisnikId: string, odjelId: string): Promise<RjesenjeResult> {
+  await authReady();
+  const users = await getAllFresh('users');
+  const legacyOwner = users.find(
+    (u) => u.id !== korisnikId && ((u.odjeliRjesenjaIds as string[] | undefined) ?? []).includes(odjelId)
+  );
+  const lockRef = doc(db, 'rjesenja', odjelId);
+
+  return runTransaction(db, async (tx): Promise<RjesenjeResult> => {
+    const lock = await tx.get(lockRef);
+    const owner = lock.exists() ? (lock.data().korisnikId as string) : (legacyOwner?.id as string | undefined);
+    if (owner && owner !== korisnikId) return { ok: false, ownerId: owner };
+    tx.set(lockRef, { korisnikId, odjelId, createdAt: Timestamp.now() });
+    tx.update(doc(db, 'users', korisnikId), { odjeliRjesenjaIds: arrayUnion(odjelId), updatedAt: Timestamp.now() });
+    return { ok: true };
+  });
+}
+
+export async function otpustiRjesenje(korisnikId: string, odjelId: string): Promise<void> {
+  await authReady();
+  const lockRef = doc(db, 'rjesenja', odjelId);
+  await runTransaction(db, async (tx) => {
+    const lock = await tx.get(lockRef);
+    if (lock.exists() && lock.data().korisnikId === korisnikId) tx.delete(lockRef);
+    tx.update(doc(db, 'users', korisnikId), { odjeliRjesenjaIds: arrayRemove(odjelId), updatedAt: Timestamp.now() });
+  });
 }
 
 // ── Odjeli ────────────────────────────────────────────────────────────────────
 
-export async function getOdjeli(): Promise<Odjel[]> {
+export async function getOdjeli(opts: { ukljuciArhivirane?: boolean } = {}): Promise<Odjel[]> {
   const [odjeliRaw, inzinjeriRaw, unosiRaw] = await Promise.all([
     getAll('odjeli'),
     getAll('inzinjeri'),
@@ -54,6 +106,7 @@ export async function getOdjeli(): Promise<Odjel[]> {
   ]);
 
   return odjeliRaw
+    .filter((o) => opts.ukljuciArhivirane || !o.arhiviran)
     .map((o) => ({
       ...(o as unknown as Odjel),
       _count: {
@@ -81,8 +134,8 @@ export async function updateOdjel(
   return raw as unknown as Odjel;
 }
 
-export async function deleteOdjel(id: string): Promise<void> {
-  await remove('odjeli', id);
+export async function arhivirajOdjel(id: string, arhiviran: boolean): Promise<void> {
+  await update('odjeli', id, { arhiviran });
 }
 
 // ── Inžinjeri ─────────────────────────────────────────────────────────────────
@@ -458,11 +511,6 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
-  const radnici = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => k.role === 'worker')
-    .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime))
-    .map((k) => ({ id: k.id, name: k.fullName || k.ime }));
-
   const entries: Record<string, Record<number, DnevnaAktivnost[]>> = {};
 
   for (const u of unosiRaw) {
@@ -486,21 +534,15 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
     });
   }
 
-  function fmtDate(d: Date) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
+  const radnici = (korisnaciRaw as unknown as Korisnik[])
+    .filter((k) => isReportWorker(k, !!entries[k.id]))
+    .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime))
+    .map((k) => ({ id: k.id, name: k.fullName || k.ime }));
 
-  return { radnici, entries, od: fmtDate(od), do_: fmtDate(do_) };
+  return { radnici, entries, od: localDateStr(od), do_: localDateStr(do_) };
 }
 
 // ── Izvještaji ────────────────────────────────────────────────────────────────
-
-function localDateStr(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Date): {
   od: Date;
@@ -602,7 +644,7 @@ export async function getIzvjestaj(
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])
-      .filter((k) => k.role === 'worker')
+      .filter((k) => isReportWorker(k, !!grouped[k.id]))
       .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
     const data = workers.map((k) => {
@@ -761,7 +803,7 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => k.role === 'worker')
+    .filter((k) => isReportWorker(k, !!acc[k.id]))
     .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
   return workers.map((k) => ({
@@ -906,7 +948,7 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => k.role === 'worker')
+    .filter((k) => isReportWorker(k, !!acc[k.id]))
     .sort((a, b) => (acc[b.id]?.ha ?? 0) - (acc[a.id]?.ha ?? 0));
 
   return workers.map((k) => ({

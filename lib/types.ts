@@ -15,6 +15,7 @@ export interface Korisnik {
   odjeliIds: string[];
   odjeliRjesenjaIds?: string[];
   lastLoginAt?: string;
+  arhiviran?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +31,7 @@ export interface Odjel {
   real_lis: number;   // realizacija m³ lišćara
   doznaceno?: boolean;
   vlakeProjektovane?: boolean;
+  arhiviran?: boolean;
   createdAt: string;
   updatedAt: string;
   _count?: { inzinjeri: number; unosi: number };

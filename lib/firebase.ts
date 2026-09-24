@@ -25,6 +25,9 @@ import {
   CollectionReference,
   onSnapshot,
   limit,
+  runTransaction,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -165,4 +168,8 @@ export async function queryCol(
   return snaps.docs.map(docToObj);
 }
 
-export { collection, query, where, orderBy, Timestamp, onSnapshot, limit };
+export function authReady() {
+  return _authReady;
+}
+
+export { collection, doc, query, where, orderBy, Timestamp, onSnapshot, limit, runTransaction, arrayUnion, arrayRemove };

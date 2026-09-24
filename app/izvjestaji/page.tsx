@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { getIzvjestaj, getSedmicnaTabela, type DnevnaAktivnost } from "@/lib/db";
+import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
@@ -480,17 +481,6 @@ function formatAktivnost(a: DnevnaAktivnost): string {
   }
 }
 
-function aktivnostColor(vrsta: string) {
-  switch (vrsta) {
-    case "DOZNAKA":    return "bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200";
-    case "VLAKA":      return "bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200";
-    case "TEREN":      return "bg-orange-100 dark:bg-orange-900/60 text-orange-800 dark:text-orange-200";
-    case "GODISNJI":   return "bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200";
-    case "KANCELARIJA":return "bg-violet-100 dark:bg-violet-900/60 text-violet-800 dark:text-violet-200";
-    case "BOLOVANJE":  return "bg-red-100 dark:bg-red-900/60 text-red-800 dark:text-red-200";
-    default:           return "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200";
-  }
-}
 
 function SedmicnaTabela({
   data,
@@ -552,7 +542,7 @@ function SedmicnaTabela({
                             {aktivnosti.map((a, i) => (
                               <span
                                 key={i}
-                                className={`inline-block rounded px-1.5 py-0.5 leading-snug text-[11px] font-medium ${aktivnostColor(a.vrsta)}`}
+                                className={`inline-block rounded px-1.5 py-0.5 leading-snug text-[11px] font-medium ${vrstaStyle(a.vrsta).badge}`}
                               >
                                 {formatAktivnost(a)}
                               </span>

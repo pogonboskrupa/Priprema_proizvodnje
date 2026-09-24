@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjeriByKorisnikId, getMjesecniRezimePoOdjelima, type OdjelMjesecRezime } from "@/lib/db";
 import { mesecLabel } from "@/lib/format";
+import { vrsta } from "@/lib/vrste";
 
 type Rezime = {
   ha: number; stabala: number; km: number;
@@ -201,14 +202,6 @@ function QuickCard({
   );
 }
 
-const VRSTA_STYLE: Record<string, { label: string; cls: string }> = {
-  DOZNAKA:    { label: "DOZ", cls: "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300" },
-  VLAKA:      { label: "VLK", cls: "bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300" },
-  TEREN:      { label: "TER", cls: "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300" },
-  KANCELARIJA:{ label: "KAN", cls: "bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300" },
-  GODISNJI:   { label: "GOD", cls: "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300" },
-  BOLOVANJE:  { label: "BOL", cls: "bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300" },
-};
 
 function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
   return (
@@ -218,9 +211,9 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
       </div>
       <div className="flex flex-wrap gap-1">
         {odjel.vrste.map((v) => {
-          const s = VRSTA_STYLE[v] ?? { label: v, cls: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300" };
+          const s = vrsta(v);
           return (
-            <span key={v} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.cls}`}>{s.label}</span>
+            <span key={v} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.badge}`}>{s.abbr}</span>
           );
         })}
       </div>

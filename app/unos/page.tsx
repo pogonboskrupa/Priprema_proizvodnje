@@ -8,6 +8,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
 import { fmtDate, mesecLabel, localDateStr, parseDecimal, parseCount } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
+import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 
 const today = () => localDateStr();
 
@@ -293,7 +294,7 @@ export default function UnosPage() {
                       checked={form.vrsta === v}
                       onChange={() => setForm({ ...form, vrsta: v })}
                     />
-                    {v === "DOZNAKA" ? "🌳 Doznaka" : "🛤️ Vlake"}
+                    {VRSTA[v].emoji} {VRSTA[v].label}
                   </label>
                 ))}
               </div>
@@ -314,13 +315,7 @@ export default function UnosPage() {
                       checked={form.vrsta === v}
                       onChange={() => setForm({ ...form, vrsta: v, odjelId: "" })}
                     />
-                    {v === "TEREN"
-                      ? "🥾 Teren"
-                      : v === "GODISNJI"
-                      ? "🏖️ God. odmor"
-                      : v === "KANCELARIJA"
-                      ? "🏢 Kancelarija"
-                      : "🏥 Bolovanje"}
+                    {VRSTA[v].emoji} {VRSTA[v].label}
                   </label>
                 ))}
               </div>
@@ -558,9 +553,9 @@ export default function UnosPage() {
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${vrstaBadgeClass(u.vrsta)}`}
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${vrstaStyle(u.vrsta).badge}`}
                           >
-                            {vrstaLabel(u.vrsta)}
+                            {vrstaStyle(u.vrsta).emoji} {vrstaStyle(u.vrsta).label}
                           </span>
                           {isWorker && u.createdById && u.createdById !== u.inzinjerId && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
@@ -620,28 +615,4 @@ export default function UnosPage() {
       )}
     </div>
   );
-}
-
-function vrstaLabel(vrsta: string): string {
-  const map: Record<string, string> = {
-    DOZNAKA: "🌳 Doznaka",
-    VLAKA: "🛤️ Vlake",
-    TEREN: "🥾 Teren",
-    GODISNJI: "🏖️ God. odmor",
-    KANCELARIJA: "🏢 Kancelarija",
-    BOLOVANJE: "🏥 Bolovanje",
-  };
-  return map[vrsta] ?? vrsta;
-}
-
-function vrstaBadgeClass(vrsta: string): string {
-  const map: Record<string, string> = {
-    DOZNAKA: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200",
-    VLAKA: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200",
-    TEREN: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200",
-    GODISNJI: "bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200",
-    KANCELARIJA: "bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200",
-    BOLOVANJE: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
-  };
-  return map[vrsta] ?? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200";
 }

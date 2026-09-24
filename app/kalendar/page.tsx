@@ -3,61 +3,14 @@ import { useEffect, useState, useMemo } from "react";
 import { getUnosiZaMjesec, getKorisnici, getOdjeli, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { UnosRada, Korisnik, Odjel, VrstaRada } from "@/lib/types";
+import type { UnosRada, Korisnik, Odjel } from "@/lib/types";
 import { monthYearLabel, fmtDateLong, localDateStr } from "@/lib/format";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm } from "@/lib/unos-edit";
+import { editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
+import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
+import { UnosEditForm } from "@/components/UnosEditForm";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
-
-const VRSTA_DOT: Record<string, string> = {
-  DOZNAKA: "bg-green-500", VLAKA: "bg-amber-500", TEREN: "bg-orange-500",
-  GODISNJI: "bg-sky-500", KANCELARIJA: "bg-indigo-500", BOLOVANJE: "bg-red-500",
-};
-const VRSTA_LABEL: Record<string, string> = {
-  DOZNAKA: "Doznaka", VLAKA: "Vlaka", TEREN: "Teren",
-  KANCELARIJA: "Kancelarija", GODISNJI: "Godišnji", BOLOVANJE: "Bolovanje",
-};
-const VRSTA_SHORT: Record<string, string> = {
-  DOZNAKA: "Doz", VLAKA: "Vl", TEREN: "Ter", GODISNJI: "God", KANCELARIJA: "Kan", BOLOVANJE: "Bol",
-};
-const VRSTA_ORDER = ["DOZNAKA", "VLAKA", "TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE"];
-const VRSTA_TILE_BORDER: Record<string, string> = {
-  DOZNAKA:    "border-l-green-500  text-green-700  dark:text-green-300",
-  VLAKA:      "border-l-amber-500  text-amber-700  dark:text-amber-300",
-  TEREN:      "border-l-orange-500 text-orange-700 dark:text-orange-300",
-  KANCELARIJA:"border-l-indigo-500 text-indigo-700 dark:text-indigo-300",
-  GODISNJI:   "border-l-sky-500    text-sky-700    dark:text-sky-300",
-  BOLOVANJE:  "border-l-red-500    text-red-700    dark:text-red-300",
-};
-const VRSTA_COL_COLOR: Record<string, string> = {
-  DOZNAKA:    "text-green-600  dark:text-green-400",
-  VLAKA:      "text-amber-600  dark:text-amber-400",
-  TEREN:      "text-orange-600 dark:text-orange-400",
-  KANCELARIJA:"text-indigo-600 dark:text-indigo-400",
-  GODISNJI:   "text-sky-600    dark:text-sky-400",
-  BOLOVANJE:  "text-red-600    dark:text-red-400",
-};
-const VRSTA_BADGE: Record<string, string> = {
-  DOZNAKA:    "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300",
-  VLAKA:      "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300",
-  TEREN:      "bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300",
-  KANCELARIJA:"bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300",
-  GODISNJI:   "bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300",
-  BOLOVANJE:  "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300",
-};
-const VRSTA_BTN_ACTIVE: Record<string, string> = {
-  DOZNAKA: "bg-green-600 text-white border-green-600",
-  VLAKA: "bg-amber-500 text-white border-amber-500",
-  TEREN: "bg-orange-500 text-white border-orange-500",
-  GODISNJI: "bg-sky-500 text-white border-sky-500",
-  KANCELARIJA: "bg-indigo-500 text-white border-indigo-500",
-  BOLOVANJE: "bg-red-500 text-white border-red-500",
-};
-const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
-
-const inputSmCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500";
-const labelCls = "block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,7 +111,7 @@ function computeAllWorkersRecap(allUnosi: UnosRada[], workers: Korisnik[]): Work
 function SingleWorkerRecap({ recap, monthLabel }: { recap: ReturnType<typeof computeRecap>; monthLabel: string }) {
   const { byVrsta, totalDays } = recap;
   if (totalDays === 0) return null;
-  const present = VRSTA_ORDER.filter((v) => byVrsta[v]);
+  const present = VRSTE.filter((v) => byVrsta[v]);
   return (
     <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       <div className="px-5 py-3.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-between gap-3">
@@ -178,10 +131,10 @@ function SingleWorkerRecap({ recap, monthLabel }: { recap: ReturnType<typeof com
         {present.map((vrsta) => {
           const s = byVrsta[vrsta];
           const days = s.days.size;
-          const tileClass = VRSTA_TILE_BORDER[vrsta] ?? "border-l-gray-400 text-gray-600 dark:text-gray-300";
+          const tileClass = `${VRSTA[vrsta].borderL} ${VRSTA[vrsta].text}`;
           return (
             <div key={vrsta} className={`border-l-[3px] rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/30 p-3 flex flex-col gap-1 ${tileClass}`}>
-              <span className="text-[10px] font-bold uppercase tracking-widest">{VRSTA_LABEL[vrsta]}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">{VRSTA[vrsta].label}</span>
               <div className="flex items-baseline gap-1.5 mt-0.5">
                 <span className="text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100 leading-none">{days}</span>
                 <span className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">d · {days * 8}h</span>
@@ -231,9 +184,9 @@ function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRow[]; monthLa
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">Radnik</th>
               <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200">Dana</th>
               <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200">Sati</th>
-              {(["DOZNAKA","VLAKA","TEREN","KANCELARIJA","GODISNJI","BOLOVANJE"] as const).map((v) => (
-                <th key={v} className={`text-center px-3 py-2.5 text-xs font-semibold ${VRSTA_COL_COLOR[v]}`}>
-                  {VRSTA_SHORT[v]}
+              {VRSTE.map((v) => (
+                <th key={v} className={`text-center px-3 py-2.5 text-xs font-semibold ${VRSTA[v].text}`}>
+                  {VRSTA[v].short}
                 </th>
               ))}
               <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-gray-400">ha / km</th>
@@ -247,12 +200,12 @@ function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRow[]; monthLa
                 <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{w.name}</td>
                 <td className="px-3 py-2.5 text-center font-bold tabular-nums text-gray-800 dark:text-gray-100">{w.totalDays || "–"}</td>
                 <td className="px-3 py-2.5 text-center tabular-nums text-gray-500 dark:text-gray-400">{w.totalDays ? w.totalDays * 8 : "–"}</td>
-                <CellNum v={w.doz} color={VRSTA_COL_COLOR["DOZNAKA"]} />
-                <CellNum v={w.vl}  color={VRSTA_COL_COLOR["VLAKA"]} />
-                <CellNum v={w.ter} color={VRSTA_COL_COLOR["TEREN"]} />
-                <CellNum v={w.kan} color={VRSTA_COL_COLOR["KANCELARIJA"]} />
-                <CellNum v={w.god} color={VRSTA_COL_COLOR["GODISNJI"]} />
-                <CellNum v={w.bol} color={VRSTA_COL_COLOR["BOLOVANJE"]} />
+                <CellNum v={w.doz} color={VRSTA.DOZNAKA.text} />
+                <CellNum v={w.vl}  color={VRSTA.VLAKA.text} />
+                <CellNum v={w.ter} color={VRSTA.TEREN.text} />
+                <CellNum v={w.kan} color={VRSTA.KANCELARIJA.text} />
+                <CellNum v={w.god} color={VRSTA.GODISNJI.text} />
+                <CellNum v={w.bol} color={VRSTA.BOLOVANJE.text} />
                 <td className="px-4 py-2.5 text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums">
                   {w.ha > 0 && <span className="mr-2">{w.ha.toFixed(1)} ha</span>}
                   {w.km > 0 && <span>{w.km.toFixed(1)} km</span>}
@@ -280,7 +233,7 @@ function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRow[]; monthLa
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const emptyEditForm = (): UnosEditForm => ({
+const emptyEditForm = (): EditForm => ({
   vrsta: "DOZNAKA", odjelId: "", brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
@@ -303,7 +256,7 @@ export default function KalendarPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const [editId, setEditId]       = useState<string | null>(null);
-  const [editForm, setEditForm]   = useState<UnosEditForm>(emptyEditForm());
+  const [editForm, setEditForm]   = useState<EditForm>(emptyEditForm());
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
@@ -323,7 +276,7 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!session) return;
-    if (!isWorker) getKorisnici().then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
+    if (!isWorker) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
   }, [session, isWorker, canEdit]);
 
@@ -347,10 +300,15 @@ export default function KalendarPage() {
   }, [visibleUnosi]);
 
   const singleRecap   = useMemo(() => computeRecap(visibleUnosi), [visibleUnosi]);
+  // arhivirani projektanti se prikazuju samo u mjesecima u kojima imaju unose
+  const shownWorkers = useMemo(
+    () => workers.filter((w) => !w.arhiviran || unosi.some((u) => u.inzinjerId === w.id)),
+    [workers, unosi]
+  );
   const allWorkersData = useMemo(() => {
-    if (!isAdmin || selectedWorkerId || workers.length === 0) return null;
-    return computeAllWorkersRecap(unosi, workers);
-  }, [isAdmin, selectedWorkerId, workers, unosi]);
+    if (!isAdmin || selectedWorkerId || shownWorkers.length === 0) return null;
+    return computeAllWorkersRecap(unosi, shownWorkers);
+  }, [isAdmin, selectedWorkerId, shownWorkers, unosi]);
 
   if (authLoading || !session) return null;
 
@@ -383,8 +341,7 @@ export default function KalendarPage() {
     });
   }
 
-  async function handleSaveEdit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSaveEdit() {
     if (!editId) return;
     const parsed = editFormToPayload(editForm);
     if (!parsed.ok) { setEditError(parsed.error); return; }
@@ -422,7 +379,6 @@ export default function KalendarPage() {
   const totalCells   = Math.ceil((offset + daysInMonth) / 7) * 7;
   const monthLabel   = monthYearLabel(year, month);
   const selectedEntries = selectedDay ? (byDay[selectedDay] ?? []) : [];
-  const allSortedOdjeli = [...odjeli].sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
   const showWorkerName  = !isWorker && !selectedWorkerId;
 
   return (
@@ -431,14 +387,14 @@ export default function KalendarPage() {
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>
 
-        {!isWorker && workers.length > 0 && (
+        {!isWorker && shownWorkers.length > 0 && (
           <select
             value={selectedWorkerId ?? ""}
             onChange={(e) => { setSelectedWorkerId(e.target.value || null); setSelectedDay(null); }}
             className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             <option value="">Svi radnici</option>
-            {workers.map((w) => (
+            {shownWorkers.map((w) => (
               <option key={w.id} value={w.id}>{w.fullName || w.ime}</option>
             ))}
           </select>
@@ -509,11 +465,11 @@ export default function KalendarPage() {
                   <div className="flex flex-col gap-[3px]">
                     {entries.slice(0, 3).map((u, i) => (
                       <div key={i} className="flex items-center gap-0.5">
-                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${VRSTA_DOT[u.vrsta] ?? "bg-gray-400"}`} />
+                        <span className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${vrstaStyle(u.vrsta).dot}`} />
                         <span className="text-[8px] leading-none text-gray-500 dark:text-gray-400 truncate font-medium">
                           {showWorkerName
-                            ? (u.korisnik?.fullName || u.korisnik?.ime || VRSTA_SHORT[u.vrsta])?.slice(0, 5)
-                            : VRSTA_SHORT[u.vrsta]}
+                            ? (u.korisnik?.fullName || u.korisnik?.ime || vrstaStyle(u.vrsta).short).slice(0, 5)
+                            : vrstaStyle(u.vrsta).short}
                         </span>
                       </div>
                     ))}
@@ -564,100 +520,21 @@ export default function KalendarPage() {
                       {workerName && showWorkerName && (
                         <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-3">{workerName}</div>
                       )}
-                      <form onSubmit={handleSaveEdit} className="space-y-3">
-                        {/* Vrsta chips */}
-                        <div className="flex flex-wrap gap-1.5">
-                          {VRSTE.map((v) => (
-                            <button key={v} type="button"
-                              onClick={() => setEditForm((f) => ({ ...f, vrsta: v, brojStabala: "", hektari: "", kilometri: "" }))}
-                              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
-                                editForm.vrsta === v ? VRSTA_BTN_ACTIVE[v] : "border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900"
-                              }`}>
-                              {VRSTA_LABEL[v]}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Odjel (only if needed) */}
-                        {!NO_ODJEL_VRSTE.has(editForm.vrsta) && (
-                          <div style={{ minWidth: 200 }}>
-                            <label className={labelCls}>Odjel</label>
-                            <select className={inputSmCls} value={editForm.odjelId}
-                              onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
-                              <option value="">Odjel...</option>
-                              {allSortedOdjeli.map((o) => (
-                                <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {/* Metrics */}
-                        {editForm.vrsta === "DOZNAKA" && (
-                          <div className="flex gap-2 flex-wrap">
-                            <div className="w-24">
-                              <label className={labelCls}>Stabala</label>
-                              <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.brojStabala}
-                                onChange={(e) => setEditForm((f) => ({ ...f, brojStabala: e.target.value }))} />
-                            </div>
-                            <div className="w-28">
-                              <label className={labelCls}>Hektari (ha)</label>
-                              <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.hektari}
-                                onChange={(e) => setEditForm((f) => ({ ...f, hektari: e.target.value }))} />
-                            </div>
-                            <div className="flex-1 min-w-[130px]">
-                              <label className={labelCls}>Napomena</label>
-                              <input type="text" maxLength={200} className={inputSmCls} value={editForm.napomena}
-                                onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
-                            </div>
-                          </div>
-                        )}
-                        {editForm.vrsta === "VLAKA" && (
-                          <div className="flex gap-2 flex-wrap">
-                            <div className="w-28">
-                              <label className={labelCls}>Kilometri (km)</label>
-                              <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.kilometri}
-                                onChange={(e) => setEditForm((f) => ({ ...f, kilometri: e.target.value }))} />
-                            </div>
-                            <div className="flex-1 min-w-[130px]">
-                              <label className={labelCls}>Napomena</label>
-                              <input type="text" maxLength={200} className={inputSmCls} value={editForm.napomena}
-                                onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
-                            </div>
-                          </div>
-                        )}
-                        {!["DOZNAKA","VLAKA"].includes(editForm.vrsta) && (
-                          <div className="max-w-[280px]">
-                            <label className={labelCls}>Napomena</label>
-                            <input type="text" maxLength={200} className={inputSmCls} value={editForm.napomena}
-                              onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
-                          </div>
-                        )}
-
-                        {editError && (
-                          <p className="text-xs text-red-600 dark:text-red-400">{editError}</p>
-                        )}
-                        <div className="flex gap-2 pt-1">
-                          <button type="submit" disabled={editSaving}
-                            className="bg-green-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50 transition-colors">
-                            {editSaving ? "Snimam..." : "Ažuriraj"}
-                          </button>
-                          <button type="button" onClick={() => setEditId(null)}
-                            className="border border-gray-300 dark:border-gray-600 px-3.5 py-1.5 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            Odustani
-                          </button>
-                        </div>
-                      </form>
+                      <UnosEditForm
+                        form={editForm}
+                        onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
+                        odjeli={odjeli}
+                        saving={editSaving}
+                        error={editError}
+                        onSubmit={handleSaveEdit}
+                        onCancel={() => setEditId(null)}
+                      />
                     </div>
                   );
                 }
 
                 // ── Read mode ───────────────────────────────────────────────
-                const borderColor = {
-                  DOZNAKA: "border-l-green-500", VLAKA: "border-l-amber-500",
-                  TEREN: "border-l-orange-500", GODISNJI: "border-l-sky-500",
-                  KANCELARIJA: "border-l-indigo-500", BOLOVANJE: "border-l-red-500",
-                }[u.vrsta] ?? "border-l-gray-400";
+                const borderColor = vrstaStyle(u.vrsta).borderL;
 
                 return (
                   <div key={u.id} className={`px-4 py-3 border-l-[3px] ${borderColor}`}>
@@ -670,8 +547,8 @@ export default function KalendarPage() {
                           </div>
                         )}
                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${VRSTA_BADGE[u.vrsta] ?? ""}`}>
-                            {VRSTA_LABEL[u.vrsta]}
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${vrstaStyle(u.vrsta).badge}`}>
+                            {vrstaStyle(u.vrsta).label}
                           </span>
                           {u.odjel && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -773,10 +650,10 @@ export default function KalendarPage() {
 
       {/* ── Legend ──────────────────────────────────────────────────────────── */}
       <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
-        {Object.entries(VRSTA_SHORT).map(([k, v]) => (
-          <div key={k} className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <span className={`w-2 h-2 rounded-full ${VRSTA_DOT[k]}`} />
-            {v}
+        {VRSTE.map((v) => (
+          <div key={v} className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <span className={`w-2 h-2 rounded-full ${VRSTA[v].dot}`} />
+            {VRSTA[v].label}
           </div>
         ))}
       </div>

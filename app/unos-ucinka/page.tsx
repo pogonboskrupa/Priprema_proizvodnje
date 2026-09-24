@@ -7,31 +7,11 @@ import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
-import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm } from "@/lib/unos-edit";
+import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
+import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
+import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
 
 const today = () => localDateStr();
-
-const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
-const VRSTA_LABEL: Record<string, string> = {
-  DOZNAKA: "Doznaka", VLAKA: "Vlaka", TEREN: "Teren",
-  GODISNJI: "Godišnji", KANCELARIJA: "Kancelarija", BOLOVANJE: "Bolovanje",
-};
-const VRSTA_COLOR: Record<string, string> = {
-  DOZNAKA: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200",
-  VLAKA: "bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200",
-  TEREN: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200",
-  GODISNJI: "bg-sky-100 dark:bg-sky-900 text-sky-800 dark:text-sky-200",
-  KANCELARIJA: "bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200",
-  BOLOVANJE: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200",
-};
-const VRSTA_BTN_ACTIVE: Record<string, string> = {
-  DOZNAKA: "bg-green-600 text-white border-green-600",
-  VLAKA: "bg-amber-500 text-white border-amber-500",
-  TEREN: "bg-orange-500 text-white border-orange-500",
-  GODISNJI: "bg-sky-500 text-white border-sky-500",
-  KANCELARIJA: "bg-indigo-500 text-white border-indigo-500",
-  BOLOVANJE: "bg-red-500 text-white border-red-500",
-};
 
 type PendingRow = {
   odjelId: string;
@@ -51,7 +31,7 @@ function pendingToPayload(p: PendingRow) {
   return editFormToPayload({ ...p, vrsta: p.vrsta });
 }
 
-const emptyEditForm = (): UnosEditForm => ({
+const emptyEditForm = (): EditForm => ({
   odjelId: "", vrsta: "DOZNAKA",
   brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
@@ -67,13 +47,10 @@ function displayKorisnik(k: Korisnik) {
   return k.fullName || k.ime;
 }
 
-const inputSmCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500";
-const labelCls = "block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5";
-
 // ── RosterNewRow ──────────────────────────────────────────────────────────────
 
 function RosterNewRow({
-  korisnik, pending, odjeli, recentOdjelIds, onUpdate, onSave, saving,
+  korisnik, pending, odjeli, recentOdjelIds, onUpdate, onSave, saving, onCancel,
 }: {
   korisnik: Korisnik;
   pending: PendingRow;
@@ -82,6 +59,8 @@ function RosterNewRow({
   onUpdate: (patch: Partial<PendingRow>) => void;
   onSave: () => void;
   saving: boolean;
+  /** Postavljen kad je ovo dodatni unos za dan koji već ima unos */
+  onCancel?: () => void;
 }) {
   const availOdjeli = korisnik.odjeliIds?.length
     ? odjeli.filter((o) => korisnik.odjeliIds.includes(o.id))
@@ -98,8 +77,13 @@ function RosterNewRow({
       {/* Name + save button */}
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-sm text-gray-900 dark:text-gray-100 leading-tight">
-          {displayKorisnik(korisnik)}
+          {onCancel ? <span className="text-xs text-gray-500 dark:text-gray-400">+ dodatni unos</span> : displayKorisnik(korisnik)}
         </span>
+        {onCancel && (
+          <button onClick={onCancel} className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400 hover:underline">
+            Odustani
+          </button>
+        )}
         {isReady && (
           <button
             onClick={onSave}
@@ -151,11 +135,11 @@ function RosterNewRow({
               })}
               className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
                 pending.vrsta === v
-                  ? VRSTA_BTN_ACTIVE[v]
+                  ? VRSTA[v].btnActive
                   : "border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 bg-white dark:bg-gray-900"
               }`}
             >
-              {VRSTA_LABEL[v]}
+              {VRSTA[v].label}
             </button>
           ))}
         </div>
@@ -166,7 +150,7 @@ function RosterNewRow({
         <div className="flex gap-2 flex-wrap pl-0.5">
           <div className="w-24">
             <label className={labelCls}>Stabala</label>
-            <input type="text" inputMode="decimal" className={inputSmCls}
+            <input type="text" inputMode="numeric" className={inputSmCls}
               value={pending.brojStabala} placeholder="0"
               onChange={(e) => onUpdate({ brojStabala: e.target.value })} />
           </div>
@@ -227,6 +211,7 @@ export default function UnosUcinkaPage() {
   const [editForm, setEditForm] = useState(emptyEditForm());
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [extraRows, setExtraRows] = useState<ReadonlySet<string>>(new Set());
 
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
@@ -267,7 +252,17 @@ export default function UnosUcinkaPage() {
 
   if (authLoading || !session) return null;
 
-  const existingMap = new Map(unosi.map((u) => [u.inzinjerId, u]));
+  const existingMap = new Map<string, UnosRada[]>();
+  for (const u of unosi) existingMap.set(u.inzinjerId, [...(existingMap.get(u.inzinjerId) ?? []), u]);
+  const showsNewRow = (id: string) => !existingMap.has(id) || extraRows.has(id);
+
+  function toggleExtra(id: string, on: boolean) {
+    setExtraRows((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
 
   function getPending(korisnikId: string): PendingRow {
     return pendingRows[korisnikId] ?? emptyPending();
@@ -285,7 +280,7 @@ export default function UnosUcinkaPage() {
   }
 
   const readyCount = korisnici.filter((k) =>
-    !existingMap.has(k.id) && isPendingReady(pendingRows[k.id])
+    showsNewRow(k.id) && isPendingReady(pendingRows[k.id])
   ).length;
 
   async function createFromPending(korisnikId: string, p: PendingRow) {
@@ -317,6 +312,7 @@ export default function UnosUcinkaPage() {
       await createFromPending(korisnikId, p);
       const fresh = await getUnosiZaDan(datum);
       setUnosi(fresh);
+      toggleExtra(korisnikId, false);
       setPendingRows((prev) => {
         const next = { ...prev };
         // Reset to auto-populate if single odjel
@@ -335,7 +331,7 @@ export default function UnosUcinkaPage() {
 
   async function saveAllReady() {
     const ready = korisnici.filter((k) =>
-      !existingMap.has(k.id) && isPendingReady(pendingRows[k.id])
+      showsNewRow(k.id) && isPendingReady(pendingRows[k.id])
     );
     if (!ready.length) return;
     setBatchSaving(true);
@@ -343,6 +339,7 @@ export default function UnosUcinkaPage() {
       await Promise.all(ready.map((k) => createFromPending(k.id, pendingRows[k.id])));
       const fresh = await getUnosiZaDan(datum);
       setUnosi(fresh);
+      setExtraRows(new Set());
       // Reset saved rows to auto-populate
       setPendingRows(() => {
         const auto: Record<string, PendingRow> = {};
@@ -375,8 +372,7 @@ export default function UnosUcinkaPage() {
     });
   }
 
-  async function handleSaveEdit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSaveEdit() {
     if (!editId) return;
     const parsed = editFormToPayload(editForm);
     if (!parsed.ok) { setEditError(parsed.error); return; }
@@ -403,13 +399,16 @@ export default function UnosUcinkaPage() {
       msg: "Obrisati ovaj unos?",
       onOk: async () => {
         setConfirmState(null);
-        await deleteUnos(id);
-        setUnosi((prev) => prev.filter((u) => u.id !== id));
+        try {
+          await deleteUnos(id);
+          setUnosi((prev) => prev.filter((u) => u.id !== id));
+          setAllUnosi((prev) => prev.filter((u) => u.id !== id));
+        } catch {
+          showMsg("Greška pri brisanju unosa.");
+        }
       },
     });
   }
-
-  const allSortedOdjeli = [...odjeli].sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
 
   return (
     <div className="py-6">
@@ -461,135 +460,9 @@ export default function UnosUcinkaPage() {
       ) : (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
           {korisnici.map((k) => {
-            const existing = existingMap.get(k.id);
-
-            // ── Edit mode ─────────────────────────────────────────────────────
-            if (existing && editId === existing.id) {
-              return (
-                <div key={k.id} className="px-3 py-3 bg-blue-50 dark:bg-blue-950/30 space-y-3">
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {displayKorisnik(k)}
-                  </div>
-                  <form onSubmit={handleSaveEdit} className="space-y-2">
-                    {/* Odjel + Vrsta */}
-                    <div className="flex flex-wrap items-start gap-2">
-                      {!NO_ODJEL_VRSTE.has(editForm.vrsta) && (
-                        <div className="shrink-0" style={{ minWidth: 200 }}>
-                          <select className={inputSmCls} value={editForm.odjelId}
-                            onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
-                            <option value="">Odjel...</option>
-                            {allSortedOdjeli.map((o) => (
-                              <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                      {/* Vrsta chips */}
-                      <div className="flex flex-wrap gap-1">
-                        {VRSTE.map((v) => (
-                          <button key={v} type="button"
-                            onClick={() => setEditForm((f) => ({ ...f, vrsta: v, brojStabala: "", hektari: "", kilometri: "" }))}
-                            className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-colors ${
-                              editForm.vrsta === v ? VRSTA_BTN_ACTIVE[v] : "border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900"
-                            }`}>
-                            {VRSTA_LABEL[v]}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Metrics */}
-                    {editForm.vrsta === "DOZNAKA" && (
-                      <div className="flex gap-2 flex-wrap">
-                        <div className="w-24">
-                          <label className={labelCls}>Stabala</label>
-                          <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.brojStabala}
-                            onChange={(e) => setEditForm((f) => ({ ...f, brojStabala: e.target.value }))} />
-                        </div>
-                        <div className="w-28">
-                          <label className={labelCls}>Hektari (ha)</label>
-                          <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.hektari}
-                            onChange={(e) => setEditForm((f) => ({ ...f, hektari: e.target.value }))} />
-                        </div>
-                        <div className="flex-1 min-w-[130px]">
-                          <label className={labelCls}>Napomena</label>
-                          <input type="text" maxLength={200} className={inputSmCls} value={editForm.napomena}
-                            onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
-                        </div>
-                      </div>
-                    )}
-                    {editForm.vrsta === "VLAKA" && (
-                      <div className="flex gap-2 flex-wrap">
-                        <div className="w-28">
-                          <label className={labelCls}>Kilometri (km)</label>
-                          <input type="text" inputMode="decimal" className={inputSmCls} value={editForm.kilometri}
-                            onChange={(e) => setEditForm((f) => ({ ...f, kilometri: e.target.value }))} />
-                        </div>
-                        <div className="flex-1 min-w-[130px]">
-                          <label className={labelCls}>Napomena</label>
-                          <input type="text" maxLength={200} className={inputSmCls} value={editForm.napomena}
-                            onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
-                        </div>
-                      </div>
-                    )}
-                    {editError && (
-                      <p className="text-xs text-red-600 dark:text-red-400">{editError}</p>
-                    )}
-                    <div className="flex gap-2 pt-1">
-                      <button type="submit" disabled={editSaving}
-                        className="bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50">
-                        {editSaving ? "Snimam..." : "Ažuriraj"}
-                      </button>
-                      <button type="button" onClick={() => setEditId(null)}
-                        className="border border-gray-300 dark:border-gray-600 px-3 py-1.5 rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                        Odustani
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              );
-            }
-
-            // ── Read mode (existing entry) ────────────────────────────────────
-            if (existing) {
-              return (
-                <div key={k.id} className="px-3 py-2.5 flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm text-gray-900 dark:text-gray-100 shrink-0" style={{ minWidth: 100 }}>
-                    {displayKorisnik(k)}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                    {existing.odjel?.gj}/{existing.odjel?.broj}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${VRSTA_COLOR[existing.vrsta] ?? ""}`}>
-                    {VRSTA_LABEL[existing.vrsta]}
-                  </span>
-                  {existing.vrsta === "DOZNAKA" && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                      {existing.brojStabala != null ? `${existing.brojStabala} st` : ""}
-                      {existing.hektari != null ? ` · ${existing.hektari.toFixed(2)} ha` : ""}
-                    </span>
-                  )}
-                  {existing.vrsta === "VLAKA" && existing.kilometri != null && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{existing.kilometri.toFixed(2)} km</span>
-                  )}
-                  {existing.napomena && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 italic">{existing.napomena}</span>
-                  )}
-                  <div className="ml-auto flex items-center gap-3 shrink-0">
-                    <button onClick={() => startEdit(existing)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
-                      Uredi
-                    </button>
-                    <button onClick={() => handleDelete(existing.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
-                      Obriši
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-
-            // ── New entry row ─────────────────────────────────────────────────
-            return (
+            const entries = existingMap.get(k.id) ?? [];
+            const newRow = showsNewRow(k.id) && (
               <RosterNewRow
-                key={k.id}
                 korisnik={k}
                 pending={getPending(k.id)}
                 odjeli={odjeli}
@@ -597,7 +470,78 @@ export default function UnosUcinkaPage() {
                 onUpdate={(patch) => updatePending(k.id, patch)}
                 onSave={() => savePendingRow(k.id)}
                 saving={savingRow === k.id}
+                onCancel={entries.length ? () => toggleExtra(k.id, false) : undefined}
               />
+            );
+
+            return (
+              <div key={k.id}>
+                {entries.map((u, i) => {
+                  const isLast = i === entries.length - 1;
+
+                  if (editId === u.id) {
+                    return (
+                      <div key={u.id} className="px-3 py-3 bg-blue-50 dark:bg-blue-950/30 space-y-3">
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          {displayKorisnik(k)}
+                        </div>
+                        <UnosEditForm
+                          form={editForm}
+                          onChange={(patch) => setEditForm((f) => ({ ...f, ...patch }))}
+                          odjeli={odjeli}
+                          saving={editSaving}
+                          error={editError}
+                          onSubmit={handleSaveEdit}
+                          onCancel={() => setEditId(null)}
+                        />
+                      </div>
+                    );
+                  }
+
+                  const st = vrstaStyle(u.vrsta);
+                  return (
+                    <div key={u.id} className="px-3 py-2.5 flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm text-gray-900 dark:text-gray-100 shrink-0" style={{ minWidth: 100 }}>
+                        {i === 0 ? displayKorisnik(k) : ""}
+                      </span>
+                      {u.odjel && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                          {u.odjel.gj}/{u.odjel.broj}
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${st.badge}`}>
+                        {st.label}
+                      </span>
+                      {u.vrsta === "DOZNAKA" && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                          {u.brojStabala != null ? `${u.brojStabala} st` : ""}
+                          {u.hektari != null ? ` · ${u.hektari.toFixed(2)} ha` : ""}
+                        </span>
+                      )}
+                      {u.vrsta === "VLAKA" && u.kilometri != null && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">{u.kilometri.toFixed(2)} km</span>
+                      )}
+                      {u.napomena && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">{u.napomena}</span>
+                      )}
+                      <div className="ml-auto flex items-center gap-3 shrink-0">
+                        {isLast && !extraRows.has(k.id) && (
+                          <button onClick={() => toggleExtra(k.id, true)} className="text-green-700 dark:text-green-400 hover:underline text-xs" title="Dodaj još jedan unos za ovaj dan">
+                            + Još
+                          </button>
+                        )}
+                        <button onClick={() => startEdit(u)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
+                          Uredi
+                        </button>
+                        <button onClick={() => handleDelete(u.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
+                          Obriši
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {newRow}
+              </div>
             );
           })}
         </div>

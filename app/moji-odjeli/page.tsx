@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMojiOdjeliData, getKorisnik, updateKorisnik } from "@/lib/db";
+import { getMojiOdjeliData, getKorisnik, getKorisnici, updateKorisnik, preuzmiRjesenje, otpustiRjesenje } from "@/lib/db";
 import type { Korisnik, Odjel } from "@/lib/types";
 
 const ELABORAT_URL = "https://pogonboskrupa.github.io/Pregled_po_odsjecima/";
@@ -37,7 +37,7 @@ export default function MojiOdjeliPage() {
       getMojiOdjeliData(),
       getKorisnik(session.userId),
     ]).then(([data, meData]) => {
-      setAllOdjeli(data.odjeli);
+      setAllOdjeli(data.odjeli.filter((o) => !o.arhiviran));
       setKorisnici(data.korisnici);
       setStatsPerOdjel(data.statsPerOdjel);
       if (meData) {
@@ -59,16 +59,17 @@ export default function MojiOdjeliPage() {
     for (const odjelId of ids ?? []) rjesenjeOwner[odjelId] = k.id;
   }
 
-  async function saveMe(patch: Partial<Pick<Korisnik, "odjeliIds" | "odjeliRjesenjaIds">>, okMsg: string) {
+  async function saveMe(patch: Partial<Pick<Korisnik, "odjeliIds">>, okMsg: string) {
     if (!me || !session) return;
-    const previous = me;
-    setMe({ ...me, ...patch });
+    const previousIds = me.odjeliIds;
+    // funkcionalni update: removeOdjel prije ovoga mijenja rješenja u istom toku
+    setMe((m) => m && { ...m, ...patch });
     setSaving(true);
     try {
       await updateKorisnik(session.userId, patch);
       toast(okMsg);
     } catch {
-      setMe(previous);
+      setMe((m) => m && { ...m, odjeliIds: previousIds });
       toast("Greška pri snimanju — promjena nije sačuvana.");
     } finally {
       setSaving(false);
@@ -84,23 +85,51 @@ export default function MojiOdjeliPage() {
   }
 
   async function removeOdjel(odjelId: string) {
-    if (!me) return;
-    await saveMe({
-      odjeliIds: (me.odjeliIds ?? []).filter((id) => id !== odjelId),
-      odjeliRjesenjaIds: (me.odjeliRjesenjaIds ?? []).filter((id) => id !== odjelId),
-    }, "Odjel uklonjen ✓");
+    if (!me || !session) return;
+    if ((me.odjeliRjesenjaIds ?? []).includes(odjelId)) {
+      const released = await toggleRjesenje(odjelId, true);
+      if (!released) return;
+    }
+    await saveMe({ odjeliIds: (me.odjeliIds ?? []).filter((id) => id !== odjelId) }, "Odjel uklonjen ✓");
+  }
+
+  // Vraća true ako je promjena uspjela
+  async function toggleRjesenje(odjelId: string, release: boolean): Promise<boolean> {
+    if (!me || !session) return false;
+    setSaving(true);
+    try {
+      if (release) {
+        await otpustiRjesenje(session.userId, odjelId);
+      } else {
+        const res = await preuzmiRjesenje(session.userId, odjelId);
+        if (!res.ok) {
+          const fresh = await getKorisnici().catch(() => korisnici);
+          setKorisnici(fresh);
+          const owner = fresh.find((k) => k.id === res.ownerId);
+          toast(`Greška: rješenje za ovaj odjel već ima ${owner?.fullName || owner?.ime || "drugi projektant"}.`);
+          return false;
+        }
+      }
+      setMe((m) => {
+        if (!m) return m;
+        const rjesenja = (m.odjeliRjesenjaIds ?? []).filter((id) => id !== odjelId);
+        return { ...m, odjeliRjesenjaIds: release ? rjesenja : [...rjesenja, odjelId] };
+      });
+      toast(release ? "Rješenje uklonjeno ✓" : "Rješenje preuzeto ✓");
+      return true;
+    } catch {
+      toast("Greška: za rješenje je potrebna internet veza. Pokušaj ponovo.");
+      return false;
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function claimRjesenje(odjelId: string) {
     if (!me) return;
     const existingOwner = rjesenjeOwner[odjelId];
     if (existingOwner && existingOwner !== me.id) return;
-    const rjesenja = me.odjeliRjesenjaIds ?? [];
-    const hasIt = rjesenja.includes(odjelId);
-    await saveMe(
-      { odjeliRjesenjaIds: hasIt ? rjesenja.filter((id) => id !== odjelId) : [...rjesenja, odjelId] },
-      hasIt ? "Rješenje uklonjeno ✓" : "Rješenje dodano ✓"
-    );
+    await toggleRjesenje(odjelId, (me.odjeliRjesenjaIds ?? []).includes(odjelId));
   }
 
   if (loading || !session || !dataLoaded) {

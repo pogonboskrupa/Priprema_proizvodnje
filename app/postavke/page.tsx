@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
-import { saveSession, isRemembered } from "@/lib/auth";
+import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika } from "@/lib/db";
+import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 
@@ -19,6 +19,8 @@ export default function PostavkePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
+  const [pinNotice, setPinNotice] = useState<{ ime: string; pin: string; novi: boolean } | null>(null);
+  const [showArhiva, setShowArhiva] = useState(false);
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function PostavkePage() {
   }
 
   async function loadKorisnici() {
-    const k = await getKorisnici();
+    const k = await getKorisnici({ ukljuciArhivirane: true });
     setKorisnici(k);
   }
 
@@ -76,15 +78,17 @@ export default function PostavkePage() {
   }
 
   const addKorisnik = () => guarded(async () => {
-    if (!addForm.ime.trim()) { toast("Upiši korisničko ime!"); return; }
-    if (korisnici.some((k) => k.ime.toUpperCase() === addForm.ime.toUpperCase())) {
-      toast("Korisnik s tim imenom već postoji!"); return;
+    const ime = addForm.ime.trim().toUpperCase();
+    if (!ime) { toast("Upiši korisničko ime!"); return; }
+    if (korisnici.some((k) => k.ime.toUpperCase() === ime)) {
+      toast("Korisnik s tim imenom već postoji (možda u arhivi)!"); return;
     }
+    const pin = generatePin();
     await createKorisnik({
-      ime: addForm.ime.toUpperCase(),
+      ime,
       fullName: addForm.fullName || addForm.ime,
       title: addForm.title,
-      pin: "1234",
+      pin,
       role: "worker",
       avatar: "",
       odjeliIds: [],
@@ -92,32 +96,40 @@ export default function PostavkePage() {
     setAddForm({ ime: "", fullName: "", title: "" });
     setShowAdd(false);
     loadKorisnici();
-    toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
+    setPinNotice({ ime, pin, novi: true });
   });
 
   function resetPin(k: Korisnik) {
     setConfirmState({
-      msg: `Resetovati PIN za ${k.ime} na 1234?`,
+      msg: `Resetovati PIN za ${k.ime}? Dobiće novi nasumični PIN koji ćeš mu javiti.`,
       okLabel: "Resetuj",
       okColor: "amber",
       onOk: () => guarded(async () => {
         setConfirmState(null);
-        await updateKorisnik(k.id, { pin: "1234" });
-        toast(`PIN za ${k.ime} resetovan na 1234 ✓`);
+        const pin = generatePin();
+        await updateKorisnik(k.id, { pin });
+        setPinNotice({ ime: k.ime, pin, novi: false });
       }),
     });
   }
 
-  function handleDelete(k: Korisnik) {
+  function handleArhiviraj(k: Korisnik) {
     setConfirmState({
-      msg: `Obrisati korisnika ${k.ime}? Ova akcija je nepovratna.`,
+      msg: `Arhivirati korisnika ${k.ime}? Neće se moći prijaviti niti se pojavljivati u unosima; njegova rješenja se oslobađaju. Unosi i izvještaji ostaju sačuvani.`,
+      okLabel: "Arhiviraj",
+      okColor: "amber",
       onOk: () => guarded(async () => {
         setConfirmState(null);
-        await deleteKorisnik(k.id);
+        await arhivirajKorisnika(k, true);
         loadKorisnici();
       }),
     });
   }
+
+  const vratiIzArhive = (k: Korisnik) => guarded(async () => {
+    await arhivirajKorisnika(k, false);
+    loadKorisnici();
+  });
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
@@ -152,6 +164,22 @@ export default function PostavkePage() {
             : "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
         }`}>
           {msg}
+        </div>
+      )}
+
+      {pinNotice && (
+        <div className="mb-4 rounded-lg px-4 py-3 border bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-center gap-4 flex-wrap">
+          <div className="text-sm">
+            {pinNotice.novi ? "Projektant" : "Novi PIN za"} <b className="font-mono">{pinNotice.ime}</b>{pinNotice.novi ? " dodan. PIN:" : ":"}
+            <span className="ml-2 font-mono text-2xl font-bold tracking-[0.3em] align-middle">{pinNotice.pin}</span>
+            <div className="text-xs mt-1 opacity-80">Zapiši i javi PIN korisniku — nakon zatvaranja više se ne prikazuje.</div>
+          </div>
+          <button
+            onClick={() => setPinNotice(null)}
+            className="ml-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+          >
+            Zapisao sam
+          </button>
         </div>
       )}
 
@@ -270,7 +298,7 @@ export default function PostavkePage() {
               </div>
               <div className="flex gap-2">
                 <button onClick={addKorisnik} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
-                  Dodaj (PIN: 1234)
+                  Dodaj
                 </button>
                 <button onClick={() => setShowAdd(false)} className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   Odustani
@@ -291,7 +319,7 @@ export default function PostavkePage() {
               </tr>
             </thead>
             <tbody>
-              {korisnici.map((k) => {
+              {korisnici.filter((k) => !k.arhiviran).map((k) => {
                 return (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
@@ -327,8 +355,8 @@ export default function PostavkePage() {
                         Reset PIN
                       </button>
                       {k.id !== session.userId && (
-                        <button onClick={() => handleDelete(k)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
-                          Obriši
+                        <button onClick={() => handleArhiviraj(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs">
+                          Arhiviraj
                         </button>
                       )}
                     </td>
@@ -338,6 +366,29 @@ export default function PostavkePage() {
             </tbody>
           </table>
           </div>
+          {korisnici.some((k) => k.arhiviran) && (
+            <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3">
+              <button
+                onClick={() => setShowArhiva((v) => !v)}
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:underline"
+              >
+                {showArhiva ? "▾" : "▸"} Arhiva ({korisnici.filter((k) => k.arhiviran).length})
+              </button>
+              {showArhiva && (
+                <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
+                  {korisnici.filter((k) => k.arhiviran).map((k) => (
+                    <div key={k.id} className="py-2 flex items-center gap-3 text-sm">
+                      <span className="font-mono text-gray-500 dark:text-gray-400">{k.ime}</span>
+                      <span className="text-gray-400 dark:text-gray-500">{k.fullName}</span>
+                      <button onClick={() => vratiIzArhive(k)} className="ml-auto text-xs text-green-700 dark:text-green-400 hover:underline">
+                        Vrati
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
