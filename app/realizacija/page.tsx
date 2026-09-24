@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli } from "@/lib/db";
+import { getOdjeli, getUnosiOdjelPeriod } from "@/lib/db";
+import type { OdjelPeriodRada } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
@@ -15,10 +16,16 @@ function getStatus(o: Odjel): "plan" | "u_toku" | "zavrseno" {
   return "u_toku";
 }
 
+function fmtPeriodDate(d: string): string {
+  const [y, m, day] = d.split("-");
+  return `${day}.${m}.${y}`;
+}
+
 export default function RealizacijaPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
+  const [periodi, setperiodi] = useState<Record<string, OdjelPeriodRada>>({});
   const [filt, setFilt] = useState<RFilt>("sve");
 
   useEffect(() => {
@@ -26,7 +33,14 @@ export default function RealizacijaPage() {
     if (!loading && session?.role !== "admin") router.replace("/");
   }, [session, loading]);
 
-  useEffect(() => { getOdjeli().then(setOdjeli); }, []);
+  useEffect(() => {
+    getOdjeli().then(setOdjeli);
+    getUnosiOdjelPeriod().then((arr) => {
+      const map: Record<string, OdjelPeriodRada> = {};
+      arr.forEach((p) => { map[p.odjelId] = p; });
+      setperiodi(map);
+    });
+  }, []);
 
   const filtered = filt === "sve" ? odjeli : odjeli.filter((o) => getStatus(o) === filt);
 
@@ -75,13 +89,14 @@ export default function RealizacijaPage() {
           const real = (o.real_cet || 0) + (o.real_lis || 0);
           const p = plan > 0 ? Math.min((real / plan) * 100, 100) : 0;
           const st = getStatus(o);
+          const period = periodi[o.id];
 
           return (
             <div key={o.id} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="font-bold text-gray-800 dark:text-gray-100">{o.broj}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{o.gj}</div>
+                  <div className="font-bold text-gray-800 dark:text-gray-100">{o.gj} / {o.broj}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Površina: {fmt(o.povrsina || 0)} ha</div>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   st === "zavrseno" ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" :
@@ -123,6 +138,35 @@ export default function RealizacijaPage() {
                   />
                 </div>
               </div>
+
+              {/* Period rada u odjelu */}
+              {(period?.doznaka || period?.vlaka) && (
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-2.5 space-y-1.5">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Period rada u odjelu</div>
+                  {period.doznaka && (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">DOZNAKA</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-mono">
+                        {fmtPeriodDate(period.doznaka.od)}
+                        {period.doznaka.od !== period.doznaka.do_ && (
+                          <> — {fmtPeriodDate(period.doznaka.do_)}</>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {period.vlaka && (
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300">VLAKA</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-mono">
+                        {fmtPeriodDate(period.vlaka.od)}
+                        {period.vlaka.od !== period.vlaka.do_ && (
+                          <> — {fmtPeriodDate(period.vlaka.do_)}</>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

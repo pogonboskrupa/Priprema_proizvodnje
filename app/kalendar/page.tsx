@@ -584,13 +584,13 @@ export default function KalendarPage() {
 
                         {/* Odjel (only if needed) */}
                         {!NO_ODJEL_VRSTE.has(editForm.vrsta) && (
-                          <div style={{ maxWidth: 180 }}>
+                          <div style={{ minWidth: 200 }}>
                             <label className={labelCls}>Odjel</label>
                             <select className={inputSmCls} value={editForm.odjelId}
                               onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
                               <option value="">Odjel...</option>
                               {allSortedOdjeli.map((o) => (
-                                <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+                                <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
                               ))}
                             </select>
                           </div>

@@ -114,7 +114,7 @@ function RosterNewRow({
       {/* Odjel + Vrsta chips row */}
       <div className="flex flex-wrap items-start gap-2">
         {!noOdjelNeeded && (
-          <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
+          <div className="shrink-0" style={{ minWidth: 200 }}>
             <select
               className={inputSmCls}
               value={pending.odjelId}
@@ -122,7 +122,7 @@ function RosterNewRow({
             >
               <option value="">Odjel...</option>
               {sortedOdjeli.map((o) => (
-                <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+                <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
               ))}
             </select>
           </div>
@@ -449,12 +449,12 @@ export default function UnosUcinkaPage() {
                     {/* Odjel + Vrsta */}
                     <div className="flex flex-wrap items-start gap-2">
                       {!NO_ODJEL_VRSTE.has(editForm.vrsta) && (
-                        <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
+                        <div className="shrink-0" style={{ minWidth: 200 }}>
                           <select className={inputSmCls} value={editForm.odjelId}
                             onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
                             <option value="">Odjel...</option>
                             {allSortedOdjeli.map((o) => (
-                              <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+                              <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
                             ))}
                           </select>
                         </div>

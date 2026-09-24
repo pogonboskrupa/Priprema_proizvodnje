@@ -628,3 +628,39 @@ export async function getIzvjestaj(
     return { period, od: localDateStr(od), do_: localDateStr(do_), tip, data };
   }
 }
+
+// ── Period rada u odjelu ──────────────────────────────────────────────────────
+
+export interface OdjelPeriodRada {
+  odjelId: string;
+  doznaka: { od: string; do_: string } | null;
+  vlaka: { od: string; do_: string } | null;
+}
+
+export async function getUnosiOdjelPeriod(): Promise<OdjelPeriodRada[]> {
+  const raw = await getAll('unosi');
+  const periodi: Record<string, { doznakaMin: string | null; doznakaMax: string | null; vlakaMin: string | null; vlakaMax: string | null }> = {};
+
+  for (const u of raw) {
+    const vrsta = u.vrsta as string;
+    if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
+    const odjelId = u.odjelId as string;
+    if (!odjelId) continue;
+    const datumStr = (u.datum as string).slice(0, 10);
+    if (!periodi[odjelId]) periodi[odjelId] = { doznakaMin: null, doznakaMax: null, vlakaMin: null, vlakaMax: null };
+    const p = periodi[odjelId];
+    if (vrsta === 'DOZNAKA') {
+      if (!p.doznakaMin || datumStr < p.doznakaMin) p.doznakaMin = datumStr;
+      if (!p.doznakaMax || datumStr > p.doznakaMax) p.doznakaMax = datumStr;
+    } else {
+      if (!p.vlakaMin || datumStr < p.vlakaMin) p.vlakaMin = datumStr;
+      if (!p.vlakaMax || datumStr > p.vlakaMax) p.vlakaMax = datumStr;
+    }
+  }
+
+  return Object.entries(periodi).map(([odjelId, p]) => ({
+    odjelId,
+    doznaka: p.doznakaMin ? { od: p.doznakaMin, do_: p.doznakaMax! } : null,
+    vlaka: p.vlakaMin ? { od: p.vlakaMin, do_: p.vlakaMax! } : null,
+  }));
+}
