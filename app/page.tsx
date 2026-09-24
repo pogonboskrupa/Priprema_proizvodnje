@@ -38,7 +38,8 @@ export default function Home() {
   const mesec = mesecLabel(new Date());
 
   const displayRezime = isWorker ? myRezime : rezime;
-  const odsustva = displayRezime ? (displayRezime.godisnji + displayRezime.kancelarija + displayRezime.bolovanje) : 0;
+  const odsustva = displayRezime ? (displayRezime.godisnji + displayRezime.bolovanje) : 0;
+  const radniDani = displayRezime ? (displayRezime.teren + displayRezime.kancelarija) : 0;
   const statsLabel = isWorker ? "Moj učinak" : "Svi projektanti";
 
   return (
@@ -70,7 +71,7 @@ export default function Home() {
             <MiniStat label="Hektara" value={displayRezime.ha.toFixed(2)} unit="ha" color="green" />
             <MiniStat label="Stabala" value={displayRezime.stabala.toString()} unit="st" color="emerald" />
             <MiniStat label="Vlake" value={displayRezime.km.toFixed(2)} unit="km" color="amber" />
-            <MiniStat label="Teren" value={displayRezime.teren.toString()} unit="dana" color="orange" />
+            <MiniStat label="Radni dani" value={radniDani.toString()} unit="dana" color="orange" />
             <MiniStat label="Odsustva" value={odsustva.toString()} unit="dana" color="sky" />
           </div>
         </div>

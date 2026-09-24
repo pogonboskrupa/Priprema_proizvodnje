@@ -342,8 +342,8 @@ function InzinjerIzvjestaj({
   const ukupnoHa = visibleRows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = visibleRows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = visibleRows.reduce((s, r) => s + r.ukupnoKm, 0);
-  const ukupnoOdsustvo = visibleRows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaKancelarija ?? 0) + (r.danaBolovanje ?? 0), 0);
-  const ukupnoTeren = visibleRows.reduce((s, r) => s + (r.danaTeren ?? 0), 0);
+  const ukupnoOdsustvo = visibleRows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaBolovanje ?? 0), 0);
+  const ukupnoRadniDani = visibleRows.reduce((s, r) => s + (r.danaTeren ?? 0) + (r.danaKancelarija ?? 0), 0);
 
   const isPersonal = !!filterInzinjerId;
 
@@ -378,7 +378,7 @@ function InzinjerIzvjestaj({
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
         <StatCard label="Doznačenih stabala" value={ukupnoSt.toString()} color="emerald" />
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
-        <StatCard label="Dana na terenu" value={ukupnoTeren.toString()} color="orange" />
+        <StatCard label="Radni dani" value={ukupnoRadniDani.toString()} color="orange" />
         <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
       </div>
 
