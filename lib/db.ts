@@ -6,6 +6,7 @@ import {
   update,
   remove,
   queryCol,
+  queryColFresh,
   Timestamp,
   where,
   orderBy,
@@ -25,7 +26,7 @@ export async function getKorisnik(id: string): Promise<Korisnik | null> {
 }
 
 export async function getKorisnikByIme(ime: string): Promise<Korisnik | null> {
-  const all = await queryCol('users', [where('ime', '==', ime.toUpperCase())]);
+  const all = await queryColFresh('users', [where('ime', '==', ime.toUpperCase())]);
   return all.length ? all[0] as unknown as Korisnik : null;
 }
 
@@ -589,7 +590,7 @@ export async function getIzvjestaj(
       grouped[key].stabala += Number(u.brojStabala) || 0;
       grouped[key].km += Number(u.kilometri) || 0;
       grouped[key].count++;
-      grouped[key].odjeliIds.add(u.odjelId as string);
+      if (u.odjelId) grouped[key].odjeliIds.add(u.odjelId as string);
       if (u.vrsta === 'GODISNJI') grouped[key].godisnji++;
       else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija++;
       else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje++;

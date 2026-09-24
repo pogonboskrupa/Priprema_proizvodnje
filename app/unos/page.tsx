@@ -7,6 +7,7 @@ import type { Odjel, Korisnik, UnosRada, VrstaRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
 import { fmtDate, mesecLabel } from "@/lib/format";
+import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 
 const today = () => new Date().toISOString().split("T")[0];
 
@@ -160,25 +161,10 @@ export default function UnosPage() {
   });
 
   const currentInzinjerId = isWorker ? session.userId : form.inzinjerId;
-  const recentOdjelIds = (() => {
-    if (!currentInzinjerId) return [] as string[];
-    const seen = new Set<string>();
-    const ids: string[] = [];
-    for (const u of [...unosi]
-      .filter((u) => u.inzinjerId === currentInzinjerId && u.odjelId)
-      .sort((a, b) => b.datum.localeCompare(a.datum))) {
-      if (!seen.has(u.odjelId)) { seen.add(u.odjelId); ids.push(u.odjelId); }
-    }
-    return ids;
-  })();
-  const recentOdjelSet = new Set(recentOdjelIds);
-  const formOdjeliRecent = recentOdjelIds.flatMap((id) => {
-    const o = odjeli.find((o) => o.id === id);
-    return o ? [o] : [];
-  });
-  const formOdjeliRest = odjeli
-    .filter((o) => !recentOdjelSet.has(o.id))
-    .sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
+  const { recent: formOdjeliRecent, rest: formOdjeliRest } = splitOdjeliByRecent(
+    odjeli,
+    recentOdjelIdsByInzinjer(unosi).get(currentInzinjerId) ?? []
+  );
 
   const filterSummary = filteredUnosi.reduce(
     (acc, u) => {

@@ -97,10 +97,22 @@ export async function getAll(col: string) {
   return snaps.docs.map(docToObj);
 }
 
-export async function getAllFresh(col: string) {
+// Server-first; offline pada na cache umjesto da baci grešku
+async function serverFirst(q: Query<DocumentData>) {
   await _authReady;
-  const snaps = await getDocsFromServer(collection(db, col));
-  return snaps.docs.map(docToObj);
+  try {
+    return (await getDocsFromServer(q)).docs.map(docToObj);
+  } catch {
+    return (await getDocsFromCache(q)).docs.map(docToObj);
+  }
+}
+
+export async function getAllFresh(col: string) {
+  return serverFirst(collection(db, col));
+}
+
+export async function queryColFresh(col: string, constraints: Parameters<typeof query>[1][]) {
+  return serverFirst(query(collection(db, col), ...constraints));
 }
 
 export async function getById(col: string, id: string) {
@@ -116,6 +128,7 @@ export async function getById(col: string, id: string) {
 }
 
 export async function create(col: string, data: Record<string, unknown>) {
+  await _authReady;
   const ref = await addDoc(collection(db, col), {
     ...data,
     createdAt: Timestamp.now(),
@@ -131,6 +144,7 @@ export async function update(col: string, id: string, data: Record<string, unkno
 }
 
 export async function remove(col: string, id: string) {
+  await _authReady;
   await deleteDoc(doc(db, col, id));
 }
 

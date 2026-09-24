@@ -334,9 +334,32 @@ export default function KalendarPage() {
     getOdjeli().then(setOdjeli);
   }, [session, isWorker]);
 
-  if (authLoading || !session) return null;
+  const isAdmin = session?.role === "admin";
+  const userId = session?.userId;
 
-  const isAdmin = session.role === "admin";
+  const visibleUnosi = useMemo(() => {
+    if (isWorker) return unosi.filter((u) => u.inzinjerId === userId);
+    if (selectedWorkerId) return unosi.filter((u) => u.inzinjerId === selectedWorkerId);
+    return unosi;
+  }, [unosi, isWorker, selectedWorkerId, userId]);
+
+  const byDay = useMemo(() => {
+    const map: Record<string, UnosRada[]> = {};
+    for (const u of visibleUnosi) {
+      const key = u.datum.slice(0, 10);
+      if (!map[key]) map[key] = [];
+      map[key].push(u);
+    }
+    return map;
+  }, [visibleUnosi]);
+
+  const singleRecap   = useMemo(() => computeRecap(visibleUnosi), [visibleUnosi]);
+  const allWorkersData = useMemo(() => {
+    if (!isAdmin || selectedWorkerId || workers.length === 0) return null;
+    return computeAllWorkersRecap(unosi, workers);
+  }, [isAdmin, selectedWorkerId, workers, unosi]);
+
+  if (authLoading || !session) return null;
 
   function prevMonth() {
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -399,28 +422,6 @@ export default function KalendarPage() {
       },
     });
   }
-
-  const visibleUnosi = useMemo(() => {
-    if (isWorker) return unosi.filter((u) => u.inzinjerId === session.userId);
-    if (selectedWorkerId) return unosi.filter((u) => u.inzinjerId === selectedWorkerId);
-    return unosi;
-  }, [unosi, isWorker, selectedWorkerId, session]);
-
-  const byDay = useMemo(() => {
-    const map: Record<string, UnosRada[]> = {};
-    for (const u of visibleUnosi) {
-      const key = u.datum.slice(0, 10);
-      if (!map[key]) map[key] = [];
-      map[key].push(u);
-    }
-    return map;
-  }, [visibleUnosi]);
-
-  const singleRecap   = useMemo(() => computeRecap(visibleUnosi), [visibleUnosi]);
-  const allWorkersData = useMemo(() => {
-    if (!isAdmin || selectedWorkerId || workers.length === 0) return null;
-    return computeAllWorkersRecap(unosi, workers);
-  }, [isAdmin, selectedWorkerId, workers, unosi]);
 
   const daysInMonth  = getDaysInMonth(year, month);
   const offset       = getFirstDayOffset(year, month);
