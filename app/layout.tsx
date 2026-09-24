@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import InstallBanner from "@/components/InstallBanner";
 import { AuthProvider } from "@/context/AuthContext";
 
 const geist = Geist({ subsets: ["latin"] });
+const libreBaskerville = Libre_Baskerville({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-baskerville" });
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -30,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href={`${BASE}/icons/icon-192.png`} />
       </head>
-      <body className={`${geist.className} min-h-screen`}>
+      <body className={`${geist.className} ${libreBaskerville.variable} min-h-screen`}>
         <AuthProvider>
           <Nav />
           <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
