@@ -64,10 +64,7 @@ function RosterNewRow({
   /** Postavljen kad je ovo dodatni unos za dan koji već ima unos */
   onCancel?: () => void;
 }) {
-  const availOdjeli = korisnik.odjeliIds?.length
-    ? odjeli.filter((o) => korisnik.odjeliIds.includes(o.id))
-    : odjeli;
-  const { recent: recentOdjeli, rest: sortedOdjeli } = splitOdjeliByRecent(availOdjeli, recentOdjelIds);
+  const { recent: recentOdjeli, rest: sortedOdjeli } = splitOdjeliByRecent(odjeli, recentOdjelIds);
 
   const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
   const parsed = pendingToPayload(pending);
