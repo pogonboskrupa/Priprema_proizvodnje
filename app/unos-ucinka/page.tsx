@@ -417,27 +417,28 @@ export default function UnosUcinkaPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Unos učinka</h1>
-        <button
-          onClick={() => setDatum(prevDay(datum))}
-          disabled={datum <= EVIDENCIJA_OD_DATUM}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
-        >‹</button>
-        <input
-          type="date" value={datum}
-          min={EVIDENCIJA_OD_DATUM}
-          max={today()}
-          onChange={(e) => {
-            // prazan ili datum van evidencije bi pokvario upit za dan
-            const v = e.target.value;
-            if (v && v >= EVIDENCIJA_OD_DATUM && v <= today()) setDatum(v);
-          }}
-          className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-        />
-        <button
-          onClick={() => setDatum(nextDay(datum))}
-          disabled={datum >= today()}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
-        >›</button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setDatum(prevDay(datum))}
+            disabled={datum <= EVIDENCIJA_OD_DATUM}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+          >‹</button>
+          <input
+            type="date" value={datum}
+            min={EVIDENCIJA_OD_DATUM}
+            max={today()}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v && v >= EVIDENCIJA_OD_DATUM && v <= today()) setDatum(v);
+            }}
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          />
+          <button
+            onClick={() => setDatum(nextDay(datum))}
+            disabled={datum >= today()}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+          >›</button>
+        </div>
         {readyCount > 0 && (
           <button
             onClick={saveAllReady}
