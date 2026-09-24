@@ -1,4 +1,5 @@
 import type { UnosRada } from "@/lib/types";
+import { jeRadniDan } from "@/lib/praznici";
 
 // Pravo na GO se broji od 1. jula: neiskorišteni dani prethodne godine važe do 30. juna
 export const GO_POCETAK_MJESEC = 7;
@@ -21,13 +22,16 @@ export function goPeriod(year: number, month: number): GoPeriod {
   };
 }
 
-/** Broj različitih dana s GO unosom u periodu (dva unosa istog dana = jedan dan) */
+/**
+ * Broj radnih dana s GO unosom u periodu. Vikendi i praznici se po Zakonu o radu
+ * ne uračunavaju u godišnji; dva unosa istog dana = jedan dan.
+ */
 export function iskoristenoDanaGO(unosi: readonly UnosRada[], p: GoPeriod): number {
   const dani = new Set<string>();
   for (const u of unosi) {
     if (u.vrsta !== "GODISNJI") continue;
     const d = u.datum.slice(0, 10);
-    if (d >= p.od && d <= p.do) dani.add(d);
+    if (d >= p.od && d <= p.do && jeRadniDan(d)) dani.add(d);
   }
   return dani.size;
 }

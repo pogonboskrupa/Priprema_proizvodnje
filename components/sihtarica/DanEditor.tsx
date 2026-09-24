@@ -4,7 +4,7 @@ import type { Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type UnosEditPayload } from "@/lib/unos-edit";
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
-import { ucinakLabel, type DanSihtarice } from "@/lib/sihtarica";
+import { jeKonflikt, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
 
@@ -25,9 +25,10 @@ const formIzUnosa = (u: UnosRada): Form => ({
 });
 
 export function DanEditor({
-  dan, odjeli, recentIds, onCreate, onUpdate, onDelete,
+  dan, prethodni, odjeli, recentIds, onCreate, onUpdate, onDelete,
 }: {
   dan: DanSihtarice;
+  prethodni: DanSihtarice | null;
   odjeli: Odjel[];
   recentIds: readonly string[];
   onCreate: (data: UnosEditPayload) => Promise<boolean>;
@@ -51,18 +52,51 @@ export function DanEditor({
     return ok;
   }
 
+  // null = dozvoljeno; inače poruka zašto nije
+  function zabrana(v: VrstaRada): string | null {
+    // doznaka/vlaka mogu biti u više odjela istog dana
+    if (upisaneVrste.has(v) && !UCINAK.includes(v)) return `${VRSTA[v].label} je već upisan za ovaj dan.`;
+    if (v === "GODISNJI" && dan.neradni) return "Godišnji se ne upisuje za vikend ni praznik — ti dani se ne troše iz godišnjeg.";
+    if (jeKonflikt([...dan.unosi, { vrsta: v }])) {
+      return v === "GODISNJI" || v === "BOLOVANJE"
+        ? `${VRSTA[v].label} je za cijeli dan — ovaj dan već ima drugu aktivnost.`
+        : "Za ovaj dan je upisan godišnji ili bolovanje.";
+    }
+    return null;
+  }
+
   async function brziUpis(v: VrstaRada) {
-    if (upisaneVrste.has(v)) { setError(`${VRSTA[v].label} je već upisan za ovaj dan.`); return; }
-    await run(() => onCreate({
+    const z = zabrana(v);
+    if (z) { setError(z); return; }
+    const ok = await run(() => onCreate({
       vrsta: v, odjelId: null, brojStabala: null, hektari: null, kilometri: null,
       napomena: form.napomena.trim() || null,
     }));
+    if (ok) setForm((f) => ({ ...f, napomena: "" }));
   }
 
   async function sacuvajUcinak() {
+    const z = zabrana(form.vrsta);
+    if (z) { setError(z); return; }
     const r = editFormToPayload(form);
     if (!r.ok) { setError(r.error); return; }
     if (await run(() => onCreate(r.data))) setForm(prazanForm(form.vrsta, form.odjelId));
+  }
+
+  // Prisustvo se prepisuje odmah; doznaka/vlaka samo popuni vrstu i odjel (učinak je svaki dan drugačiji)
+  const zaKopiju = prethodni?.unosi ?? [];
+  const kopijaBrzi = [...new Set(zaKopiju.filter((u) => NO_ODJEL_VRSTE.has(u.vrsta)).map((u) => u.vrsta))]
+    .filter((v) => !zabrana(v));
+  const kopijaUcinak = zaKopiju.find((u) => !NO_ODJEL_VRSTE.has(u.vrsta) && u.odjelId);
+
+  async function kaoPrethodni() {
+    if (kopijaUcinak) setForm(prazanForm(kopijaUcinak.vrsta, kopijaUcinak.odjelId));
+    for (const v of kopijaBrzi) {
+      const ok = await run(() => onCreate({
+        vrsta: v, odjelId: null, brojStabala: null, hektari: null, kilometri: null, napomena: null,
+      }));
+      if (!ok) return;
+    }
   }
 
   async function sacuvajIzmjenu() {
@@ -74,7 +108,18 @@ export function DanEditor({
 
   return (
     <div className="px-3 sm:pl-[4.75rem] pb-4 pt-1 space-y-4 bg-green-50/40 dark:bg-green-950/10 print:hidden">
-      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 first-letter:uppercase">{fmtDateLong(dan.datum)}</div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400 first-letter:uppercase">{fmtDateLong(dan.datum)}</span>
+        {dan.praznik && <span className="text-xs text-rose-700 dark:text-rose-300">Praznik — {dan.praznik}</span>}
+        {dan.weekday === 6 && !dan.praznik && <span className="text-xs text-amber-700 dark:text-amber-400">Subota — upiši samo ako je bila radna subota.</span>}
+        {!dan.zakljucan && !edit && dan.unosi.length === 0 && prethodni && (kopijaBrzi.length > 0 || kopijaUcinak) && (
+          <button type="button" disabled={busy} onClick={kaoPrethodni}
+            className="ml-auto text-xs font-medium text-green-700 dark:text-green-400 hover:underline disabled:opacity-50">
+            ↺ Kao {DANI_KRATKO[prethodni.weekday].toLowerCase()} {prethodni.dan}.
+            {" "}({prethodni.unosi.map((u) => VRSTA[u.vrsta]?.short ?? u.vrsta).join(", ")})
+          </button>
+        )}
+      </div>
 
       {dan.unosi.length > 0 && (
         <ul className="space-y-1.5">
@@ -111,13 +156,18 @@ export function DanEditor({
         </ul>
       )}
 
-      {!edit && (
+      {dan.zakljucan && !edit && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">Nedjelja je neradni dan — postojeći unos možeš samo ispraviti ili obrisati.</p>
+      )}
+
+      {!edit && !dan.zakljucan && (
         <div className="grid gap-4 md:grid-cols-[auto_1fr]">
           <div>
             <div className={labelSmCls}>Prisustvo — jedan klik upisuje dan</div>
             <div className="flex flex-wrap gap-1.5">
               {BRZI.map((v) => (
                 <button key={v} type="button" disabled={busy || upisaneVrste.has(v)} onClick={() => brziUpis(v)}
+                  title={zabrana(v) ?? undefined}
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${VRSTA[v].badge} border-transparent hover:brightness-95`}>
                   + {VRSTA[v].label}
                 </button>

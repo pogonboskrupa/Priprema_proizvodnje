@@ -12,12 +12,13 @@ export function DanRed({
   onToggle: () => void;
   editor: ReactNode;
 }) {
-  const prazanRadni = !dan.vikend && !dan.buduci && dan.unosi.length === 0;
-  const clickable = canEdit && !dan.buduci;
+  const prazanRadni = !dan.neradni && !dan.buduci && dan.unosi.length === 0;
+  // nedjelja se otvara samo da se postojeći unos ispravi ili obriše
+  const clickable = canEdit && !dan.buduci && (!dan.zakljucan || dan.unosi.length > 0);
 
   return (
-    <li className={`relative border-b border-gray-100 dark:border-gray-800 last:border-b-0 break-inside-avoid ${
-      dan.vikend ? "bg-gray-50/80 dark:bg-gray-800/30" : "bg-white dark:bg-gray-900"
+    <li id={`dan-${dan.datum}`} className={`relative scroll-mt-20 border-b border-gray-100 dark:border-gray-800 last:border-b-0 break-inside-avoid ${
+      dan.praznik ? "bg-rose-50/70 dark:bg-rose-950/20" : dan.vikend ? "bg-gray-50/80 dark:bg-gray-800/30" : "bg-white dark:bg-gray-900"
     } ${open ? "ring-2 ring-inset ring-green-600/40 z-10" : ""}`}>
       {dan.danas && <span className="absolute left-0 inset-y-0 w-1 bg-green-600 print:hidden" aria-hidden />}
       <button
@@ -33,7 +34,7 @@ export function DanRed({
           dan.danas ? "bg-green-700 text-white" : ""
         }`}>
           <span className={`text-lg font-bold tabular-nums ${
-            dan.danas ? "" : dan.weekday === 0 ? "text-red-600 dark:text-red-400" : dan.vikend ? "text-gray-500 dark:text-gray-400" : "text-gray-800 dark:text-gray-100"
+            dan.danas ? "" : dan.weekday === 0 || dan.praznik ? "text-red-600 dark:text-red-400" : dan.vikend ? "text-gray-500 dark:text-gray-400" : "text-gray-800 dark:text-gray-100"
           }`}>
             {dan.dan}
           </span>
@@ -42,7 +43,15 @@ export function DanRed({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+          {dan.praznik && (
+            <span className="text-xs font-medium text-rose-700 dark:text-rose-300">{dan.praznik}</span>
+          )}
+          {dan.konflikt && (
+            <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-red-600 text-white" title="Godišnji ili bolovanje ne ide uz drugu aktivnost istog dana">
+              ⚠ konflikt
+            </span>
+          )}
           {dan.unosi.map((u) => {
             const vs = vrstaStyle(u.vrsta);
             const ucinak = ucinakLabel(u);
@@ -62,8 +71,8 @@ export function DanRed({
               nije upisano
             </span>
           )}
-          {dan.unosi.length === 0 && dan.vikend && !dan.buduci && (
-            <span className="text-xs text-gray-400 dark:text-gray-500">vikend</span>
+          {dan.unosi.length === 0 && dan.vikend && !dan.praznik && !dan.buduci && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">{dan.zakljucan ? "neradni dan" : "vikend"}</span>
           )}
         </div>
 

@@ -94,6 +94,9 @@ export function GoKartica({
           {canEdit ? "Upiši broj dana po ugovoru — iskorišteni dani se oduzimaju od 1. jula." : "Broj dana po ugovoru upisuje administrator."}
         </p>
       )}
+      {imaUgovor && (
+        <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Računaju se samo radni dani — vikendi i praznici se ne troše iz godišnjeg.</p>
+      )}
       {preostalo !== null && preostalo < 0 && (
         <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">Prekoračeno za {-preostalo} {-preostalo === 1 ? "dan" : "dana"}.</p>
       )}

@@ -9,7 +9,7 @@ import {
 import { onUnosiChanges, isOffline } from "@/lib/firebase";
 import type { Korisnik, Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import type { UnosEditPayload } from "@/lib/unos-edit";
-import { daniMjeseca, rezime, fmtBroj, DANI_KRATKO, ucinakLabel } from "@/lib/sihtarica";
+import { daniMjeseca, rezime, fmtBroj, DANI_KRATKO, ucinakLabel, prethodniPopunjen } from "@/lib/sihtarica";
 import { goPeriod, iskoristenoDanaGO } from "@/lib/godisnji";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { monthYearLabel, fmtDate } from "@/lib/format";
@@ -20,6 +20,7 @@ import { DanRed } from "@/components/sihtarica/DanRed";
 import { DanEditor } from "@/components/sihtarica/DanEditor";
 import { GoKartica } from "@/components/sihtarica/GoKartica";
 import { PopuniPeriod } from "@/components/sihtarica/PopuniPeriod";
+import { MjesecTraka } from "@/components/sihtarica/MjesecTraka";
 
 interface Mjesec { year: number; month: number }
 
@@ -123,12 +124,28 @@ export default function SihtaricaPage() {
     return [...new Set([...fromUnosi, ...(korisnik?.odjeliIds ?? [])])];
   }, [unosi, selectedId, korisnik]);
 
+  useEffect(() => {
+    if (!openDay) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpenDay(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openDay]);
+
   if (authLoading || !session) return null;
 
   const naPrvom = jePrviMjesecEvidencije(mjesec.year, mjesec.month);
   const tek = tekuciMjesec();
   const naTekucem = mjesec.year === tek.year && mjesec.month === tek.month;
   const imeProjektanta = korisnik ? (korisnik.fullName || korisnik.ime) : "";
+
+  function otvoriDan(datum: string) {
+    setOpenDay({ key: viewKey, datum });
+    requestAnimationFrame(() =>
+      document.getElementById(`dan-${datum}`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
+  }
+
+  const idxProjektanta = korisnici.findIndex((k) => k.id === selectedId);
+  const prvaGreska = dani.find((d) => d.konflikt);
 
   const audit = { createdById: session.userId, createdByRole: session.role };
   const savedMsg = (n = 1) => {
@@ -208,7 +225,7 @@ export default function SihtaricaPage() {
     const { exportXlsx } = await import("@/lib/export");
     const rows = dani.flatMap((d) => {
       const base = { Datum: fmtDate(d.datum), Dan: DANI_KRATKO[d.weekday] };
-      if (!d.unosi.length) return [{ ...base, Vrsta: d.vikend ? "vikend" : "", Odjel: "", Učinak: "", Napomena: "" }];
+      if (!d.unosi.length) return [{ ...base, Vrsta: d.praznik ?? (d.vikend ? "vikend" : ""), Odjel: "", Učinak: "", Napomena: "" }];
       return d.unosi.map((u) => ({
         ...base,
         Vrsta: VRSTA[u.vrsta]?.label ?? u.vrsta,
@@ -238,15 +255,21 @@ export default function SihtaricaPage() {
         </div>
 
         {canPick && (
+          <div className="flex items-center gap-1 print:hidden">
+          <button type="button" className={btnNav} disabled={idxProjektanta <= 0}
+            onClick={() => setPickedId(korisnici[idxProjektanta - 1].id)} aria-label="Prethodni projektant">‹</button>
           <select
             id="sihtarica-projektant"
             value={selectedId}
             onChange={(e) => setPickedId(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 print:hidden"
+            className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 max-w-[14rem]"
             aria-label="Projektant"
           >
             {korisnici.map((k) => <option key={k.id} value={k.id}>{k.fullName || k.ime}</option>)}
           </select>
+          <button type="button" className={btnNav} disabled={idxProjektanta < 0 || idxProjektanta >= korisnici.length - 1}
+            onClick={() => setPickedId(korisnici[idxProjektanta + 1].id)} aria-label="Sljedeći projektant">›</button>
+          </div>
         )}
 
         <div className="flex items-center gap-1">
@@ -326,7 +349,17 @@ export default function SihtaricaPage() {
         />
       </div>
 
-      {showPopuni && <PopuniPeriod dani={dani} onSubmit={handlePopuni} onClose={() => setShowPopuni(false)} />}
+      {!loading && <MjesecTraka dani={dani} onPick={otvoriDan} />}
+
+      {!loading && prvaGreska && (
+        <button type="button" onClick={() => otvoriDan(prvaGreska.datum)}
+          className="w-full text-left rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-2.5 text-sm text-red-800 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-950/60 print:hidden">
+          <b>⚠ {rez.konflikti} {rez.konflikti === 1 ? "dan ima" : "dana ima"} konflikt</b> — godišnji ili bolovanje upisan zajedno s drugom aktivnošću.
+          <span className="underline ml-1">Otvori {prvaGreska.dan}.</span>
+        </button>
+      )}
+
+      {showPopuni && <PopuniPeriod key={viewKey} dani={dani} onSubmit={handlePopuni} onClose={() => setShowPopuni(false)} />}
 
       {/* Dani */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
@@ -353,6 +386,7 @@ export default function SihtaricaPage() {
                   <DanEditor
                     key={`${d.datum}-${selectedId}`}
                     dan={d}
+                    prethodni={prethodniPopunjen(dani, d.datum)}
                     odjeli={odjeli}
                     recentIds={recentIds}
                     onCreate={(data) => handleCreate(d.datum, data)}

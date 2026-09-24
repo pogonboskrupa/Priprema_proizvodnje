@@ -20,11 +20,11 @@ export function PopuniPeriod({
   const [vrsta, setVrsta] = useState<VrstaRada>("GODISNJI");
   const [od, setOd] = useState(prvi);
   const [do_, setDo] = useState(zadnji);
-  const [preskociVikend, setPreskociVikend] = useState(true);
+  const [preskociNeradne, setPreskociNeradne] = useState(true);
   const [samoPrazne, setSamoPrazne] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const datumi = od && do_ && od <= do_ ? datumiZaPopunu(dani, od, do_, { preskociVikend, samoPrazne, vrsta }) : [];
+  const datumi = od && do_ && od <= do_ ? datumiZaPopunu(dani, od, do_, { preskociNeradne, samoPrazne, vrsta }) : [];
 
   async function submit() {
     if (!datumi.length) return;
@@ -63,8 +63,8 @@ export function PopuniPeriod({
           <input id="popuni-do" type="date" className={dateCls} value={do_} min={prvi} max={zadnji} onChange={(e) => setDo(e.target.value)} />
         </label>
         <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 py-1.5">
-          <input id="popuni-vikend" type="checkbox" checked={preskociVikend} onChange={(e) => setPreskociVikend(e.target.checked)} className="accent-green-700" />
-          Preskoči vikende
+          <input id="popuni-vikend" type="checkbox" checked={preskociNeradne} onChange={(e) => setPreskociNeradne(e.target.checked)} className="accent-green-700" />
+          Preskoči vikende i praznike
         </label>
         <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 py-1.5">
           <input id="popuni-prazne" type="checkbox" checked={samoPrazne} onChange={(e) => setSamoPrazne(e.target.checked)} className="accent-green-700" />
@@ -77,6 +77,11 @@ export function PopuniPeriod({
           className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-800 disabled:opacity-40 transition-colors">
           {busy ? "Upisujem…" : `Upiši ${VRSTA[vrsta].label.toLowerCase()} — ${datumi.length} ${datumi.length === 1 ? "dan" : "dana"}`}
         </button>
+        {datumi.length > 0 && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+            {datumi.map((d) => Number(d.slice(8))).join(", ")}.
+          </span>
+        )}
         {od > do_ && <span className="text-xs text-red-600 dark:text-red-400">Datum „od“ je poslije datuma „do“.</span>}
       </div>
     </section>
