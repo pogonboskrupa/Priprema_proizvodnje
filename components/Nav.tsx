@@ -43,7 +43,6 @@ const adminLinks = [
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/kalendar", label: "Kalendar" },
   { href: "/odjeli", label: "Odjeli" },
-  { href: "/inzinjeri", label: "Projektanti" },
   { href: "/plan", label: "Plan sječe" },
   { href: "/plan-projektant", label: "Plan/projektant" },
   { href: "/realizacija", label: "Realizacija" },
