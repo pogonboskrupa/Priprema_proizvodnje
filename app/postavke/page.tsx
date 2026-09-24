@@ -1,16 +1,54 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika } from "@/lib/db";
+import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
-import type { Korisnik } from "@/lib/types";
+import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { vrsta as vrstaStyle } from "@/lib/vrste";
 
+type Tab = "profil" | "korisnici" | "unosi";
+
+const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
+
+function fmtDan(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return `${DANI[d.getDay()]}, ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}.`;
+}
+
+function fmtLastLogin(iso: string | undefined): string {
+  if (!iso) return "–";
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMin / 60);
+  const diffD = Math.floor(diffH / 24);
+  if (diffMin < 1) return "Upravo";
+  if (diffMin < 60) return `${diffMin} min ago`;
+  if (diffH < 24) return `Danas ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diffD === 1) return `Jučer ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diffD < 7) return `${diffD} dana ago`;
+  return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function kolicina(u: UnosRada): string {
+  const parts: string[] = [];
+  if (u.hektari) parts.push(`${u.hektari} ha`);
+  if (u.brojStabala) parts.push(`${u.brojStabala} st.`);
+  if (u.kilometri) parts.push(`${u.kilometri} km`);
+  return parts.join(" · ") || "–";
+}
 
 export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
   const router = useRouter();
+
+  const isAdmin = session?.role === "admin";
+  const isOperater = !!session?.operater;
+  const canSeeUnosi = isAdmin || isOperater;
+
+  const [tab, setTab] = useState<Tab>("profil");
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [me, setMe] = useState<Korisnik | null>(null);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
@@ -23,6 +61,9 @@ export default function PostavkePage() {
   const [showArhiva, setShowArhiva] = useState(false);
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
 
+  const [zadnjiUnosi, setZadnjiUnosi] = useState<UnosRada[]>([]);
+  const [loadingUnosi, setLoadingUnosi] = useState(false);
+
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
   }, [session, loading]);
@@ -30,8 +71,16 @@ export default function PostavkePage() {
   useEffect(() => {
     if (!session) return;
     loadMe(session.userId);
-    if (session.role === "admin") loadKorisnici();
+    if (isAdmin) loadKorisnici();
   }, [session]);
+
+  useEffect(() => {
+    if (tab !== "unosi" || !canSeeUnosi) return;
+    setLoadingUnosi(true);
+    getUnosi().then((u) => {
+      setZadnjiUnosi(u);
+    }).finally(() => setLoadingUnosi(false));
+  }, [tab]);
 
   async function loadMe(id: string) {
     const k = await getKorisnik(id);
@@ -63,7 +112,6 @@ export default function PostavkePage() {
     if (!/^\d{4}$/.test(pinForm.new1)) { setPinMsg("Novi PIN mora biti 4 cifre!"); return; }
     if (pinForm.new1 !== pinForm.new2) { setPinMsg("PIN-ovi se ne poklapaju!"); return; }
     try {
-      // svjež PIN sa servera — admin ga je možda resetovao na drugom uređaju
       const fresh = await getKorisnikByIme(me.ime);
       if (pinForm.old !== (fresh?.pin ?? me.pin)) { setPinMsg("Trenutni PIN nije ispravan!"); return; }
       await updateKorisnik(session.userId, { pin: pinForm.new1 });
@@ -133,29 +181,47 @@ export default function PostavkePage() {
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
-  function fmtLastLogin(iso: string | undefined): string {
-    if (!iso) return "–";
-    const d = new Date(iso);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60000);
-    const diffH = Math.floor(diffMin / 60);
-    const diffD = Math.floor(diffH / 24);
-    if (diffMin < 1) return "Upravo";
-    if (diffMin < 60) return `${diffMin} min ago`;
-    if (diffH < 24) return `Danas ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
-    if (diffD === 1) return `Jučer ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
-    if (diffD < 7) return `${diffD} dana ago`;
-    return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
-  }
+  // Group unosi by datum for display
+  const unosiPoSedmica = useMemo(() => {
+    const grouped = new Map<string, UnosRada[]>();
+    for (const u of zadnjiUnosi) {
+      const d = u.datum.slice(0, 10);
+      if (!grouped.has(d)) grouped.set(d, []);
+      grouped.get(d)!.push(u);
+    }
+    return [...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+  }, [zadnjiUnosi]);
 
   if (loading || !session) return null;
 
-
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "profil", label: "Profil" },
+    ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }] : []),
+    ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
+  ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Postavke</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Postavke</h1>
+
+      {/* Tab bar */}
+      {tabs.length > 1 && (
+        <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                tab === t.id
+                  ? "border-green-700 text-green-700 dark:text-green-400 dark:border-green-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {msg && (
         <div className={`mb-4 rounded-lg px-4 py-2 text-sm border ${
@@ -183,76 +249,79 @@ export default function PostavkePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Profil */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Moj profil</h2>
-          <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Prijavljeni kao</div>
-            <div className="font-bold text-gray-800 dark:text-gray-100 text-lg">{session.ime}</div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
-            <input
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-              value={profForm.fullName}
-              onChange={(e) => setProfForm({ ...profForm, fullName: e.target.value })}
-              maxLength={60}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Titula / radno mjesto</label>
-            <input
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-              value={profForm.title}
-              onChange={(e) => setProfForm({ ...profForm, title: e.target.value })}
-              maxLength={60}
-            />
-          </div>
-          <button
-            onClick={saveProfile}
-            className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800"
-          >
-            Sačuvaj profil
-          </button>
-        </div>
-
-        {/* PIN */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Promjena PIN-a</h2>
-          {["old", "new1", "new2"].map((f, i) => (
-            <div key={f}>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
-                {i === 0 ? "Trenutni PIN" : i === 1 ? "Novi PIN (4 cifre)" : "Potvrdi novi PIN"}
-              </label>
+      {/* ── TAB: Profil ─────────────────────────────────────────── */}
+      {tab === "profil" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Profil */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-200">Moj profil</h2>
+            <div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Prijavljeni kao</div>
+              <div className="font-bold text-gray-800 dark:text-gray-100 text-lg">{session.ime}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
               <input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                value={pinForm[f as "old" | "new1" | "new2"]}
-                onChange={(e) => setPinForm({ ...pinForm, [f]: e.target.value })}
-                placeholder="••••"
+                value={profForm.fullName}
+                onChange={(e) => setProfForm({ ...profForm, fullName: e.target.value })}
+                maxLength={60}
               />
             </div>
-          ))}
-          {pinMsg && (
-            <div className={`text-sm ${pinMsg.includes("✓") ? "text-green-600" : "text-red-600"}`}>
-              {pinMsg}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Titula / radno mjesto</label>
+              <input
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                value={profForm.title}
+                onChange={(e) => setProfForm({ ...profForm, title: e.target.value })}
+                maxLength={60}
+              />
             </div>
-          )}
-          <button
-            onClick={changePin}
-            className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800"
-          >
-            Sačuvaj PIN
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={saveProfile}
+              className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800"
+            >
+              Sačuvaj profil
+            </button>
+          </div>
 
-      {/* Admin: upravljanje korisnicima */}
-      {session.role === "admin" && (
-        <div className="mt-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {/* PIN */}
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-200">Promjena PIN-a</h2>
+            {["old", "new1", "new2"].map((f, i) => (
+              <div key={f}>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                  {i === 0 ? "Trenutni PIN" : i === 1 ? "Novi PIN (4 cifre)" : "Potvrdi novi PIN"}
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  value={pinForm[f as "old" | "new1" | "new2"]}
+                  onChange={(e) => setPinForm({ ...pinForm, [f]: e.target.value })}
+                  placeholder="••••"
+                />
+              </div>
+            ))}
+            {pinMsg && (
+              <div className={`text-sm ${pinMsg.includes("✓") ? "text-green-600" : "text-red-600"}`}>
+                {pinMsg}
+              </div>
+            )}
+            <button
+              onClick={changePin}
+              className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800"
+            >
+              Sačuvaj PIN
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: Korisnici ──────────────────────────────────────── */}
+      {tab === "korisnici" && isAdmin && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-between">
             <span className="font-semibold text-gray-700 dark:text-gray-200">
               Korisnici <span className="text-xs font-normal text-gray-500 dark:text-gray-400">— upravljanje projektantima</span>
@@ -308,19 +377,18 @@ export default function PostavkePage() {
           )}
 
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[500px]">
-            <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-              <tr>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
-                <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnja prijava</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {korisnici.filter((k) => !k.arhiviran).map((k) => {
-                return (
+            <table className="w-full text-sm min-w-[500px]">
+              <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
+                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
+                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
+                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnja prijava</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {korisnici.filter((k) => !k.arhiviran).map((k) => (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
@@ -361,10 +429,9 @@ export default function PostavkePage() {
                       )}
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
           </div>
           {korisnici.some((k) => k.arhiviran) && (
             <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3">
@@ -387,6 +454,73 @@ export default function PostavkePage() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
+      {tab === "unosi" && canSeeUnosi && (
+        <div>
+          {loadingUnosi ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Učitavam unose…</div>
+          ) : unosiPoSedmica.length === 0 ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Nema unosa.</div>
+          ) : (
+            <div className="space-y-4">
+              {unosiPoSedmica.map(([datum, unosi]) => (
+                <div
+                  key={datum}
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
+                >
+                  {/* Day header */}
+                  <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      {fmtDan(datum)}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      {unosi.length} {unosi.length === 1 ? "unos" : unosi.length < 5 ? "unosa" : "unosa"}
+                    </span>
+                  </div>
+
+                  {/* Entries */}
+                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                    {unosi.map((u) => {
+                      const vs = vrstaStyle(u.vrsta);
+                      return (
+                        <div key={u.id} className="px-4 py-3 flex items-center gap-3 flex-wrap">
+                          {/* Korisnik */}
+                          <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[60px]">
+                            {u.korisnik?.ime ?? u.inzinjerId.slice(0, 6)}
+                          </span>
+
+                          {/* Vrsta badge */}
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${vs.badge}`}>
+                            {vs.short}
+                          </span>
+
+                          {/* Odjel */}
+                          <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 min-w-[80px]">
+                            {u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : "–"}
+                          </span>
+
+                          {/* Količina */}
+                          <span className="text-sm tabular-nums text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {kolicina(u)}
+                          </span>
+
+                          {/* Napomena */}
+                          {u.napomena && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate max-w-[200px]" title={u.napomena}>
+                              {u.napomena}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
