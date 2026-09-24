@@ -96,7 +96,7 @@ export default function StatistikaPage() {
       </div>
 
       {/* Main tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
+      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit max-w-full overflow-x-auto">
         {([
           ["prisutnost",  "📅 Prisutnost"],
           ["ucanak",      "🌲 Učinak"],

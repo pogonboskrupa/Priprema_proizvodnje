@@ -1,4 +1,5 @@
 import type { Odjel, UnosRada } from "@/lib/types";
+import { cmpOdjel } from "@/lib/format";
 
 export function recentOdjelIdsByInzinjer(unosi: UnosRada[]): Map<string, string[]> {
   const result = new Map<string, string[]>();
@@ -16,7 +17,6 @@ export function recentOdjelIdsByInzinjer(unosi: UnosRada[]): Map<string, string[
   return result;
 }
 
-const byGjBroj = (a: Odjel, b: Odjel) => (a.gj + a.broj).localeCompare(b.gj + b.broj);
 
 export function splitOdjeliByRecent(
   odjeli: Odjel[],
@@ -25,6 +25,6 @@ export function splitOdjeliByRecent(
   const byId = new Map(odjeli.map((o) => [o.id, o]));
   const recent = recentIds.flatMap((id) => byId.get(id) ?? []);
   const recentSet = new Set(recent.map((o) => o.id));
-  const rest = odjeli.filter((o) => !recentSet.has(o.id)).sort(byGjBroj);
+  const rest = odjeli.filter((o) => !recentSet.has(o.id)).sort(cmpOdjel);
   return { recent, rest };
 }

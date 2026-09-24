@@ -2,6 +2,7 @@
 import type { Odjel } from "@/lib/types";
 import { NO_ODJEL_VRSTE, type UnosEditForm as Form } from "@/lib/unos-edit";
 import { VRSTA, VRSTE } from "@/lib/vrste";
+import { cmpOdjel } from "@/lib/format";
 
 export const inputSmCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500";
 export const labelSmCls = "block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5";
@@ -17,7 +18,7 @@ export function UnosEditForm({
   onSubmit: () => void;
   onCancel: () => void;
 }) {
-  const sortedOdjeli = [...odjeli].sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
+  const sortedOdjeli = [...odjeli].sort(cmpOdjel);
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-3">

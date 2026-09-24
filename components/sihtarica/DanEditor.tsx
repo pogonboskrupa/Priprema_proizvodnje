@@ -4,7 +4,7 @@ import type { Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type UnosEditPayload } from "@/lib/unos-edit";
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
-import { jeKonflikt, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
+import { zabranaUpisa, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
 
@@ -52,18 +52,7 @@ export function DanEditor({
     return ok;
   }
 
-  // null = dozvoljeno; inače poruka zašto nije
-  function zabrana(v: VrstaRada): string | null {
-    // doznaka/vlaka mogu biti u više odjela istog dana
-    if (upisaneVrste.has(v) && !UCINAK.includes(v)) return `${VRSTA[v].label} je već upisan za ovaj dan.`;
-    if (v === "GODISNJI" && dan.neradni) return "Godišnji se ne upisuje za vikend ni praznik — ti dani se ne troše iz godišnjeg.";
-    if (jeKonflikt([...dan.unosi, { vrsta: v }])) {
-      return v === "GODISNJI" || v === "BOLOVANJE"
-        ? `${VRSTA[v].label} je za cijeli dan — ovaj dan već ima drugu aktivnost.`
-        : "Za ovaj dan je upisan godišnji ili bolovanje.";
-    }
-    return null;
-  }
+  const zabrana = (v: VrstaRada) => zabranaUpisa(dan.datum, dan.unosi, v);
 
   async function brziUpis(v: VrstaRada) {
     const z = zabrana(v);

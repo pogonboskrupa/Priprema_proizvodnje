@@ -7,6 +7,7 @@ import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
+import { localDateStr } from "@/lib/format";
 
 type Tab = "profil" | "korisnici" | "unosi";
 
@@ -30,6 +31,15 @@ function fmtLastLogin(iso: string | undefined): string {
   if (diffD === 1) return `Jučer ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
   if (diffD < 7) return `${diffD} dana ago`;
   return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+const ZADNJI_DANA = 30;
+
+function fmtUnijeto(iso: string | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 function kolicina(u: UnosRada): string {
@@ -76,22 +86,32 @@ export default function PostavkePage() {
 
   useEffect(() => {
     if (tab !== "unosi" || !canSeeUnosi) return;
+    let cancelled = false;
     setLoadingUnosi(true);
-    getUnosi().then((u) => {
-      setZadnjiUnosi(u);
-    }).finally(() => setLoadingUnosi(false));
+    const od = new Date();
+    od.setDate(od.getDate() - ZADNJI_DANA);
+    const odStr = localDateStr(od);
+    getUnosi()
+      .then((u) => { if (!cancelled) setZadnjiUnosi(u.filter((x) => x.datum.slice(0, 10) >= odStr)); })
+      .catch(() => { if (!cancelled) toast("Greška pri učitavanju unosa."); })
+      .finally(() => { if (!cancelled) setLoadingUnosi(false); });
+    return () => { cancelled = true; };
   }, [tab]);
 
   async function loadMe(id: string) {
-    const k = await getKorisnik(id);
+    // offline bez keširanog profila getKorisnik baca — forma tada ostaje prazna, stranica radi
+    const k = await getKorisnik(id).catch(() => null);
     if (!k) return;
     setMe(k);
     setProfForm({ fullName: k.fullName || "", title: k.title || "" });
   }
 
   async function loadKorisnici() {
-    const k = await getKorisnici({ ukljuciArhivirane: true });
-    setKorisnici(k);
+    try {
+      setKorisnici(await getKorisnici({ ukljuciArhivirane: true }));
+    } catch {
+      toast("Greška pri učitavanju korisnika. Provjeri internet.");
+    }
   }
 
   async function guarded(action: () => Promise<void>) {
@@ -181,14 +201,14 @@ export default function PostavkePage() {
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
-  // Group unosi by datum for display
-  const unosiPoSedmica = useMemo(() => {
+  const unosiPoDanu = useMemo(() => {
     const grouped = new Map<string, UnosRada[]>();
     for (const u of zadnjiUnosi) {
       const d = u.datum.slice(0, 10);
       if (!grouped.has(d)) grouped.set(d, []);
       grouped.get(d)!.push(u);
     }
+    for (const list of grouped.values()) list.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
     return [...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [zadnjiUnosi]);
 
@@ -464,11 +484,11 @@ export default function PostavkePage() {
         <div>
           {loadingUnosi ? (
             <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Učitavam unose…</div>
-          ) : unosiPoSedmica.length === 0 ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Nema unosa.</div>
+          ) : unosiPoDanu.length === 0 ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Nema unosa u zadnjih {ZADNJI_DANA} dana.</div>
           ) : (
             <div className="space-y-4">
-              {unosiPoSedmica.map(([datum, unosi]) => (
+              {unosiPoDanu.map(([datum, unosi]) => (
                 <div
                   key={datum}
                   className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
@@ -479,7 +499,7 @@ export default function PostavkePage() {
                       {fmtDan(datum)}
                     </span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">
-                      {unosi.length} {unosi.length === 1 ? "unos" : unosi.length < 5 ? "unosa" : "unosa"}
+                      {unosi.length} {unosi.length % 10 === 1 && unosi.length % 100 !== 11 ? "unos" : "unosa"}
                     </span>
                   </div>
 
@@ -515,6 +535,11 @@ export default function PostavkePage() {
                               {u.napomena}
                             </span>
                           )}
+
+                          <span className="basis-full sm:basis-auto sm:ml-auto text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                            {u.creator && u.creator.id !== u.inzinjerId ? `unio ${u.creator.ime} · ` : ""}
+                            {fmtUnijeto(u.createdAt)}
+                          </span>
                         </div>
                       );
                     })}

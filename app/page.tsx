@@ -3,14 +3,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjeriByKorisnikId, getMjesecniRezimePoOdjelima, type OdjelMjesecRezime } from "@/lib/db";
+import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjeriByKorisnikId, getMjesecniRezimePoOdjelima, type OdjelMjesecRezime, type MjesecniRezime } from "@/lib/db";
 import { mesecLabel } from "@/lib/format";
 import { vrsta } from "@/lib/vrste";
 
-type Rezime = {
-  ha: number; stabala: number; km: number;
-  godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number;
-};
+type Rezime = MjesecniRezime;
 
 export default function Home() {
   const { session, loading } = useAuth();
@@ -27,7 +24,7 @@ export default function Home() {
   useEffect(() => {
     if (!session) return;
     if (!isWorker) {
-      getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
+      getMjesecniRezime().then(setRezime).catch(() => {});
       getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
     } else {
       // unosi.inzinjerId = korisnik.id; legacy unosi mogu imati inzinjer.id
@@ -35,7 +32,7 @@ export default function Home() {
         .catch(() => [])
         .then((inz) => {
           const ids = [session.userId, ...inz.map((i) => i.id)];
-          getMjesecniRezimeMoj(ids).then((r) => setMyRezime(r as Rezime)).catch(() => {});
+          getMjesecniRezimeMoj(ids).then(setMyRezime).catch(() => {});
           getMjesecniRezimePoOdjelima(ids).then(setOdjeliRezime).catch(() => {});
         });
     }
@@ -47,7 +44,7 @@ export default function Home() {
 
   const displayRezime = isWorker ? myRezime : rezime;
   const odsustva = displayRezime ? (displayRezime.godisnji + displayRezime.bolovanje) : 0;
-  const radniDani = displayRezime ? (displayRezime.teren + displayRezime.kancelarija) : 0;
+  const radniDani = displayRezime?.radniDani ?? 0;
   const statsLabel = isWorker ? "Moj učinak" : "Svi projektanti";
 
   return (

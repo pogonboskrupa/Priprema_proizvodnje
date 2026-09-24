@@ -1,6 +1,7 @@
 import type { UnosRada, VrstaRada } from "@/lib/types";
 import { localDateStr } from "@/lib/format";
-import { praznik } from "@/lib/praznici";
+import { praznik, jeRadniDan } from "@/lib/praznici";
+import { VRSTA } from "@/lib/vrste";
 
 // Odsustvo isključuje rad istog dana; oba zajedno su greška u unosu
 const ODSUSTVO: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE"]);
@@ -63,6 +64,24 @@ export function jeKonflikt(unosi: readonly { vrsta: VrstaRada }[]): boolean {
   return odsustva > 0 && vrste.size > 1;
 }
 
+/**
+ * Pravila upisa zajednička za Šihtaricu, Unos rada i Unos učinka.
+ * null = dozvoljeno; inače poruka zašto nije.
+ */
+export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRada }[], vrsta: VrstaRada): string | null {
+  const label = VRSTA[vrsta].label;
+  // doznaka/vlaka mogu biti u više odjela istog dana
+  const visestruko = vrsta === "DOZNAKA" || vrsta === "VLAKA";
+  if (!visestruko && postojeci.some((u) => u.vrsta === vrsta)) return `${label} je već upisan za ovaj dan.`;
+  if (vrsta === "GODISNJI" && !jeRadniDan(datum)) return "Godišnji se ne upisuje za vikend ni praznik — ti dani se ne troše iz godišnjeg.";
+  if (jeKonflikt([...postojeci, { vrsta }])) {
+    return ODSUSTVO.has(vrsta)
+      ? `${label} je za cijeli dan — ovaj dan već ima drugu aktivnost.`
+      : "Za ovaj dan je upisan godišnji ili bolovanje.";
+  }
+  return null;
+}
+
 export interface SihtaricaRezime {
   radnihDana: number;
   popunjeno: number;
@@ -103,10 +122,9 @@ export function datumiZaPopunu(
 ): string[] {
   return dani
     .filter((d) => d.datum >= od && d.datum <= do_ && !d.buduci && !d.zakljucan)
-    // godišnji se nikad ne troši na vikend/praznik
-    .filter((d) => !((opts.preskociNeradne || opts.vrsta === "GODISNJI") && d.neradni))
-    .filter((d) => (opts.samoPrazne ? d.unosi.length === 0 : !d.unosi.some((u) => u.vrsta === opts.vrsta)))
-    .filter((d) => !jeKonflikt([...d.unosi, { vrsta: opts.vrsta }]))
+    .filter((d) => !(opts.preskociNeradne && d.neradni))
+    .filter((d) => !(opts.samoPrazne && d.unosi.length > 0))
+    .filter((d) => !zabranaUpisa(d.datum, d.unosi, opts.vrsta))
     .map((d) => d.datum);
 }
 

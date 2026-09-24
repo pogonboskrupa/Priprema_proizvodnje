@@ -20,7 +20,7 @@ import {
   arrayRemove,
 } from './firebase';
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
-import { localDateStr } from './format';
+import { localDateStr, cmpOdjel } from './format';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -143,7 +143,7 @@ export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: 
         },
       }),
     }))
-    .sort((a, b) => String(a.broj).localeCompare(String(b.broj)));
+    .sort(cmpOdjel);
 }
 
 export async function createOdjel(data: {
@@ -364,65 +364,49 @@ export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
 
 // ── Rezime (početna stranica) ─────────────────────────────────────────────────
 
-export async function getMjesecniRezime() {
+export interface MjesecniRezime {
+  ha: number; stabala: number; km: number;
+  /** Dani (projektant × dan), ne broj unosa — dva unosa istog dana su jedan dan */
+  godisnji: number; kancelarija: number; bolovanje: number; teren: number;
+  /** Dani na poslu: teren, kancelarija, doznaka ili vlaka */
+  radniDani: number;
+  ukupno: number;
+}
+
+function rezimeIzUnosa(unosi: Record<string, unknown>[]): MjesecniRezime {
+  const r: MjesecniRezime = { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, radniDani: 0, ukupno: unosi.length };
+  const vrstaDani = new Set<string>();
+  const radni = new Set<string>();
+  const brojac = { GODISNJI: 'godisnji', KANCELARIJA: 'kancelarija', BOLOVANJE: 'bolovanje', TEREN: 'teren' } as const;
+  for (const u of unosi) {
+    const vrsta = u.vrsta as string;
+    const dan = `${u.inzinjerId}|${(u.datum as string).slice(0, 10)}`;
+    if (vrsta === 'DOZNAKA') { r.ha += Number(u.hektari) || 0; r.stabala += Number(u.brojStabala) || 0; }
+    else if (vrsta === 'VLAKA') r.km += Number(u.kilometri) || 0;
+    const key = brojac[vrsta as keyof typeof brojac];
+    if (key && !vrstaDani.has(`${dan}|${vrsta}`)) { vrstaDani.add(`${dan}|${vrsta}`); r[key]++; }
+    if (vrsta !== 'GODISNJI' && vrsta !== 'BOLOVANJE') radni.add(dan);
+  }
+  r.radniDani = radni.size;
+  return r;
+}
+
+function tekuciMjesecRaspon() {
   const now = new Date();
   const od = new Date(now.getFullYear(), now.getMonth(), 1);
-  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  do_.setHours(23, 59, 59, 999);
+  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  return [where('datum', '>=', Timestamp.fromDate(od)), where('datum', '<=', Timestamp.fromDate(do_))];
+}
 
-  const unosi = await queryUnosi( [
-    where('datum', '>=', Timestamp.fromDate(od)),
-    where('datum', '<=', Timestamp.fromDate(do_)),
-  ]);
-
-  return unosi.reduce(
-    (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number }, u) => {
-      const vrsta = u.vrsta as string;
-      if (vrsta === 'DOZNAKA') {
-        acc.ha += Number(u.hektari) || 0;
-        acc.stabala += Number(u.brojStabala) || 0;
-      } else if (vrsta === 'VLAKA') {
-        acc.km += Number(u.kilometri) || 0;
-      } else if (vrsta === 'GODISNJI') acc.godisnji++;
-      else if (vrsta === 'KANCELARIJA') acc.kancelarija++;
-      else if (vrsta === 'BOLOVANJE') acc.bolovanje++;
-      else if (vrsta === 'TEREN') acc.teren++;
-      acc.ukupno++;
-      return acc;
-    },
-    { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, ukupno: 0 }
-  );
+export async function getMjesecniRezime(): Promise<MjesecniRezime> {
+  return rezimeIzUnosa(await queryUnosi(tekuciMjesecRaspon()));
 }
 
 // ids: korisnik.id + legacy inzinjer.id-evi (stariji unosi su vezani za inzinjeri kolekciju)
-export async function getMjesecniRezimeMoj(ids: readonly string[]) {
+export async function getMjesecniRezimeMoj(ids: readonly string[]): Promise<MjesecniRezime> {
   const idSet = new Set(ids);
-  const now = new Date();
-  const od = new Date(now.getFullYear(), now.getMonth(), 1);
-  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  do_.setHours(23, 59, 59, 999);
-
-  const unosi = await queryUnosi( [
-    where('datum', '>=', Timestamp.fromDate(od)),
-    where('datum', '<=', Timestamp.fromDate(do_)),
-  ]);
-
-  return unosi
-    .filter((u) => idSet.has(u.inzinjerId as string))
-    .reduce(
-      (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number }, u) => {
-        const vrsta = u.vrsta as string;
-        if (vrsta === 'DOZNAKA') { acc.ha += Number(u.hektari) || 0; acc.stabala += Number(u.brojStabala) || 0; }
-        else if (vrsta === 'VLAKA') acc.km += Number(u.kilometri) || 0;
-        else if (vrsta === 'GODISNJI') acc.godisnji++;
-        else if (vrsta === 'KANCELARIJA') acc.kancelarija++;
-        else if (vrsta === 'BOLOVANJE') acc.bolovanje++;
-        else if (vrsta === 'TEREN') acc.teren++;
-        acc.ukupno++;
-        return acc;
-      },
-      { ha: 0, stabala: 0, km: 0, godisnji: 0, kancelarija: 0, bolovanje: 0, teren: 0, ukupno: 0 }
-    );
+  const unosi = await queryUnosi(tekuciMjesecRaspon());
+  return rezimeIzUnosa(unosi.filter((u) => idSet.has(u.inzinjerId as string)));
 }
 
 export async function getUnosiZaMjesec(year: number, month: number): Promise<UnosRada[]> {
@@ -478,9 +462,7 @@ export async function getMojiOdjeliData(): Promise<{
   korisnici: Korisnik[];
 }> {
   const [odjeliRaw, korisnaciRaw] = await Promise.all([getAll('odjeli'), getAll('users')]);
-  const odjeli = (odjeliRaw as unknown as Odjel[]).sort((a, b) =>
-    String(a.broj).localeCompare(String(b.broj))
-  );
+  const odjeli = (odjeliRaw as unknown as Odjel[]).sort(cmpOdjel);
   return { odjeli, korisnici: korisnaciRaw as unknown as Korisnik[] };
 }
 
@@ -642,7 +624,7 @@ export async function getIzvjestaj(
 
     const data = odjeliRaw
       .filter((o) => !!grouped[o.id as string])  // samo odjeli s aktivnošću u periodu
-      .sort((a, b) => String(a.gj).localeCompare(String(b.gj)) || String(a.broj).localeCompare(String(b.broj), undefined, { numeric: true }))
+      .sort(cmpOdjel)
       .map((o) => {
         const g = grouped[o.id as string];
         const povrsina = Number(o.povrsina) || 0;
@@ -808,7 +790,7 @@ export async function getMjesecniRezimePoOdjelima(ids?: readonly string[]): Prom
         vrste: [...a.vrste],
       };
     })
-    .sort((a, b) => a.gj.localeCompare(b.gj) || a.broj.localeCompare(b.broj, undefined, { numeric: true }));
+    .sort(cmpOdjel);
 }
 
 // ── Statistika ────────────────────────────────────────────────────────────────
@@ -956,7 +938,7 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
         projektanti,
       };
     })
-    .sort((a, b) => a.gj.localeCompare(b.gj) || a.broj.localeCompare(b.broj, undefined, { numeric: true }));
+    .sort(cmpOdjel);
 }
 
 export interface UporedbaRed {

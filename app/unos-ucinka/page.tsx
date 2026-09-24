@@ -9,6 +9,7 @@ import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
+import { zabranaUpisa } from "@/lib/sihtarica";
 import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
@@ -282,6 +283,12 @@ export default function UnosUcinkaPage() {
     showsNewRow(k.id) && isPendingReady(pendingRows[k.id])
   ).length;
 
+  function zabranaZa(korisnikId: string, p: PendingRow): string | null {
+    const parsed = pendingToPayload(p);
+    if (!parsed.ok) return parsed.error;
+    return zabranaUpisa(datum, unosi.filter((u) => u.inzinjerId === korisnikId), parsed.data.vrsta);
+  }
+
   async function createFromPending(korisnikId: string, p: PendingRow) {
     const parsed = pendingToPayload(p);
     if (!parsed.ok) throw new Error(parsed.error);
@@ -306,6 +313,8 @@ export default function UnosUcinkaPage() {
   async function savePendingRow(korisnikId: string) {
     const p = pendingRows[korisnikId];
     if (!isPendingReady(p)) return;
+    const z = zabranaZa(korisnikId, p);
+    if (z) { showMsg(z); return; }
     setSavingRow(korisnikId);
     try {
       await createFromPending(korisnikId, p);
@@ -329,10 +338,16 @@ export default function UnosUcinkaPage() {
   }
 
   async function saveAllReady() {
-    const ready = korisnici.filter((k) =>
+    const kandidati = korisnici.filter((k) =>
       showsNewRow(k.id) && isPendingReady(pendingRows[k.id])
     );
-    if (!ready.length) return;
+    // redove koji krše pravila preskoči i ostavi popunjene da se isprave
+    const odbijeni = kandidati.filter((k) => zabranaZa(k.id, pendingRows[k.id]));
+    const ready = kandidati.filter((k) => !odbijeni.includes(k));
+    if (!ready.length) {
+      if (odbijeni.length) showMsg(`${displayKorisnik(odbijeni[0])}: ${zabranaZa(odbijeni[0].id, pendingRows[odbijeni[0].id])}`);
+      return;
+    }
     setBatchSaving(true);
     try {
       await Promise.all(ready.map((k) => createFromPending(k.id, pendingRows[k.id])));
@@ -340,16 +355,18 @@ export default function UnosUcinkaPage() {
       setUnosi(fresh);
       setExtraRows(new Set());
       // Reset saved rows to auto-populate
-      setPendingRows(() => {
+      setPendingRows((prev) => {
         const auto: Record<string, PendingRow> = {};
         korisnici.forEach((k) => {
-          if (k.odjeliIds?.length === 1) {
+          if (odbijeni.includes(k)) auto[k.id] = prev[k.id];
+          else if (k.odjeliIds?.length === 1) {
             auto[k.id] = { ...emptyPending(), odjelId: k.odjeliIds[0] };
           }
         });
         return auto;
       });
-      showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓${isOffline() ? " (offline — poslaće se kad bude signala)" : ""}`);
+      showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓${isOffline() ? " (offline — poslaće se kad bude signala)" : ""}`
+        + (odbijeni.length ? ` · ${odbijeni.length} nije sačuvano: ${displayKorisnik(odbijeni[0])} — ${zabranaZa(odbijeni[0].id, pendingRows[odbijeni[0].id])}` : ""));
     } catch {
       showMsg("Greška: dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.");
       setUnosi(await getUnosiZaDan(datum).catch(() => unosi));

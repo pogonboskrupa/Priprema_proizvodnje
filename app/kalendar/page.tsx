@@ -268,11 +268,15 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!session) return;
+    // brzo listanje mjeseci: kasni odgovor za raniji mjesec ne smije pregaziti tekući
+    let cancelled = false;
     setLoading(true);
     setEditId(null);
     getUnosiZaMjesec(year, month)
-      .then(setUnosi)
-      .finally(() => setLoading(false));
+      .then((u) => { if (!cancelled) setUnosi(u); })
+      .catch(() => { if (!cancelled) setUnosi([]); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [session, year, month]);
 
   useEffect(() => {
@@ -319,7 +323,10 @@ export default function KalendarPage() {
     else setMonth((m) => m - 1);
     setSelectedDay(null);
   }
+  const naTekucem = year === now.getFullYear() && month === now.getMonth() + 1;
+
   function nextMonth() {
+    if (naTekucem) return;
     if (month === 12) { setYear((y) => y + 1); setMonth(1); }
     else setMonth((m) => m + 1);
     setSelectedDay(null);
@@ -409,7 +416,7 @@ export default function KalendarPage() {
         <div className="flex items-center gap-1">
           <button onClick={prevMonth} disabled={jePrviMjesecEvidencije(year, month)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 capitalize px-3 min-w-[130px] text-center">{monthLabel}</span>
-          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">›</button>
+          <button onClick={nextMonth} disabled={naTekucem} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">›</button>
         </div>
       </div>
 

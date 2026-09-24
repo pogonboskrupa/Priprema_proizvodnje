@@ -59,3 +59,9 @@ export function fmtDateLong(dateStr: string): string {
   const weekday = DAYS_BS[new Date(y, m - 1, d).getDay()];
   return `${weekday}, ${d}. ${MONTHS_BS[m - 1]}`;
 }
+
+/** Sortiranje odjela: GJ pa broj numerički ("2" prije "10") */
+export function cmpOdjel(a: { gj?: unknown; broj?: unknown }, b: { gj?: unknown; broj?: unknown }): number {
+  return String(a.gj).localeCompare(String(b.gj), "bs", { numeric: true })
+    || String(a.broj).localeCompare(String(b.broj), "bs", { numeric: true });
+}

@@ -11,6 +11,8 @@ import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { EVIDENCIJA_OD_DATUM, mjeseciEvidencije } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
+import { praznik, jeRadniDan } from "@/lib/praznici";
+import { zabranaUpisa } from "@/lib/sihtarica";
 
 const today = () => localDateStr();
 
@@ -64,14 +66,17 @@ export default function UnosPage() {
     const end = parseLocalDate(do_);
     const cur = parseLocalDate(od);
     while (cur <= end) {
-      if (cur.getDay() !== 0) days.push(localDateStr(cur));
+      const ds = localDateStr(cur);
+      if (cur.getDay() !== 0 && !praznik(ds)) days.push(ds);
       cur.setDate(cur.getDate() + 1);
     }
     return days;
   }
 
   const multiDayDates =
-    multiDay && datumDo && datumDo >= form.datum ? getWorkDays(form.datum, datumDo) : [];
+    multiDay && datumDo && datumDo >= form.datum
+      ? getWorkDays(form.datum, datumDo).filter((d) => form.vrsta !== "GODISNJI" || jeRadniDan(d))
+      : [];
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -114,6 +119,18 @@ export default function UnosPage() {
       setMsg("Greška: neispravan broj (npr. 12,5 ha ili 1234 stabala).");
       return;
     }
+    // ista pravila kao Šihtarica: GO samo radnim danom, bez miješanja odsustva i rada istog dana
+    const inzId = isWorker ? session!.userId : form.inzinjerId;
+    const kandidati = multiDay && multiDayDates.length > 0 ? multiDayDates : [form.datum];
+    const postojeci = (d: string) => unosi.filter((u) => u.inzinjerId === inzId && u.datum.slice(0, 10) === d);
+    const dates = kandidati.filter((d) => !zabranaUpisa(d, postojeci(d), form.vrsta));
+    if (!dates.length) {
+      const razlog = zabranaUpisa(kandidati[0], postojeci(kandidati[0]), form.vrsta);
+      setMsg(`Greška: ${razlog ?? "nijedan dan se ne može upisati."}`);
+      return;
+    }
+    const preskoceno = kandidati.length - dates.length;
+
     setLoading(true);
     setMsg("");
     try {
@@ -128,9 +145,9 @@ export default function UnosPage() {
         createdById: session!.userId,
         createdByRole: session!.role,
       };
-      const dates = multiDay && multiDayDates.length > 0 ? multiDayDates : [form.datum];
       await Promise.all(dates.map((datum) => createUnos({ ...base, datum })));
-      const saved = dates.length > 1 ? `Sačuvano ${dates.length} unosa!` : "Unos je sačuvan!";
+      const saved = (dates.length > 1 ? `Sačuvano ${dates.length} unosa!` : "Unos je sačuvan!")
+        + (preskoceno ? ` Preskočeno ${preskoceno} (već upisano ili neradni dan).` : "");
       setMsg(isOffline() ? `${saved} (offline — poslaće se kad bude signala)` : saved);
       setForm((f) => ({
         ...f,
@@ -195,8 +212,8 @@ export default function UnosPage() {
     const rows = filteredUnosi.map((u) => ({
       Datum: fmtDate(u.datum),
       Projektant: displayProjectant(u),
-      Odjel: u.odjel?.broj ?? "",
-      Vrsta: u.vrsta,
+      Odjel: u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : "",
+      Vrsta: VRSTA[u.vrsta]?.label ?? u.vrsta,
       "Hektari (ha)": u.hektari ?? "",
       Stabala: u.brojStabala ?? "",
       "Vlake (km)": u.kilometri ?? "",
@@ -228,6 +245,7 @@ export default function UnosPage() {
                 className={inputCls}
                 value={form.datum}
                 min={EVIDENCIJA_OD_DATUM}
+                max={today()}
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
               />
@@ -265,12 +283,13 @@ export default function UnosPage() {
                       className={inputCls}
                       value={datumDo}
                       min={form.datum}
+                      max={today()}
                       onChange={(e) => setDatumDo(e.target.value)}
                     />
                   </div>
                   {multiDayDates.length > 0 && (
                     <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 text-xs text-blue-700 dark:text-blue-300">
-                      Kreiraće se <strong>{multiDayDates.length}</strong> unosa (nedjelje preskočene)
+                      Kreiraće se do <strong>{multiDayDates.length}</strong> unosa (nedjelje i praznici preskočeni{form.vrsta === "GODISNJI" ? ", za godišnji i subote" : ""})
                     </div>
                   )}
                 </div>

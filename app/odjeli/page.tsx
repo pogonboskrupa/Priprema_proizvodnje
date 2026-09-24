@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { parseDecimal } from "@/lib/format";
+import { parseDecimal, cmpOdjel } from "@/lib/format";
 
 type BulkRow = { broj: string; povrsina: string };
 
@@ -82,6 +82,13 @@ export default function OdjeliPage() {
   const odjeli = sviOdjeli.filter((o) => !o.arhiviran);
   const arhivirani = sviOdjeli.filter((o) => o.arhiviran);
 
+  // isti odjel dva puta bi raspolovio unose i izvještaje; arhiva se računa (može se vratiti)
+  const kljuc = (gj: string, broj: string) => `${gj.trim().toUpperCase()}|${broj.trim().toUpperCase()}`;
+  function duplikatPoruka(gj: string, broj: string, exceptId?: string | null): string | null {
+    const d = sviOdjeli.find((o) => o.id !== exceptId && kljuc(o.gj, o.broj) === kljuc(gj, broj));
+    return d ? `Odjel ${d.gj} / ${d.broj} već postoji${d.arhiviran ? " (u arhivi — vrati ga iz arhive)" : ""}.` : null;
+  }
+
   function validPovrsina(raw: string): number | null {
     const n = parseDecimal(raw);
     if (n === null || Number.isNaN(n)) { setErr("Neispravna površina (npr. 12,5)."); return null; }
@@ -94,6 +101,8 @@ export default function OdjeliPage() {
     e.preventDefault();
     const povrsina = validPovrsina(form.povrsina);
     if (povrsina === null) return;
+    const dup = duplikatPoruka(form.gj, form.broj, editId);
+    if (dup) { setErr(dup); return; }
     setLoading(true);
     try {
       const data = { gj: form.gj.trim(), broj: form.broj.trim(), povrsina };
@@ -118,6 +127,14 @@ export default function OdjeliPage() {
     const parsed = valid.map((r) => ({ broj: r.broj.trim(), povrsina: parseDecimal(r.povrsina) }));
     const bad = parsed.find((r) => r.povrsina === null || Number.isNaN(r.povrsina));
     if (bad) { setErr(`Neispravna površina za odjel ${bad.broj}.`); return; }
+    const uListi = new Set<string>();
+    for (const r of parsed) {
+      const k = kljuc(bulkGj, r.broj);
+      if (uListi.has(k)) { setErr(`Odjel ${r.broj} je dva puta u listi.`); return; }
+      uListi.add(k);
+      const dup = duplikatPoruka(bulkGj, r.broj);
+      if (dup) { setErr(dup); return; }
+    }
     setErr("");
     setLoading(true);
     try {
@@ -161,6 +178,8 @@ export default function OdjeliPage() {
     if (!editId) return;
     const povrsina = validPovrsina(form.povrsina);
     if (povrsina === null) return;
+    const dup = duplikatPoruka(form.gj, form.broj, editId);
+    if (dup) { setErr(dup); return; }
     setLoading(true);
     try {
       await updateOdjel(editId, { gj: form.gj.trim(), broj: form.broj.trim(), povrsina });
@@ -536,7 +555,7 @@ export default function OdjeliPage() {
           {showArhiva && (
             <div className="mt-2 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
               {arhivirani
-                .sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj))
+                .sort(cmpOdjel)
                 .map((o) => (
                   <div key={o.id} className="px-4 py-2.5 flex items-center gap-3 text-sm">
                     <span className="font-mono text-gray-500 dark:text-gray-400">{o.gj} / {o.broj}</span>
