@@ -719,3 +719,85 @@ export async function getMjesecniRezimePoOdjelima(inzinjerId?: string): Promise<
     })
     .sort((a, b) => a.gj.localeCompare(b.gj) || a.broj.localeCompare(b.broj, undefined, { numeric: true }));
 }
+
+// ── Statistika ────────────────────────────────────────────────────────────────
+
+export interface PrisutnostRow {
+  radnikId: string;
+  ime: string;
+  podaci: Record<number, { teren: number; kancelarija: number; godisnji: number; bolovanje: number }>;
+}
+
+export async function getStatistikaPrisutnosti(year: number): Promise<PrisutnostRow[]> {
+  const od = new Date(year, 0, 1);
+  const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const [unosiRaw, korisnaciRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('users'),
+  ]);
+
+  const acc: Record<string, Record<number, { teren: number; kancelarija: number; godisnji: number; bolovanje: number }>> = {};
+
+  for (const u of unosiRaw) {
+    const vrsta = u.vrsta as string;
+    if (!['TEREN', 'KANCELARIJA', 'GODISNJI', 'BOLOVANJE'].includes(vrsta)) continue;
+    const id = u.inzinjerId as string;
+    if (!id) continue;
+    const m = new Date((u.datum as string).slice(0, 10)).getMonth() + 1;
+    if (!acc[id]) acc[id] = {};
+    if (!acc[id][m]) acc[id][m] = { teren: 0, kancelarija: 0, godisnji: 0, bolovanje: 0 };
+    if (vrsta === 'TEREN') acc[id][m].teren++;
+    else if (vrsta === 'KANCELARIJA') acc[id][m].kancelarija++;
+    else if (vrsta === 'GODISNJI') acc[id][m].godisnji++;
+    else if (vrsta === 'BOLOVANJE') acc[id][m].bolovanje++;
+  }
+
+  const workers = (korisnaciRaw as unknown as Korisnik[])
+    .filter((k) => k.role === 'worker')
+    .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
+
+  return workers.map((k) => ({
+    radnikId: k.id,
+    ime: k.fullName || k.ime,
+    podaci: acc[k.id] || {},
+  }));
+}
+
+export interface UcinakMjesec {
+  mjesec: number;
+  ha: number;
+  stabala: number;
+  km: number;
+}
+
+export async function getStatistikaUcinka(year: number, inzinjerId?: string): Promise<UcinakMjesec[]> {
+  const od = new Date(year, 0, 1);
+  const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const unosiRaw = await queryCol('unosi', [
+    where('datum', '>=', Timestamp.fromDate(od)),
+    where('datum', '<=', Timestamp.fromDate(do_)),
+  ]);
+
+  const acc: Record<number, { ha: number; stabala: number; km: number }> = {};
+  for (let m = 1; m <= 12; m++) acc[m] = { ha: 0, stabala: 0, km: 0 };
+
+  for (const u of unosiRaw) {
+    if (inzinjerId && u.inzinjerId !== inzinjerId) continue;
+    const vrsta = u.vrsta as string;
+    if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
+    const m = new Date((u.datum as string).slice(0, 10)).getMonth() + 1;
+    if (vrsta === 'DOZNAKA') {
+      acc[m].ha += Number(u.hektari) || 0;
+      acc[m].stabala += Number(u.brojStabala) || 0;
+    } else {
+      acc[m].km += Number(u.kilometri) || 0;
+    }
+  }
+
+  return Array.from({ length: 12 }, (_, i) => ({ mjesec: i + 1, ...acc[i + 1] }));
+}

@@ -47,6 +47,7 @@ const adminLinks = [
   { href: "/plan-projektant", label: "Plan/projektant" },
   { href: "/realizacija", label: "Realizacija" },
   { href: "/elaborat", label: "Elaborat" },
+  { href: "/statistika", label: "Statistika" },
   { href: "/postavke", label: "Postavke" },
 ];
 
