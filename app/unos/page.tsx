@@ -6,16 +6,19 @@ import { useRouter } from "next/navigation";
 import type { Odjel, Korisnik, UnosRada, VrstaRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
-import { fmtDate, mesecLabel } from "@/lib/format";
+import { fmtDate, mesecLabel, localDateStr, parseDecimal, parseCount } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 
-const today = () => new Date().toISOString().split("T")[0];
+const today = () => localDateStr();
 
-function getDayOfWeek(dateStr: string): number {
+function parseLocalDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d).getDay();
+  return new Date(y, m - 1, d);
 }
-const currentMonth = () => new Date().toISOString().slice(0, 7);
+function getDayOfWeek(dateStr: string): number {
+  return parseLocalDate(dateStr).getDay();
+}
+const currentMonth = () => localDateStr().slice(0, 7);
 
 function getMonthOptions() {
   const opts: { val: string; label: string }[] = [];
@@ -65,10 +68,10 @@ export default function UnosPage() {
 
   function getWorkDays(od: string, do_: string): string[] {
     const days: string[] = [];
-    const end = new Date(do_);
-    const cur = new Date(od);
+    const end = parseLocalDate(do_);
+    const cur = parseLocalDate(od);
     while (cur <= end) {
-      if (cur.getDay() !== 0) days.push(cur.toISOString().split("T")[0]);
+      if (cur.getDay() !== 0) days.push(localDateStr(cur));
       cur.setDate(cur.getDate() + 1);
     }
     return days;
@@ -107,6 +110,13 @@ export default function UnosPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const brojStabala = form.vrsta === "DOZNAKA" ? parseCount(form.brojStabala) : null;
+    const hektari = form.vrsta === "DOZNAKA" ? parseDecimal(form.hektari) : null;
+    const kilometri = form.vrsta === "VLAKA" ? parseDecimal(form.kilometri) : null;
+    if ([brojStabala, hektari, kilometri].some((n) => Number.isNaN(n))) {
+      setMsg("Greška: neispravan broj (npr. 12,5 ha ili 1234 stabala).");
+      return;
+    }
     setLoading(true);
     setMsg("");
     try {
@@ -114,9 +124,9 @@ export default function UnosPage() {
         vrsta: form.vrsta,
         inzinjerId: form.inzinjerId,
         odjelId: form.odjelId,
-        brojStabala: form.brojStabala ? Number(form.brojStabala.replace(",", ".")) : undefined,
-        hektari: form.hektari ? Number(form.hektari.replace(",", ".")) : undefined,
-        kilometri: form.kilometri ? Number(form.kilometri.replace(",", ".")) : undefined,
+        brojStabala: brojStabala ?? undefined,
+        hektari: hektari ?? undefined,
+        kilometri: kilometri ?? undefined,
         napomena: form.napomena || undefined,
         createdById: session!.userId,
         createdByRole: session!.role,

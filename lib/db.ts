@@ -257,7 +257,7 @@ export async function deleteUnos(id: string): Promise<void> {
 export async function updateUnos(id: string, data: {
   vrsta?: string;
   inzinjerId?: string;
-  odjelId?: string;
+  odjelId?: string | null;
   brojStabala?: number | null;
   hektari?: number | null;
   kilometri?: number | null;
@@ -329,7 +329,9 @@ export async function getMjesecniRezime() {
   );
 }
 
-export async function getMjesecniRezimeMoj(inzinjerId: string) {
+// ids: korisnik.id + legacy inzinjer.id-evi (stariji unosi su vezani za inzinjeri kolekciju)
+export async function getMjesecniRezimeMoj(ids: readonly string[]) {
+  const idSet = new Set(ids);
   const now = new Date();
   const od = new Date(now.getFullYear(), now.getMonth(), 1);
   const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -341,7 +343,7 @@ export async function getMjesecniRezimeMoj(inzinjerId: string) {
   ]);
 
   return unosi
-    .filter((u) => u.inzinjerId === inzinjerId)
+    .filter((u) => idSet.has(u.inzinjerId as string))
     .reduce(
       (acc: { ha: number; stabala: number; km: number; godisnji: number; kancelarija: number; bolovanje: number; teren: number; ukupno: number }, u) => {
         const vrsta = u.vrsta as string;
@@ -676,7 +678,8 @@ export interface OdjelMjesecRezime {
   vrste: string[];
 }
 
-export async function getMjesecniRezimePoOdjelima(inzinjerId?: string): Promise<OdjelMjesecRezime[]> {
+export async function getMjesecniRezimePoOdjelima(ids?: readonly string[]): Promise<OdjelMjesecRezime[]> {
+  const idSet = ids ? new Set(ids) : null;
   const now = new Date();
   const od = new Date(now.getFullYear(), now.getMonth(), 1);
   const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -694,7 +697,7 @@ export async function getMjesecniRezimePoOdjelima(inzinjerId?: string): Promise<
   const acc: Record<string, { ha: number; stabala: number; km: number; vrste: Set<string> }> = {};
 
   for (const u of unosiRaw) {
-    if (inzinjerId && u.inzinjerId !== inzinjerId) continue;
+    if (idSet && !idSet.has(u.inzinjerId as string)) continue;
     const vrsta = u.vrsta as string;
     const odjelId = u.odjelId as string;
     if (!odjelId) continue;

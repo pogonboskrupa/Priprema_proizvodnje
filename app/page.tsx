@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjerByKorisnikId, getMjesecniRezimePoOdjelima, OdjelMjesecRezime } from "@/lib/db";
+import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjeriByKorisnikId, getMjesecniRezimePoOdjelima, type OdjelMjesecRezime } from "@/lib/db";
 import { mesecLabel } from "@/lib/format";
 
 type Rezime = {
@@ -29,14 +29,16 @@ export default function Home() {
       getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
       getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
     } else {
-      getInzinjerByKorisnikId(session.userId).then((inz) => {
-        if (inz) {
-          getMjesecniRezimeMoj(inz.id).then((r) => setMyRezime(r as Rezime)).catch(() => {});
-          getMjesecniRezimePoOdjelima(inz.id).then(setOdjeliRezime).catch(() => {});
-        }
-      });
+      // unosi.inzinjerId = korisnik.id; legacy unosi mogu imati inzinjer.id
+      getInzinjeriByKorisnikId(session.userId)
+        .catch(() => [])
+        .then((inz) => {
+          const ids = [session.userId, ...inz.map((i) => i.id)];
+          getMjesecniRezimeMoj(ids).then((r) => setMyRezime(r as Rezime)).catch(() => {});
+          getMjesecniRezimePoOdjelima(ids).then(setOdjeliRezime).catch(() => {});
+        });
     }
-  }, [session]);
+  }, [session, isWorker]);
 
   if (loading || !session) return null;
 

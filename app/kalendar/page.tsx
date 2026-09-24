@@ -4,8 +4,9 @@ import { getUnosiZaMjesec, getKorisnici, getOdjeli, updateUnos, deleteUnos } fro
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { UnosRada, Korisnik, Odjel, VrstaRada } from "@/lib/types";
-import { monthYearLabel, fmtDateLong } from "@/lib/format";
+import { monthYearLabel, fmtDateLong, localDateStr } from "@/lib/format";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm } from "@/lib/unos-edit";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
@@ -53,7 +54,6 @@ const VRSTA_BTN_ACTIVE: Record<string, string> = {
   KANCELARIJA: "bg-indigo-500 text-white border-indigo-500",
   BOLOVANJE: "bg-red-500 text-white border-red-500",
 };
-const NO_ODJEL_VRSTE = new Set<VrstaRada>(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"]);
 const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
 
 const inputSmCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500";
@@ -280,15 +280,7 @@ function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRow[]; monthLa
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type EditForm = {
-  vrsta: VrstaRada;
-  odjelId: string;
-  brojStabala: string;
-  hektari: string;
-  kilometri: string;
-  napomena: string;
-};
-const emptyEditForm = (): EditForm => ({
+const emptyEditForm = (): UnosEditForm => ({
   vrsta: "DOZNAKA", odjelId: "", brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
@@ -299,7 +291,7 @@ export default function KalendarPage() {
   const canEdit = !!(session?.role === "admin" || session?.operater);
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+  const todayStr = localDateStr(now);
 
   const [year, setYear]   = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -311,8 +303,9 @@ export default function KalendarPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const [editId, setEditId]       = useState<string | null>(null);
-  const [editForm, setEditForm]   = useState<EditForm>(emptyEditForm());
+  const [editForm, setEditForm]   = useState<UnosEditForm>(emptyEditForm());
   const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
   useEffect(() => {
@@ -329,10 +322,10 @@ export default function KalendarPage() {
   }, [session, year, month]);
 
   useEffect(() => {
-    if (!session || isWorker) return;
-    getKorisnici().then((k) => setWorkers(k.filter((w) => w.role === "worker")));
-    getOdjeli().then(setOdjeli);
-  }, [session, isWorker]);
+    if (!session) return;
+    if (!isWorker) getKorisnici().then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
+    if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
+  }, [session, isWorker, canEdit]);
 
   const isAdmin = session?.role === "admin";
   const userId = session?.userId;
@@ -379,6 +372,7 @@ export default function KalendarPage() {
 
   function startEdit(u: UnosRada) {
     setEditId(u.id);
+    setEditError("");
     setEditForm({
       vrsta: u.vrsta,
       odjelId: u.odjelId ?? "",
@@ -392,20 +386,20 @@ export default function KalendarPage() {
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editId) return;
+    const parsed = editFormToPayload(editForm);
+    if (!parsed.ok) { setEditError(parsed.error); return; }
     setEditSaving(true);
+    setEditError("");
     try {
       await updateUnos(editId, {
-        vrsta: editForm.vrsta,
-        odjelId: editForm.odjelId || undefined,
-        brojStabala: editForm.vrsta === "DOZNAKA" && editForm.brojStabala ? Number(editForm.brojStabala.replace(",", ".")) : null,
-        hektari:     editForm.vrsta === "DOZNAKA" && editForm.hektari     ? Number(editForm.hektari.replace(",", "."))     : null,
-        kilometri:   editForm.vrsta === "VLAKA"   && editForm.kilometri   ? Number(editForm.kilometri.replace(",", "."))   : null,
-        napomena: editForm.napomena || null,
+        ...parsed.data,
         updatedById: session!.userId,
         updatedByRole: session!.role,
       });
       setEditId(null);
       await reload();
+    } catch {
+      setEditError("Greška pri snimanju. Pokušaj ponovo.");
     } finally {
       setEditSaving(false);
     }
@@ -640,6 +634,9 @@ export default function KalendarPage() {
                           </div>
                         )}
 
+                        {editError && (
+                          <p className="text-xs text-red-600 dark:text-red-400">{editError}</p>
+                        )}
                         <div className="flex gap-2 pt-1">
                           <button type="submit" disabled={editSaving}
                             className="bg-green-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-green-800 disabled:opacity-50 transition-colors">

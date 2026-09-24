@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
+import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, deleteKorisnik } from "@/lib/db";
 import { saveSession, isRemembered } from "@/lib/auth";
 import type { Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -43,28 +43,39 @@ export default function PostavkePage() {
     setKorisnici(k);
   }
 
-  async function saveProfile() {
+  async function guarded(action: () => Promise<void>) {
+    try { await action(); } catch { toast("Greška pri snimanju. Provjeri internet i pokušaj ponovo."); }
+  }
+
+  const saveProfile = () => guarded(async () => {
     if (!session) return;
     await updateKorisnik(session.userId, { fullName: profForm.fullName, title: profForm.title });
     saveSession({ ...session, fullName: profForm.fullName }, isRemembered());
     refresh();
     loadMe(session.userId);
     toast("Profil sačuvan ✓");
-  }
+  });
 
   async function changePin() {
     if (!session || !me) return;
-    if (pinForm.old !== me.pin) { setPinMsg("Trenutni PIN nije ispravan!"); return; }
     if (!/^\d{4}$/.test(pinForm.new1)) { setPinMsg("Novi PIN mora biti 4 cifre!"); return; }
     if (pinForm.new1 !== pinForm.new2) { setPinMsg("PIN-ovi se ne poklapaju!"); return; }
-    await updateKorisnik(session.userId, { pin: pinForm.new1 });
+    try {
+      // svjež PIN sa servera — admin ga je možda resetovao na drugom uređaju
+      const fresh = await getKorisnikByIme(me.ime);
+      if (pinForm.old !== (fresh?.pin ?? me.pin)) { setPinMsg("Trenutni PIN nije ispravan!"); return; }
+      await updateKorisnik(session.userId, { pin: pinForm.new1 });
+    } catch {
+      setPinMsg("Greška pri snimanju PIN-a.");
+      return;
+    }
     setPinForm({ old: "", new1: "", new2: "" });
     setMe({ ...me, pin: pinForm.new1 });
     setPinMsg("PIN promijenjen ✓");
     setTimeout(() => setPinMsg(""), 3000);
   }
 
-  async function addKorisnik() {
+  const addKorisnik = () => guarded(async () => {
     if (!addForm.ime.trim()) { toast("Upiši korisničko ime!"); return; }
     if (korisnici.some((k) => k.ime.toUpperCase() === addForm.ime.toUpperCase())) {
       toast("Korisnik s tim imenom već postoji!"); return;
@@ -82,29 +93,29 @@ export default function PostavkePage() {
     setShowAdd(false);
     loadKorisnici();
     toast(`Projektant ${addForm.ime.toUpperCase()} dodan — PIN: 1234 ✓`);
-  }
+  });
 
   function resetPin(k: Korisnik) {
     setConfirmState({
       msg: `Resetovati PIN za ${k.ime} na 1234?`,
       okLabel: "Resetuj",
       okColor: "amber",
-      onOk: async () => {
+      onOk: () => guarded(async () => {
         setConfirmState(null);
         await updateKorisnik(k.id, { pin: "1234" });
         toast(`PIN za ${k.ime} resetovan na 1234 ✓`);
-      },
+      }),
     });
   }
 
   function handleDelete(k: Korisnik) {
     setConfirmState({
       msg: `Obrisati korisnika ${k.ime}? Ova akcija je nepovratna.`,
-      onOk: async () => {
+      onOk: () => guarded(async () => {
         setConfirmState(null);
         await deleteKorisnik(k.id);
         loadKorisnici();
-      },
+      }),
     });
   }
 
@@ -135,7 +146,11 @@ export default function PostavkePage() {
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Postavke</h1>
 
       {msg && (
-        <div className="mb-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg px-4 py-2 text-sm">
+        <div className={`mb-4 rounded-lg px-4 py-2 text-sm border ${
+          msg.startsWith("Greška")
+            ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+            : "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+        }`}>
           {msg}
         </div>
       )}
@@ -294,10 +309,10 @@ export default function PostavkePage() {
                     <td className="px-4 py-3 text-right">
                       {k.role === "worker" && (
                         <button
-                          onClick={async () => {
+                          onClick={() => guarded(async () => {
                             await updateKorisnik(k.id, { operater: !k.operater });
                             loadKorisnici();
-                          }}
+                          })}
                           className={`text-xs mr-3 px-2 py-0.5 rounded-full font-medium border transition-colors ${
                             k.operater
                               ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 hover:bg-blue-200 dark:hover:bg-blue-800"

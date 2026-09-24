@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMojiOdjeliData, getKorisnik, updateKorisnik, getOdjeli } from "@/lib/db";
+import { getMojiOdjeliData, getKorisnik, updateKorisnik } from "@/lib/db";
 import type { Korisnik, Odjel } from "@/lib/types";
 
 const ELABORAT_URL = "https://pogonboskrupa.github.io/Pregled_po_odsjecima/";
@@ -44,65 +44,63 @@ export default function MojiOdjeliPage() {
         setMe(meData);
       }
       setDataLoaded(true);
+    }).catch(() => {
+      setMsg("Greška pri učitavanju. Provjeri internet i osvježi stranicu.");
+      setDataLoaded(true);
     });
   }, [session]);
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
-  // Build map: odjelId → korisnikId who has rješenje (excluding me)
+  // odjelId → korisnikId koji ima rješenje; moj red uzima iz `me` jer je korisnici lista stara nakon izmjene
   const rjesenjeOwner: Record<string, string> = {};
   for (const k of korisnici) {
-    for (const odjelId of k.odjeliRjesenjaIds ?? []) {
-      rjesenjeOwner[odjelId] = k.id;
+    const ids = me && k.id === me.id ? me.odjeliRjesenjaIds : k.odjeliRjesenjaIds;
+    for (const odjelId of ids ?? []) rjesenjeOwner[odjelId] = k.id;
+  }
+
+  async function saveMe(patch: Partial<Pick<Korisnik, "odjeliIds" | "odjeliRjesenjaIds">>, okMsg: string) {
+    if (!me || !session) return;
+    const previous = me;
+    setMe({ ...me, ...patch });
+    setSaving(true);
+    try {
+      await updateKorisnik(session.userId, patch);
+      toast(okMsg);
+    } catch {
+      setMe(previous);
+      toast("Greška pri snimanju — promjena nije sačuvana.");
+    } finally {
+      setSaving(false);
     }
   }
 
   async function addOdjel() {
-    if (!addOdjelId || !me || !session) return;
-    if ((me.odjeliIds ?? []).includes(addOdjelId)) { setAddOdjelId(""); return; }
-    setSaving(true);
-    const newIds = [...(me.odjeliIds ?? []), addOdjelId];
-    const updated = { ...me, odjeliIds: newIds };
-    setMe(updated);
+    if (!addOdjelId || !me) return;
+    const current = me.odjeliIds ?? [];
     setAddOdjelId("");
-    await updateKorisnik(session.userId, { odjeliIds: newIds });
-    setSaving(false);
-    toast("Odjel dodan ✓");
+    if (current.includes(addOdjelId)) return;
+    await saveMe({ odjeliIds: [...current, addOdjelId] }, "Odjel dodan ✓");
   }
 
   async function removeOdjel(odjelId: string) {
-    if (!me || !session) return;
-    setSaving(true);
-    const newIds = (me.odjeliIds ?? []).filter((id) => id !== odjelId);
-    const newRjesenja = (me.odjeliRjesenjaIds ?? []).filter((id) => id !== odjelId);
-    const updated = { ...me, odjeliIds: newIds, odjeliRjesenjaIds: newRjesenja };
-    setMe(updated);
-    await updateKorisnik(session.userId, { odjeliIds: newIds, odjeliRjesenjaIds: newRjesenja });
-    setSaving(false);
-    toast("Odjel uklonjen ✓");
+    if (!me) return;
+    await saveMe({
+      odjeliIds: (me.odjeliIds ?? []).filter((id) => id !== odjelId),
+      odjeliRjesenjaIds: (me.odjeliRjesenjaIds ?? []).filter((id) => id !== odjelId),
+    }, "Odjel uklonjen ✓");
   }
 
   async function claimRjesenje(odjelId: string) {
-    if (!me || !session) return;
+    if (!me) return;
     const existingOwner = rjesenjeOwner[odjelId];
     if (existingOwner && existingOwner !== me.id) return;
-    setSaving(true);
     const rjesenja = me.odjeliRjesenjaIds ?? [];
     const hasIt = rjesenja.includes(odjelId);
-    const newRjesenja = hasIt
-      ? rjesenja.filter((id) => id !== odjelId)
-      : [...rjesenja, odjelId];
-    const updated = { ...me, odjeliRjesenjaIds: newRjesenja };
-    setMe(updated);
-    // Update local rjesenjeOwner map optimistically
-    if (hasIt) {
-      delete rjesenjeOwner[odjelId];
-    } else {
-      rjesenjeOwner[odjelId] = me.id;
-    }
-    await updateKorisnik(session.userId, { odjeliRjesenjaIds: newRjesenja });
-    setSaving(false);
-    toast(hasIt ? "Rješenje ukloneno ✓" : "Rješenje dodano ✓");
+    await saveMe(
+      { odjeliRjesenjaIds: hasIt ? rjesenja.filter((id) => id !== odjelId) : [...rjesenja, odjelId] },
+      hasIt ? "Rješenje uklonjeno ✓" : "Rješenje dodano ✓"
+    );
   }
 
   if (loading || !session || !dataLoaded) {
@@ -126,7 +124,11 @@ export default function MojiOdjeliPage() {
       </p>
 
       {msg && (
-        <div className="mb-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg px-4 py-2 text-sm">
+        <div className={`mb-4 rounded-lg px-4 py-2 text-sm border ${
+          msg.startsWith("Greška")
+            ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+            : "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+        }`}>
           {msg}
         </div>
       )}

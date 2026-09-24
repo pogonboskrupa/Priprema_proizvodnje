@@ -5,16 +5,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { fmtDate, fmtDateLong } from "@/lib/format";
+import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
+import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm } from "@/lib/unos-edit";
 
-function today() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+const today = () => localDateStr();
 
 const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
-const NO_ODJEL_VRSTE = new Set<VrstaRada>(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"]);
 const VRSTA_LABEL: Record<string, string> = {
   DOZNAKA: "Doznaka", VLAKA: "Vlaka", TEREN: "Teren",
   GODISNJI: "Godišnji", KANCELARIJA: "Kancelarija", BOLOVANJE: "Bolovanje",
@@ -49,21 +46,22 @@ function emptyPending(): PendingRow {
   return { odjelId: "", vrsta: "", brojStabala: "", hektari: "", kilometri: "", napomena: "" };
 }
 
-const emptyEditForm = () => ({
-  odjelId: "", vrsta: "DOZNAKA" as VrstaRada,
+function pendingToPayload(p: PendingRow) {
+  if (!p.vrsta) return { ok: false as const, error: "" };
+  return editFormToPayload({ ...p, vrsta: p.vrsta });
+}
+
+const emptyEditForm = (): UnosEditForm => ({
+  odjelId: "", vrsta: "DOZNAKA",
   brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
-function prevDay(d: string) {
-  const dt = new Date(d + "T12:00:00");
-  dt.setDate(dt.getDate() - 1);
-  return dt.toISOString().split("T")[0];
+function shiftDay(d: string, delta: number) {
+  const [y, m, day] = d.split("-").map(Number);
+  return localDateStr(new Date(y, m - 1, day + delta));
 }
-function nextDay(d: string) {
-  const dt = new Date(d + "T12:00:00");
-  dt.setDate(dt.getDate() + 1);
-  return dt.toISOString().split("T")[0];
-}
+const prevDay = (d: string) => shiftDay(d, -1);
+const nextDay = (d: string) => shiftDay(d, 1);
 
 function displayKorisnik(k: Korisnik) {
   return k.fullName || k.ime;
@@ -91,7 +89,9 @@ function RosterNewRow({
   const { recent: recentOdjeli, rest: sortedOdjeli } = splitOdjeliByRecent(availOdjeli, recentOdjelIds);
 
   const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
-  const isReady = !!(pending.vrsta && (noOdjelNeeded || pending.odjelId));
+  const parsed = pendingToPayload(pending);
+  const isReady = parsed.ok;
+  const numberError = !parsed.ok && parsed.error === "Neispravan broj.";
 
   return (
     <div className="px-3 py-3 space-y-2">
@@ -108,6 +108,9 @@ function RosterNewRow({
           >
             {saving ? "..." : "Sačuvaj"}
           </button>
+        )}
+        {numberError && (
+          <span className="shrink-0 text-xs text-red-600 dark:text-red-400">Neispravan broj</span>
         )}
       </div>
 
@@ -223,6 +226,7 @@ export default function UnosUcinkaPage() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState(emptyEditForm());
   const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
 
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
 
@@ -247,7 +251,7 @@ export default function UnosUcinkaPage() {
         }
       });
       setPendingRows(auto);
-    });
+    }).catch(() => setMsg("Greška pri učitavanju podataka. Osvježi stranicu."));
   }, []);
 
   useEffect(() => {
@@ -277,28 +281,40 @@ export default function UnosUcinkaPage() {
   }
 
   function isPendingReady(p: PendingRow | undefined) {
-    if (!p?.vrsta) return false;
-    return NO_ODJEL_VRSTE.has(p.vrsta) || !!p.odjelId;
+    return !!p && pendingToPayload(p).ok;
   }
 
   const readyCount = korisnici.filter((k) =>
     !existingMap.has(k.id) && isPendingReady(pendingRows[k.id])
   ).length;
 
+  async function createFromPending(korisnikId: string, p: PendingRow) {
+    const parsed = pendingToPayload(p);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const d = parsed.data;
+    const created = await createUnos({
+      datum, vrsta: d.vrsta,
+      inzinjerId: korisnikId, odjelId: d.odjelId ?? undefined,
+      brojStabala: d.brojStabala ?? undefined,
+      hektari: d.hektari ?? undefined,
+      kilometri: d.kilometri ?? undefined,
+      napomena: d.napomena ?? undefined,
+      createdById: session!.userId, createdByRole: session!.role,
+    });
+    setAllUnosi((prev) => [created, ...prev]);
+  }
+
+  function showMsg(m: string) {
+    setMsg(m);
+    setTimeout(() => setMsg(""), 4000);
+  }
+
   async function savePendingRow(korisnikId: string) {
     const p = pendingRows[korisnikId];
     if (!isPendingReady(p)) return;
     setSavingRow(korisnikId);
     try {
-      await createUnos({
-        datum, vrsta: p.vrsta as VrstaRada,
-        inzinjerId: korisnikId, odjelId: p.odjelId,
-        brojStabala: p.vrsta === "DOZNAKA" && p.brojStabala ? Number(p.brojStabala.replace(",", ".")) : undefined,
-        hektari: p.vrsta === "DOZNAKA" && p.hektari ? Number(p.hektari.replace(",", ".")) : undefined,
-        kilometri: p.vrsta === "VLAKA" && p.kilometri ? Number(p.kilometri.replace(",", ".")) : undefined,
-        napomena: p.napomena || undefined,
-        createdById: session!.userId, createdByRole: session!.role,
-      });
+      await createFromPending(korisnikId, p);
       const fresh = await getUnosiZaDan(datum);
       setUnosi(fresh);
       setPendingRows((prev) => {
@@ -310,6 +326,8 @@ export default function UnosUcinkaPage() {
           : emptyPending();
         return next;
       });
+    } catch {
+      showMsg("Greška pri snimanju. Pokušaj ponovo.");
     } finally {
       setSavingRow(null);
     }
@@ -322,18 +340,7 @@ export default function UnosUcinkaPage() {
     if (!ready.length) return;
     setBatchSaving(true);
     try {
-      await Promise.all(ready.map((k) => {
-        const p = pendingRows[k.id];
-        return createUnos({
-          datum, vrsta: p.vrsta as VrstaRada,
-          inzinjerId: k.id, odjelId: p.odjelId,
-          brojStabala: p.vrsta === "DOZNAKA" && p.brojStabala ? Number(p.brojStabala.replace(",", ".")) : undefined,
-          hektari: p.vrsta === "DOZNAKA" && p.hektari ? Number(p.hektari.replace(",", ".")) : undefined,
-          kilometri: p.vrsta === "VLAKA" && p.kilometri ? Number(p.kilometri.replace(",", ".")) : undefined,
-          napomena: p.napomena || undefined,
-          createdById: session!.userId, createdByRole: session!.role,
-        });
-      }));
+      await Promise.all(ready.map((k) => createFromPending(k.id, pendingRows[k.id])));
       const fresh = await getUnosiZaDan(datum);
       setUnosi(fresh);
       // Reset saved rows to auto-populate
@@ -346,8 +353,10 @@ export default function UnosUcinkaPage() {
         });
         return auto;
       });
-      setMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓`);
-      setTimeout(() => setMsg(""), 4000);
+      showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓`);
+    } catch {
+      showMsg("Greška: dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.");
+      setUnosi(await getUnosiZaDan(datum).catch(() => unosi));
     } finally {
       setBatchSaving(false);
     }
@@ -355,8 +364,9 @@ export default function UnosUcinkaPage() {
 
   function startEdit(u: UnosRada) {
     setEditId(u.id);
+    setEditError("");
     setEditForm({
-      odjelId: u.odjelId,
+      odjelId: u.odjelId ?? "",
       vrsta: u.vrsta,
       brojStabala: u.brojStabala != null ? String(u.brojStabala) : "",
       hektari: u.hektari != null ? String(u.hektari) : "",
@@ -368,23 +378,21 @@ export default function UnosUcinkaPage() {
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!editId) return;
+    const parsed = editFormToPayload(editForm);
+    if (!parsed.ok) { setEditError(parsed.error); return; }
     setEditSaving(true);
+    setEditError("");
     try {
-      const u = unosi.find((x) => x.id === editId)!;
       await updateUnos(editId, {
-        vrsta: editForm.vrsta,
-        inzinjerId: u.inzinjerId,
-        odjelId: editForm.odjelId || undefined,
-        brojStabala: editForm.vrsta === "DOZNAKA" && editForm.brojStabala ? Number(editForm.brojStabala.replace(",", ".")) : null,
-        hektari: editForm.vrsta === "DOZNAKA" && editForm.hektari ? Number(editForm.hektari.replace(",", ".")) : null,
-        kilometri: editForm.vrsta === "VLAKA" && editForm.kilometri ? Number(editForm.kilometri.replace(",", ".")) : null,
-        napomena: editForm.napomena || null,
+        ...parsed.data,
         updatedById: session!.userId,
         updatedByRole: session!.role,
       });
       setEditId(null);
       const fresh = await getUnosiZaDan(datum);
       setUnosi(fresh);
+    } catch {
+      setEditError("Greška pri snimanju. Pokušaj ponovo.");
     } finally {
       setEditSaving(false);
     }
@@ -436,7 +444,11 @@ export default function UnosUcinkaPage() {
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 capitalize">{fmtDateLong(datum)}</p>
 
       {msg && (
-        <div className="mb-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 rounded-lg px-4 py-2.5 text-sm">
+        <div className={`mb-4 rounded-lg px-4 py-2.5 text-sm border ${
+          msg.startsWith("Greška")
+            ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+            : "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+        }`}>
           {msg}
         </div>
       )}
@@ -518,6 +530,9 @@ export default function UnosUcinkaPage() {
                             onChange={(e) => setEditForm((f) => ({ ...f, napomena: e.target.value }))} />
                         </div>
                       </div>
+                    )}
+                    {editError && (
+                      <p className="text-xs text-red-600 dark:text-red-400">{editError}</p>
                     )}
                     <div className="flex gap-2 pt-1">
                       <button type="submit" disabled={editSaving}

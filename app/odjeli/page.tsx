@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { parseDecimal } from "@/lib/format";
 
 type BulkRow = { broj: string; povrsina: string };
 
@@ -62,6 +63,7 @@ export default function OdjeliPage() {
   const [loading, setLoading] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null); // "<odjelId>-doz" | "<odjelId>-vlak"
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -76,28 +78,27 @@ export default function OdjeliPage() {
 
   if (authLoading || !session) return null;
 
+  function validPovrsina(raw: string): number | null {
+    const n = parseDecimal(raw);
+    if (n === null || Number.isNaN(n)) { setErr("Neispravna površina (npr. 12,5)."); return null; }
+    setErr("");
+    return n;
+  }
+
   // ── Pojedinačni submit ─────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const povrsina = validPovrsina(form.povrsina);
+    if (povrsina === null) return;
     setLoading(true);
     try {
-      if (editId) {
-        await updateOdjel(editId, {
-          gj: form.gj,
-          broj: form.broj,
-          povrsina: parseFloat(form.povrsina.replace(",", ".")),
-        });
-      } else {
-        await createOdjel({
-          gj: form.gj,
-          broj: form.broj,
-          povrsina: parseFloat(form.povrsina.replace(",", ".")),
-        });
-      }
+      const data = { gj: form.gj.trim(), broj: form.broj.trim(), povrsina };
+      if (editId) await updateOdjel(editId, data);
+      else await createOdjel(data);
       setForm({ gj: "", broj: "", povrsina: "" });
       setEditId(null);
     } catch {
-      // forma ostaje popunjena da korisnik može ponoviti
+      setErr("Greška pri snimanju odjela. Pokušaj ponovo.");
     } finally {
       setLoading(false);
       load();
@@ -110,17 +111,19 @@ export default function OdjeliPage() {
     if (!bulkGj.trim()) return;
     const valid = bulkRows.filter((r) => r.broj.trim() && r.povrsina.trim());
     if (!valid.length) return;
+    const parsed = valid.map((r) => ({ broj: r.broj.trim(), povrsina: parseDecimal(r.povrsina) }));
+    const bad = parsed.find((r) => r.povrsina === null || Number.isNaN(r.povrsina));
+    if (bad) { setErr(`Neispravna površina za odjel ${bad.broj}.`); return; }
+    setErr("");
     setLoading(true);
     try {
       await Promise.all(
-        valid.map((r) =>
-          createOdjel({ gj: bulkGj.trim(), broj: r.broj.trim(), povrsina: parseFloat(r.povrsina.replace(",", ".")) })
-        )
+        parsed.map((r) => createOdjel({ gj: bulkGj.trim(), broj: r.broj, povrsina: r.povrsina as number }))
       );
       setBulkGj("");
       setBulkRows([{ broj: "", povrsina: "" }, { broj: "", povrsina: "" }]);
     } catch {
-      // redovi ostaju
+      setErr("Greška pri snimanju — provjeri listu, dio odjela možda nije sačuvan.");
     } finally {
       setLoading(false);
       load();
@@ -152,17 +155,15 @@ export default function OdjeliPage() {
 
   async function saveInlineEdit() {
     if (!editId) return;
+    const povrsina = validPovrsina(form.povrsina);
+    if (povrsina === null) return;
     setLoading(true);
     try {
-      await updateOdjel(editId, {
-        gj: form.gj,
-        broj: form.broj,
-        povrsina: parseFloat(form.povrsina.replace(",", ".")),
-      });
+      await updateOdjel(editId, { gj: form.gj.trim(), broj: form.broj.trim(), povrsina });
       setEditId(null);
       setForm({ gj: "", broj: "", povrsina: "" });
     } catch {
-      // forma ostaje
+      setErr("Greška pri snimanju odjela. Pokušaj ponovo.");
     } finally {
       setLoading(false);
       load();
@@ -197,7 +198,7 @@ export default function OdjeliPage() {
       msg: "Obrisati ovaj odjel? Ova akcija je nepovratna.",
       onOk: async () => {
         setConfirmState(null);
-        await deleteOdjel(id);
+        try { await deleteOdjel(id); } catch { setErr("Greška pri brisanju odjela."); }
         load();
       },
     });
@@ -208,6 +209,12 @@ export default function OdjeliPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Odjeli</h1>
+
+      {err && (
+        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {err}
+        </div>
+      )}
 
       {/* Mode toggle (samo kad nije edit) */}
       {!editId && (
@@ -408,7 +415,7 @@ export default function OdjeliPage() {
           return (
             <div className="space-y-4">
               {sorted.map(([gj, items]) => {
-                const totalHa = items.reduce((s, i) => s + i.povrsina, 0);
+                const totalHa = items.reduce((s, i) => s + (Number(i.povrsina) || 0), 0);
                 return (
                   <div key={gj} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="bg-green-700 px-4 py-2.5 flex items-center justify-between">
@@ -452,7 +459,7 @@ export default function OdjeliPage() {
                                   onKeyDown={(e) => { if (e.key === "Enter") saveInlineEdit(); if (e.key === "Escape") cancelEdit(); }}
                                   className="w-full border border-blue-400 rounded px-1.5 py-0.5 text-sm text-right bg-white dark:bg-gray-800 dark:text-gray-100 outline-none"
                                 />
-                              ) : o.povrsina.toFixed(2)}
+                              ) : (Number(o.povrsina) || 0).toFixed(2)}
                             </td>
                             <td className="px-2 py-2 text-center">
                               <StatusToggle
