@@ -675,7 +675,7 @@ export interface OdjelMjesecRezime {
   vrste: string[];
 }
 
-export async function getMjesecniRezimePoOdjelima(): Promise<OdjelMjesecRezime[]> {
+export async function getMjesecniRezimePoOdjelima(inzinjerId?: string): Promise<OdjelMjesecRezime[]> {
   const now = new Date();
   const od = new Date(now.getFullYear(), now.getMonth(), 1);
   const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -693,6 +693,7 @@ export async function getMjesecniRezimePoOdjelima(): Promise<OdjelMjesecRezime[]
   const acc: Record<string, { ha: number; stabala: number; km: number; vrste: Set<string> }> = {};
 
   for (const u of unosiRaw) {
+    if (inzinjerId && u.inzinjerId !== inzinjerId) continue;
     const vrsta = u.vrsta as string;
     const odjelId = u.odjelId as string;
     if (!odjelId) continue;

@@ -27,12 +27,13 @@ export default function Home() {
     if (!session) return;
     if (!isWorker) {
       getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
-      if (session.role === "admin") {
-        getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
-      }
+      getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
     } else {
       getInzinjerByKorisnikId(session.userId).then((inz) => {
-        if (inz) getMjesecniRezimeMoj(inz.id).then((r) => setMyRezime(r as Rezime)).catch(() => {});
+        if (inz) {
+          getMjesecniRezimeMoj(inz.id).then((r) => setMyRezime(r as Rezime)).catch(() => {});
+          getMjesecniRezimePoOdjelima(inz.id).then(setOdjeliRezime).catch(() => {});
+        }
       });
     }
   }, [session]);
@@ -81,10 +82,10 @@ export default function Home() {
         </div>
       )}
 
-      {session.role === "admin" && odjeliRezime.length > 0 && (
+      {odjeliRezime.length > 0 && (
         <div className="mb-8">
           <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 capitalize flex items-center gap-2">
-            <span>Aktivnost po odjelima</span>
+            <span>{isWorker ? "Moji odjeli" : "Aktivnost po odjelima"}</span>
             <span className="normal-case font-normal">·</span>
             <span className="normal-case font-normal">{mesec}</span>
           </div>
