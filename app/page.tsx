@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjerByKorisnikId } from "@/lib/db";
+import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjerByKorisnikId, getMjesecniRezimePoOdjelima, OdjelMjesecRezime } from "@/lib/db";
 import { mesecLabel } from "@/lib/format";
 
 type Rezime = {
@@ -16,6 +16,7 @@ export default function Home() {
   const router = useRouter();
   const [rezime, setRezime] = useState<Rezime | null>(null);
   const [myRezime, setMyRezime] = useState<Rezime | null>(null);
+  const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
   const isWorker = session?.role === "worker";
 
   useEffect(() => {
@@ -26,6 +27,9 @@ export default function Home() {
     if (!session) return;
     if (!isWorker) {
       getMjesecniRezime().then((r) => setRezime(r as Rezime)).catch(() => {});
+      if (session.role === "admin") {
+        getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
+      }
     } else {
       getInzinjerByKorisnikId(session.userId).then((inz) => {
         if (inz) getMjesecniRezimeMoj(inz.id).then((r) => setMyRezime(r as Rezime)).catch(() => {});
@@ -73,6 +77,21 @@ export default function Home() {
             <MiniStat label="Vlake" value={displayRezime.km.toFixed(2)} unit="km" color="amber" />
             <MiniStat label="Radni dani" value={radniDani.toString()} unit="dana" color="orange" />
             <MiniStat label="Odsustva" value={odsustva.toString()} unit="dana" color="sky" />
+          </div>
+        </div>
+      )}
+
+      {session.role === "admin" && odjeliRezime.length > 0 && (
+        <div className="mb-8">
+          <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 capitalize flex items-center gap-2">
+            <span>Aktivnost po odjelima</span>
+            <span className="normal-case font-normal">·</span>
+            <span className="normal-case font-normal">{mesec}</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            {odjeliRezime.map((o) => (
+              <OdjelCard key={o.odjelId} odjel={o} />
+            ))}
           </div>
         </div>
       )}
@@ -176,5 +195,39 @@ function QuickCard({
       <h2 className="font-semibold text-gray-800 dark:text-gray-100 mb-1">{title}</h2>
       <p className="text-sm text-gray-600 dark:text-gray-300">{desc}</p>
     </Link>
+  );
+}
+
+const VRSTA_STYLE: Record<string, { label: string; cls: string }> = {
+  DOZNAKA:    { label: "DOZ", cls: "bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300" },
+  VLAKA:      { label: "VLK", cls: "bg-sky-100 dark:bg-sky-900/60 text-sky-700 dark:text-sky-300" },
+  TEREN:      { label: "TER", cls: "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300" },
+  KANCELARIJA:{ label: "KAN", cls: "bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300" },
+  GODISNJI:   { label: "GOD", cls: "bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300" },
+  BOLOVANJE:  { label: "BOL", cls: "bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300" },
+};
+
+function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2">
+      <div className="font-semibold text-sm text-gray-800 dark:text-gray-100 leading-tight truncate">
+        {odjel.gj} / {odjel.broj}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {odjel.vrste.map((v) => {
+          const s = VRSTA_STYLE[v] ?? { label: v, cls: "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300" };
+          return (
+            <span key={v} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.cls}`}>{s.label}</span>
+          );
+        })}
+      </div>
+      {(odjel.ha > 0 || odjel.stabala > 0 || odjel.km > 0) && (
+        <div className="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5 tabular-nums">
+          {odjel.ha > 0 && <div>{odjel.ha.toFixed(2)} ha</div>}
+          {odjel.stabala > 0 && <div>{odjel.stabala} st</div>}
+          {odjel.km > 0 && <div>{odjel.km.toFixed(2)} km</div>}
+        </div>
+      )}
+    </div>
   );
 }

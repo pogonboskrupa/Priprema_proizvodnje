@@ -664,3 +664,57 @@ export async function getUnosiOdjelPeriod(): Promise<OdjelPeriodRada[]> {
     vlaka: p.vlakaMin ? { od: p.vlakaMin, do_: p.vlakaMax! } : null,
   }));
 }
+
+export interface OdjelMjesecRezime {
+  odjelId: string;
+  gj: string;
+  broj: string;
+  ha: number;
+  stabala: number;
+  km: number;
+  vrste: string[];
+}
+
+export async function getMjesecniRezimePoOdjelima(): Promise<OdjelMjesecRezime[]> {
+  const now = new Date();
+  const od = new Date(now.getFullYear(), now.getMonth(), 1);
+  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  do_.setHours(23, 59, 59, 999);
+
+  const [unosiRaw, odjeliRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('odjeli'),
+  ]);
+
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
+  const acc: Record<string, { ha: number; stabala: number; km: number; vrste: Set<string> }> = {};
+
+  for (const u of unosiRaw) {
+    const vrsta = u.vrsta as string;
+    const odjelId = u.odjelId as string;
+    if (!odjelId) continue;
+    if (!acc[odjelId]) acc[odjelId] = { ha: 0, stabala: 0, km: 0, vrste: new Set() };
+    const a = acc[odjelId];
+    a.vrste.add(vrsta);
+    if (vrsta === 'DOZNAKA') { a.ha += Number(u.hektari) || 0; a.stabala += Number(u.brojStabala) || 0; }
+    else if (vrsta === 'VLAKA') a.km += Number(u.kilometri) || 0;
+  }
+
+  return Object.entries(acc)
+    .map(([odjelId, a]) => {
+      const o = odMap[odjelId];
+      return {
+        odjelId,
+        gj: o?.gj ?? '—',
+        broj: o?.broj ?? '—',
+        ha: a.ha,
+        stabala: a.stabala,
+        km: a.km,
+        vrste: [...a.vrste],
+      };
+    })
+    .sort((a, b) => a.gj.localeCompare(b.gj) || a.broj.localeCompare(b.broj, undefined, { numeric: true }));
+}
