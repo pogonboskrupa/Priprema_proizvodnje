@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { getSession, clearSession, type Session } from "@/lib/auth";
+import { getSession, clearSession, saveSession, isRemembered, type Session } from "@/lib/auth";
+import { getKorisnik } from "@/lib/db";
 
 interface AuthCtx {
   session: Session | null;
@@ -27,6 +28,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => { refresh(); }, []);
+
+  // Sesija je snimak iz trenutka prijave: uskladi je s bazom (arhiviran/obrisan korisnik,
+  // promijenjena uloga ili operaterska prava). Offline greška ne odjavljuje.
+  const userId = session?.userId;
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    getKorisnik(userId).then((k) => {
+      if (cancelled) return;
+      const ses = getSession();
+      if (!ses || ses.userId !== userId) return;
+      if (!k || k.arhiviran) { logout(); return; }
+      const fresh: Session = {
+        ...ses,
+        role: k.role,
+        operater: k.operater ?? false,
+        fullName: k.fullName,
+        ime: k.ime,
+        avatar: k.avatar,
+      };
+      if (JSON.stringify(fresh) !== JSON.stringify(ses)) {
+        saveSession(fresh, isRemembered());
+        setSession(fresh);
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [userId]);
 
   return <Ctx.Provider value={{ session, loading, logout, refresh }}>{children}</Ctx.Provider>;
 }

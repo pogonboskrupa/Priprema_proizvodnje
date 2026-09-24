@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
 import { fmtDate } from "@/lib/format";
+import { godineEvidencije, mjeseciEvidencije } from "@/lib/godine";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
@@ -48,22 +49,6 @@ type TabelaData = {
   do_: string;
 };
 
-// Generates last N months newest-first as { value: ISO date string, label }
-function buildMonthOptions(count = 24) {
-  const now = new Date();
-  const opts: { value: string; label: string; date: Date }[] = [];
-  const names = ["Januar", "Februar", "Mart", "April", "Maj", "Juni", "Juli", "August", "Septembar", "Oktobar", "Novembar", "Decembar"];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    opts.push({
-      date: d,
-      value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      label: `${names[d.getMonth()]} ${d.getFullYear()}`,
-    });
-  }
-  return opts;
-}
-
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -71,8 +56,8 @@ export default function IzvjestajiPage() {
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
   // Computed inside state initializer to avoid SSR/client timezone mismatch
-  const [monthOptions] = useState(() => buildMonthOptions(24));
-  const [selectedMonth, setSelectedMonth] = useState(() => buildMonthOptions(1)[0].value);
+  const [monthOptions] = useState(mjeseciEvidencije);
+  const [selectedMonth, setSelectedMonth] = useState(() => mjeseciEvidencije()[0].value);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [err, setErr] = useState("");
   const [data, setData] = useState<IzvjestajData | null>(null);
@@ -140,7 +125,7 @@ export default function IzvjestajiPage() {
     load(period, tip, selectedMonth, val);
   }
 
-  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const yearOptions = godineEvidencije();
 
   const formatDate = (d: string) => fmtDate(d);
 

@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm } from "@/components/UnosEditForm";
+import { jePrviMjesecEvidencije } from "@/lib/godine";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
@@ -313,6 +314,7 @@ export default function KalendarPage() {
   if (authLoading || !session) return null;
 
   function prevMonth() {
+    if (jePrviMjesecEvidencije(year, month)) return;
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
     else setMonth((m) => m - 1);
     setSelectedDay(null);
@@ -368,8 +370,12 @@ export default function KalendarPage() {
       msg: `Obrisati unos za ${name}?`,
       onOk: async () => {
         setConfirmState(null);
-        await deleteUnos(u.id);
-        setUnosi((prev) => prev.filter((x) => x.id !== u.id));
+        try {
+          await deleteUnos(u.id);
+          setUnosi((prev) => prev.filter((x) => x.id !== u.id));
+        } catch {
+          alert("Greška pri brisanju unosa. Pokušaj ponovo.");
+        }
       },
     });
   }
@@ -401,7 +407,7 @@ export default function KalendarPage() {
         )}
 
         <div className="flex items-center gap-1">
-          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">‹</button>
+          <button onClick={prevMonth} disabled={jePrviMjesecEvidencije(year, month)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
           <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 capitalize px-3 min-w-[130px] text-center">{monthLabel}</span>
           <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors">›</button>
         </div>

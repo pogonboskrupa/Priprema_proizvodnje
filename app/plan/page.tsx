@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, updateOdjel } from "@/lib/db";
+import { getOdjeli, updateOdjelGodina } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 import { parseDecimal } from "@/lib/format";
+import { godineEvidencije } from "@/lib/godine";
+import { odjelZaGodinu, imaPodatke } from "@/lib/plan-sjece";
 
 // Forest palette — one accent per GJ group (cycling)
 const GJ_PALETTE = [
@@ -47,7 +49,8 @@ function Progress({ value, color }: { value: number; color: string }) {
 export default function PlanPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const [odjeli, setOdjeli] = useState<Odjel[]>([]);
+  const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormFields>({ povrsina: "", plan_cet: "", plan_lis: "", real_cet: "", real_lis: "" });
   const [saving, setSaving] = useState(false);
@@ -61,7 +64,7 @@ export default function PlanPage() {
   useEffect(() => { loadOdjeli(); }, []);
 
   async function loadOdjeli() {
-    try { setOdjeli(await getOdjeli()); } catch { setErr("Greška pri učitavanju odjela."); }
+    try { setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true })); } catch { setErr("Greška pri učitavanju odjela."); }
   }
 
   function startEdit(o: Odjel) {
@@ -85,8 +88,7 @@ export default function PlanPage() {
     setSaving(true);
     setErr("");
     try {
-      await updateOdjel(editId, {
-        povrsina: values.povrsina ?? 0,
+      await updateOdjelGodina(editId, year, values.povrsina ?? 0, {
         plan_cet: values.plan_cet ?? 0,
         plan_lis: values.plan_lis ?? 0,
         real_cet: values.real_cet ?? 0,
@@ -100,6 +102,11 @@ export default function PlanPage() {
       setSaving(false);
     }
   }
+
+  // vrijednosti odabrane godine; arhivirani odjel ostaje vidljiv u godinama u kojima ima plan
+  const odjeli = sviOdjeli
+    .map((o) => ({ ...o, ...odjelZaGodinu(o, year) }))
+    .filter((o) => !o.arhiviran || imaPodatke(o));
 
   const totPlanCet = odjeli.reduce((s, o) => s + (o.plan_cet || 0), 0);
   const totPlanLis = odjeli.reduce((s, o) => s + (o.plan_lis || 0), 0);
@@ -200,11 +207,27 @@ export default function PlanPage() {
         <div style={{ marginBottom: 24, display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div className="baskerville" style={{ fontSize: 26, fontWeight: 700, color: "var(--text)", lineHeight: 1.15, textWrap: "balance" }}>
-              Plan sječe 2026
+              Plan sječe {year}
             </div>
             <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 3 }}>
               {groups.length} gospodarska jedinica · {odjeli.length} odjela
             </div>
+          </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {godineEvidencije({ iSljedeca: true }).map((y) => (
+              <button
+                key={y}
+                onClick={() => { setYear(y); setEditId(null); }}
+                style={{
+                  padding: "4px 12px", borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  border: "1px solid var(--border)",
+                  background: y === year ? "#2d6a4f" : "var(--surface)",
+                  color: y === year ? "#fff" : "var(--text)",
+                }}
+              >
+                {y}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import type { Korisnik, VrstaRada } from "@/lib/types";
 import { VRSTA, heatClass } from "@/lib/vrste";
+import { godineEvidencije } from "@/lib/godine";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
@@ -24,9 +25,6 @@ const VRSTA_CFG: Record<PVrsta, ReturnType<typeof cfgFor>> = {
   bolovanje: cfgFor("BOLOVANJE"),
 };
 
-function yearOptions(current: number) {
-  return Array.from({ length: 5 }, (_, i) => current - i);
-}
 
 export default function StatistikaPage() {
   const { session, loading } = useAuth();
@@ -87,7 +85,7 @@ export default function StatistikaPage() {
 
   if (loading || !session || session.role !== "admin") return null;
 
-  const years = yearOptions(currentYear);
+  const years = godineEvidencije();
 
   return (
     <div className="py-6 space-y-5">

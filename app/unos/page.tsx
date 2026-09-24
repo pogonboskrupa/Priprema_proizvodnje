@@ -6,9 +6,11 @@ import { useRouter } from "next/navigation";
 import type { Odjel, Korisnik, UnosRada, VrstaRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { exportXlsx } from "@/lib/export";
-import { fmtDate, mesecLabel, localDateStr, parseDecimal, parseCount } from "@/lib/format";
+import { fmtDate, localDateStr, parseDecimal, parseCount } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
+import { EVIDENCIJA_OD_DATUM, mjeseciEvidencije } from "@/lib/godine";
+import { isOffline } from "@/lib/firebase";
 
 const today = () => localDateStr();
 
@@ -21,16 +23,6 @@ function getDayOfWeek(dateStr: string): number {
 }
 const currentMonth = () => localDateStr().slice(0, 7);
 
-function getMonthOptions() {
-  const opts: { val: string; label: string }[] = [];
-  const now = new Date();
-  for (let i = 0; i < 13; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    opts.push({ val, label: mesecLabel(d) });
-  }
-  return opts;
-}
 
 function displayProjectant(u: UnosRada): string {
   if (u.korisnik) return u.korisnik.fullName || u.korisnik.ime;
@@ -91,10 +83,14 @@ export default function UnosPage() {
   }, [session]);
 
   async function load() {
-    const [od, kor, un] = await Promise.all([getOdjeli(), getKorisnici(), getUnosi()]);
-    setOdjeli(od);
-    setKorisnici(kor.filter((k) => k.role === "worker"));
-    setUnosi(un);
+    try {
+      const [od, kor, un] = await Promise.all([getOdjeli(), getKorisnici(), getUnosi()]);
+      setOdjeli(od);
+      setKorisnici(kor.filter((k) => k.role === "worker"));
+      setUnosi(un);
+    } catch {
+      setMsg("Greška pri učitavanju podataka. Provjeri internet i osvježi stranicu.");
+    }
   }
 
   useEffect(() => {
@@ -134,7 +130,8 @@ export default function UnosPage() {
       };
       const dates = multiDay && multiDayDates.length > 0 ? multiDayDates : [form.datum];
       await Promise.all(dates.map((datum) => createUnos({ ...base, datum })));
-      setMsg(dates.length > 1 ? `Sačuvano ${dates.length} unosa!` : "Unos je sačuvan!");
+      const saved = dates.length > 1 ? `Sačuvano ${dates.length} unosa!` : "Unos je sačuvan!";
+      setMsg(isOffline() ? `${saved} (offline — poslaće se kad bude signala)` : saved);
       setForm((f) => ({
         ...f,
         datum: today(),
@@ -158,7 +155,11 @@ export default function UnosPage() {
       msg: "Obrisati ovaj unos?",
       onOk: async () => {
         setConfirmState(null);
-        await deleteUnos(id);
+        try {
+          await deleteUnos(id);
+        } catch {
+          setMsg("Greška pri brisanju unosa.");
+        }
         load();
       },
     });
@@ -226,6 +227,7 @@ export default function UnosPage() {
                 type="date"
                 className={inputCls}
                 value={form.datum}
+                min={EVIDENCIJA_OD_DATUM}
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
               />
@@ -451,8 +453,8 @@ export default function UnosPage() {
                 value={filterMjesec}
                 onChange={(e) => setFilterMjesec(e.target.value)}
               >
-                {getMonthOptions().map((o) => (
-                  <option key={o.val} value={o.val}>
+                {mjeseciEvidencije().map((o) => (
+                  <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}

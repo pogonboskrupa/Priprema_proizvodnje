@@ -4,6 +4,7 @@ import { getGodisnjePlanPoProjektantu, setPlanHa, type PlanProjektantRed } from 
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { parseDecimal } from "@/lib/format";
+import { godineEvidencije } from "@/lib/godine";
 
 export default function PlanPoProjectantPage() {
   const { session, loading } = useAuth();
@@ -60,7 +61,7 @@ export default function PlanPoProjectantPage() {
     }
   }
 
-  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+  const years = godineEvidencije({ iSljedeca: true });
 
   return (
     <div className="py-6">

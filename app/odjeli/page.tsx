@@ -72,7 +72,7 @@ export default function OdjeliPage() {
   }, [session, authLoading]);
 
   async function load() {
-    setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true }));
+    setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true, saBrojem: true }));
   }
 
   useEffect(() => { load(); }, []);

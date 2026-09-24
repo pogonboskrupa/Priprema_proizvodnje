@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { db, collection, query, orderBy, onSnapshot } from "@/lib/firebase";
+import { db, collection, query, onUnosiChanges } from "@/lib/firebase";
 import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
 import { useAuth } from "@/context/AuthContext";
@@ -64,7 +64,6 @@ const workerLinks = [
 function useNewEntryNotifier() {
   const [toast, setToast] = useState<string | null>(null);
   const { session } = useAuth();
-  const initializedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -72,11 +71,14 @@ function useNewEntryNotifier() {
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
-    initializedRef.current = false;
-    const q = query(collection(db, "unosi"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (snapshot) => {
-      if (!initializedRef.current) { initializedRef.current = true; return; }
-      const added = snapshot.docChanges().filter((c) => c.type === "added");
+    // dijeli sync listener iz lib/firebase — nema zasebnog čitanja cijele kolekcije
+    const unsub = onUnosiChanges((changes) => {
+      // edit starog unosa ga uvodi u sync prozor kao "added"; novi unos ima createdAt === updatedAt
+      const added = changes.filter((c) => {
+        if (c.type !== "added") return false;
+        const { createdAt, updatedAt } = c.doc.data();
+        return !!createdAt && !!updatedAt && createdAt.isEqual(updatedAt);
+      });
       if (!added.length) return;
       const msg = added.length === 1 ? "Novi unos je dodan" : `${added.length} novih unosa`;
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {

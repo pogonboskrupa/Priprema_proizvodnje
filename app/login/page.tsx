@@ -41,7 +41,7 @@ export default function LoginPage() {
       setSubmitting(false);
       if (!found) { setErr("Korisnik nije pronađen!"); setPin(""); return; }
       if (found.arhiviran) { setErr("Korisnički račun je arhiviran."); setPin(""); return; }
-      if (p !== found.pin) { setErr("Pogrešan PIN!"); setPin(""); return; }
+      if (p !== String(found.pin ?? "")) { setErr("Pogrešan PIN!"); setPin(""); return; }
       const loginAt = new Date().toISOString();
       try {
         await Promise.race([

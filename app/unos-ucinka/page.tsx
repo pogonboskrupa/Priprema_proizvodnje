@@ -7,6 +7,8 @@ import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
+import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
+import { isOffline } from "@/lib/firebase";
 import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
@@ -350,7 +352,7 @@ export default function UnosUcinkaPage() {
         });
         return auto;
       });
-      showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓`);
+      showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓${isOffline() ? " (offline — poslaće se kad bude signala)" : ""}`);
     } catch {
       showMsg("Greška: dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.");
       setUnosi(await getUnosiZaDan(datum).catch(() => unosi));
@@ -417,11 +419,18 @@ export default function UnosUcinkaPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Unos učinka</h1>
         <button
           onClick={() => setDatum(prevDay(datum))}
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+          disabled={datum <= EVIDENCIJA_OD_DATUM}
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
         >‹</button>
         <input
           type="date" value={datum}
-          onChange={(e) => setDatum(e.target.value)}
+          min={EVIDENCIJA_OD_DATUM}
+          max={today()}
+          onChange={(e) => {
+            // prazan ili datum van evidencije bi pokvario upit za dan
+            const v = e.target.value;
+            if (v && v >= EVIDENCIJA_OD_DATUM && v <= today()) setDatum(v);
+          }}
           className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         />
         <button

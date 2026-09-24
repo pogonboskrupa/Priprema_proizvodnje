@@ -22,15 +22,25 @@ export interface Korisnik {
   updatedAt: string;
 }
 
+/** Plan i realizacija sječe za jednu godinu, m³ */
+export interface OdjelGodina {
+  plan_cet: number;
+  plan_lis: number;
+  real_cet: number;
+  real_lis: number;
+}
+
 export interface Odjel {
   id: string;
   gj: string;   // gospodarska jedinica
   broj: string;
   povrsina: number;
-  plan_cet: number;   // plan m³ četinara
-  plan_lis: number;   // plan m³ lišćara
-  real_cet: number;   // realizacija m³ četinara
-  real_lis: number;   // realizacija m³ lišćara
+  /** Stara polja bez godine — čitaj kroz odjelZaGodinu() */
+  plan_cet?: number;
+  plan_lis?: number;
+  real_cet?: number;
+  real_lis?: number;
+  poGodini?: Record<string, OdjelGodina>;
   doznaceno?: boolean;
   vlakeProjektovane?: boolean;
   arhiviran?: boolean;

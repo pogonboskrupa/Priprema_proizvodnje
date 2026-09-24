@@ -17,8 +17,22 @@ import {
   arrayUnion,
   arrayRemove,
 } from './firebase';
-import type { Odjel, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
+import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
 import { localDateStr } from './format';
+
+// ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
+// Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
+// pa se ID ovdje svodi na korisnika (baza se ne mijenja).
+async function queryUnosi(constraints: Parameters<typeof queryCol>[1]) {
+  const [raw, inzinjeri] = await Promise.all([queryCol('unosi', constraints), getAll('inzinjeri')]);
+  const owner = new Map<string, string>();
+  for (const i of inzinjeri) if (i.korisnikId) owner.set(i.id as string, i.korisnikId as string);
+  if (!owner.size) return raw;
+  return raw.map((u) => {
+    const k = owner.get(u.inzinjerId as string);
+    return k ? { ...u, inzinjerId: k } : u;
+  });
+}
 
 // ── Korisnici ─────────────────────────────────────────────────────────────────
 
@@ -98,21 +112,26 @@ export async function otpustiRjesenje(korisnikId: string, odjelId: string): Prom
 
 // ── Odjeli ────────────────────────────────────────────────────────────────────
 
-export async function getOdjeli(opts: { ukljuciArhivirane?: boolean } = {}): Promise<Odjel[]> {
+export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: boolean } = {}): Promise<Odjel[]> {
+  // brojanje prolazi kroz sve unose — samo stranica Odjeli ga traži
   const [odjeliRaw, inzinjeriRaw, unosiRaw] = await Promise.all([
     getAll('odjeli'),
-    getAll('inzinjeri'),
-    getAll('unosi'),
+    opts.saBrojem ? getAll('inzinjeri') : Promise.resolve([]),
+    opts.saBrojem ? queryUnosi([]) : Promise.resolve([]),
   ]);
+  const unosiPoOdjelu = new Map<string, number>();
+  for (const u of unosiRaw) unosiPoOdjelu.set(u.odjelId as string, (unosiPoOdjelu.get(u.odjelId as string) ?? 0) + 1);
 
   return odjeliRaw
     .filter((o) => opts.ukljuciArhivirane || !o.arhiviran)
     .map((o) => ({
       ...(o as unknown as Odjel),
-      _count: {
-        inzinjeri: inzinjeriRaw.filter((i) => i.odjelId === o.id).length,
-        unosi: unosiRaw.filter((u) => u.odjelId === o.id).length,
-      },
+      ...(opts.saBrojem && {
+        _count: {
+          inzinjeri: inzinjeriRaw.filter((i) => i.odjelId === o.id).length,
+          unosi: unosiPoOdjelu.get(o.id as string) ?? 0,
+        },
+      }),
     }))
     .sort((a, b) => String(a.broj).localeCompare(String(b.broj)));
 }
@@ -128,10 +147,15 @@ export async function createOdjel(data: {
 
 export async function updateOdjel(
   id: string,
-  data: { gj?: string; broj?: string; povrsina?: number; plan_cet?: number; plan_lis?: number; real_cet?: number; real_lis?: number; doznaceno?: boolean; vlakeProjektovane?: boolean }
+  data: { gj?: string; broj?: string; povrsina?: number; doznaceno?: boolean; vlakeProjektovane?: boolean }
 ): Promise<Odjel> {
   const raw = await update('odjeli', id, data as Record<string, unknown>);
   return raw as unknown as Odjel;
+}
+
+export async function updateOdjelGodina(id: string, year: number, povrsina: number, g: OdjelGodina): Promise<void> {
+  // dotted path mijenja samo tu godinu; prošle godine ostaju kao arhiva
+  await update('odjeli', id, { povrsina, [`poGodini.${year}`]: g });
 }
 
 export async function arhivirajOdjel(id: string, arhiviran: boolean): Promise<void> {
@@ -168,7 +192,7 @@ export async function getGodisnjePlanPoProjektantu(year: number): Promise<PlanPr
   const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
 
   const [unosiRaw, usersRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
@@ -179,14 +203,10 @@ export async function getGodisnjePlanPoProjektantu(year: number): Promise<PlanPr
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
   const inzinjeri = inzinjeriRaw as unknown as Inzinjer[];
-  // legacy unosi koriste inzinjer.id — mapiraj ih na korisnika
-  const ownerOf = new Map<string, string>();
-  for (const i of inzinjeri) if (i.korisnikId) ownerOf.set(i.id, i.korisnikId);
 
   const acc = new Map<string, { ha: number; km: number; odjeli: Set<string> }>();
   for (const u of unosiRaw) {
-    const raw = u.inzinjerId as string;
-    const id = ownerOf.get(raw) ?? raw;
+    const id = u.inzinjerId as string;
     const a = acc.get(id) ?? { ha: 0, km: 0, odjeli: new Set<string>() };
     if (u.vrsta === 'DOZNAKA') a.ha += Number(u.hektari) || 0;
     else if (u.vrsta === 'VLAKA') a.km += Number(u.kilometri) || 0;
@@ -227,7 +247,7 @@ export async function setPlanHa(korisnikId: string, year: number, planHa: number
 
 export async function getUnosi(): Promise<UnosRada[]> {
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [orderBy('datum', 'desc')]),
+    queryUnosi( [orderBy('datum', 'desc')]),
     getAll('inzinjeri'),
     getAll('odjeli'),
     getAll('users'),
@@ -307,7 +327,7 @@ export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
   const do_ = new Date(y, m - 1, d, 23, 59, 59, 999);
 
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
       orderBy('datum', 'asc'),
@@ -338,7 +358,7 @@ export async function getMjesecniRezime() {
   const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   do_.setHours(23, 59, 59, 999);
 
-  const unosi = await queryCol('unosi', [
+  const unosi = await queryUnosi( [
     where('datum', '>=', Timestamp.fromDate(od)),
     where('datum', '<=', Timestamp.fromDate(do_)),
   ]);
@@ -370,7 +390,7 @@ export async function getMjesecniRezimeMoj(ids: readonly string[]) {
   const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   do_.setHours(23, 59, 59, 999);
 
-  const unosi = await queryCol('unosi', [
+  const unosi = await queryUnosi( [
     where('datum', '>=', Timestamp.fromDate(od)),
     where('datum', '<=', Timestamp.fromDate(do_)),
   ]);
@@ -399,7 +419,7 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
   do_.setHours(23, 59, 59, 999);
 
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
       orderBy('datum', 'asc'),
@@ -433,7 +453,7 @@ export async function getMojiOdjeliData(): Promise<{
   const [odjeliRaw, korisnaciRaw, unosiRaw] = await Promise.all([
     getAll('odjeli'),
     getAll('users'),
-    getAll('unosi'),
+    queryUnosi([]),
   ]);
 
   const odjeli = (odjeliRaw as unknown as Odjel[]).sort((a, b) =>
@@ -482,7 +502,7 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
   do_.setHours(23, 59, 59, 999);
 
   const [unosiRaw, korisnaciRaw, odjeliRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
@@ -560,14 +580,14 @@ export async function getIzvjestaj(
   const { od, do_ } = getDateRange(period, refDate);
 
   const [unosiRaw, odjeliRaw, korisnaciRaw, doKrajaRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
     getAll('odjeli'),
     getAll('users'),
     tip === 'odjel'
-      ? queryCol('unosi', [where('datum', '<=', Timestamp.fromDate(do_))])
+      ? queryUnosi( [where('datum', '<=', Timestamp.fromDate(do_))])
       : Promise.resolve([]),
   ]);
 
@@ -675,8 +695,9 @@ export interface OdjelPeriodRada {
   vlaka: { od: string; do_: string } | null;
 }
 
-export async function getUnosiOdjelPeriod(): Promise<OdjelPeriodRada[]> {
-  const raw = await getAll('unosi');
+export async function getUnosiOdjelPeriod(year?: number): Promise<OdjelPeriodRada[]> {
+  const raw = await queryUnosi([]);
+  const godina = year ? String(year) : null;
   const periodi: Record<string, { doznakaMin: string | null; doznakaMax: string | null; vlakaMin: string | null; vlakaMax: string | null }> = {};
 
   for (const u of raw) {
@@ -685,6 +706,7 @@ export async function getUnosiOdjelPeriod(): Promise<OdjelPeriodRada[]> {
     const odjelId = u.odjelId as string;
     if (!odjelId) continue;
     const datumStr = (u.datum as string).slice(0, 10);
+    if (godina && !datumStr.startsWith(godina)) continue;
     if (!periodi[odjelId]) periodi[odjelId] = { doznakaMin: null, doznakaMax: null, vlakaMin: null, vlakaMax: null };
     const p = periodi[odjelId];
     if (vrsta === 'DOZNAKA') {
@@ -721,7 +743,7 @@ export async function getMjesecniRezimePoOdjelima(ids?: readonly string[]): Prom
   do_.setHours(23, 59, 59, 999);
 
   const [unosiRaw, odjeliRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
@@ -772,7 +794,7 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
   const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
 
   const [unosiRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
@@ -820,7 +842,7 @@ export async function getStatistikaUcinka(year: number, inzinjerId?: string): Pr
   const od = new Date(year, 0, 1);
   const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
 
-  const unosiRaw = await queryCol('unosi', [
+  const unosiRaw = await queryUnosi( [
     where('datum', '>=', Timestamp.fromDate(od)),
     where('datum', '<=', Timestamp.fromDate(do_)),
   ]);
@@ -859,7 +881,7 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
   const do_ = month ? new Date(year, month, 0, 23, 59, 59, 999) : new Date(year, 11, 31, 23, 59, 59, 999);
 
   const [unosiRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
@@ -920,7 +942,7 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
   const do_ = month ? new Date(year, month, 0, 23, 59, 59, 999) : new Date(year, 11, 31, 23, 59, 59, 999);
 
   const [unosiRaw, korisnaciRaw] = await Promise.all([
-    queryCol('unosi', [
+    queryUnosi( [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),

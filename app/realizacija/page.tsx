@@ -6,10 +6,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 import { VRSTA } from "@/lib/vrste";
+import { godineEvidencije } from "@/lib/godine";
+import { odjelZaGodinu, imaPodatke } from "@/lib/plan-sjece";
+import type { OdjelGodina } from "@/lib/types";
+
+type OdjelRed = Odjel & OdjelGodina;
 
 type RFilt = "sve" | "plan" | "u_toku" | "zavrseno";
 
-function getStatus(o: Odjel): "plan" | "u_toku" | "zavrseno" {
+function getStatus(o: OdjelRed): "plan" | "u_toku" | "zavrseno" {
   const plan = (o.plan_cet || 0) + (o.plan_lis || 0);
   const real = (o.real_cet || 0) + (o.real_lis || 0);
   if (real <= 0) return "plan";
@@ -25,7 +30,8 @@ function fmtPeriodDate(d: string): string {
 export default function RealizacijaPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const [odjeli, setOdjeli] = useState<Odjel[]>([]);
+  const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [periodi, setperiodi] = useState<Record<string, OdjelPeriodRada>>({});
   const [filt, setFilt] = useState<RFilt>("sve");
   const [err, setErr] = useState("");
@@ -36,13 +42,20 @@ export default function RealizacijaPage() {
   }, [session, loading]);
 
   useEffect(() => {
-    getOdjeli().then(setOdjeli).catch(() => setErr("Greška pri učitavanju odjela."));
-    getUnosiOdjelPeriod().then((arr) => {
+    getOdjeli({ ukljuciArhivirane: true }).then(setSviOdjeli).catch(() => setErr("Greška pri učitavanju odjela."));
+  }, []);
+
+  useEffect(() => {
+    getUnosiOdjelPeriod(year).then((arr) => {
       const map: Record<string, OdjelPeriodRada> = {};
       arr.forEach((p) => { map[p.odjelId] = p; });
       setperiodi(map);
     }).catch(() => setErr("Greška pri učitavanju perioda rada."));
-  }, []);
+  }, [year]);
+
+  const odjeli: OdjelRed[] = sviOdjeli
+    .map((o) => ({ ...o, ...odjelZaGodinu(o, year) }))
+    .filter((o) => !o.arhiviran || imaPodatke(o));
 
   const filtered = filt === "sve" ? odjeli : odjeli.filter((o) => getStatus(o) === filt);
 
@@ -56,7 +69,22 @@ export default function RealizacijaPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Realizacija</h1>
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Realizacija {year}</h1>
+        <div className="flex gap-1">
+          {godineEvidencije().map((y) => (
+            <button
+              key={y}
+              onClick={() => setYear(y)}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                year === y ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {err && (
         <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">

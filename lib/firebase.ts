@@ -12,7 +12,7 @@ import {
   getDocsFromCache,
   getDocsFromServer,
   getDocFromCache,
-  addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -28,6 +28,9 @@ import {
   runTransaction,
   arrayUnion,
   arrayRemove,
+  getCountFromServer,
+  type DocumentChange,
+  type Unsubscribe,
 } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -77,6 +80,89 @@ if (typeof window !== 'undefined') {
   _authReady = Promise.resolve();
 }
 
+export function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+}
+
+// ── Sinhronizacija cache-a ────────────────────────────────────────────────────
+// Čitanja idu iz lokalnog cache-a (brzo, radi i offline). Listeneri ga drže svježim:
+// male kolekcije cijele, a unosi samo nedavno mijenjani (jeftino). Poređenje broja
+// dokumenata sa serverom otkriva nepotpun cache i tada se unosi jednom povuku cijeli.
+
+const SYNC_TIMEOUT_MS = 5000;
+const UNOSI_PROZOR_DANA = 60;
+const syncReady = new Map<string, Promise<void>>();
+const unosiSubscribers = new Set<(changes: DocumentChange<DocumentData>[]) => void>();
+
+/** Promjene unosa sa servera nakon početne sinhronizacije (za obavještenja) */
+export function onUnosiChanges(cb: (changes: DocumentChange<DocumentData>[]) => void): () => void {
+  unosiSubscribers.add(cb);
+  return () => { unosiSubscribers.delete(cb); };
+}
+
+// Rješava se na prvi snapshot sa servera, odmah ako je uređaj offline, ili nakon timeouta
+function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: (c: DocumentChange<DocumentData>[]) => void }): Promise<void> {
+  return new Promise((resolve) => {
+    let synced = false;
+    let unsub: Unsubscribe | null = null;
+    const timer = setTimeout(resolve, isOffline() ? 0 : SYNC_TIMEOUT_MS);
+    unsub = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
+      if (!synced) {
+        if (snap.metadata.fromCache) return;
+        synced = true;
+        clearTimeout(timer);
+        resolve();
+        if (!opts.keep) unsub?.();
+        return;
+      }
+      const changes = snap.docChanges();
+      if (changes.length) opts.onLaterChanges?.(changes);
+    }, () => { clearTimeout(timer); resolve(); });
+  });
+}
+
+async function ensureCompleteUnosi() {
+  if (isOffline()) return;
+  try {
+    const ref = collection(db, 'unosi');
+    const [server, cached] = await Promise.all([
+      getCountFromServer(ref),
+      getDocsFromCache(ref).catch(() => null),
+    ]);
+    if (cached && cached.size === server.data().count) return;
+    // listener (ne jednokratni get) uklanja i dokumente obrisane na drugim uređajima
+    await listen(ref, { keep: false });
+  } catch { /* bez mreže — ostaje cache */ }
+}
+
+if (typeof window !== 'undefined') {
+  for (const col of ['odjeli', 'users', 'inzinjeri']) {
+    syncReady.set(col, _authReady.then(() => listen(collection(db, col), { keep: true })));
+  }
+  syncReady.set('unosi', _authReady.then(async () => {
+    const since = Timestamp.fromMillis(Date.now() - UNOSI_PROZOR_DANA * 86_400_000);
+    await listen(query(collection(db, 'unosi'), where('updatedAt', '>=', since)), {
+      keep: true,
+      onLaterChanges: (changes) => unosiSubscribers.forEach((cb) => cb(changes)),
+    });
+    await ensureCompleteUnosi();
+  }));
+}
+
+async function ready(col: string) {
+  await _authReady;
+  // neuspjela sinhronizacija ne smije blokirati čitanje — tada ostaje cache/server
+  await syncReady.get(col)?.catch(() => undefined);
+}
+
+// Offline Firestore upiše lokalno i pošalje kad bude mreže, ali promise čeka server.
+// Da UI ne visi na "Čuvanje...", nakon kratkog čekanja upis se smatra prihvaćenim.
+function confirmOrQueue(write: Promise<void>): Promise<void> {
+  write.catch((e) => console.error('Firestore upis odbijen', e));
+  const wait = isOffline() ? 300 : 10000;
+  return Promise.race([write, new Promise<void>((r) => setTimeout(r, wait))]);
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 export function docToObj(snap: QueryDocumentSnapshot<DocumentData>) {
@@ -90,7 +176,7 @@ export function docToObj(snap: QueryDocumentSnapshot<DocumentData>) {
 }
 
 export async function getAll(col: string) {
-  await _authReady;
+  await ready(col);
   const ref = collection(db, col);
   try {
     const cached = await getDocsFromCache(ref);
@@ -119,7 +205,7 @@ export async function queryColFresh(col: string, constraints: Parameters<typeof 
 }
 
 export async function getById(col: string, id: string) {
-  await _authReady;
+  await ready(col);
   const ref = doc(db, col, id);
   try {
     const cached = await getDocFromCache(ref);
@@ -132,30 +218,29 @@ export async function getById(col: string, id: string) {
 
 export async function create(col: string, data: Record<string, unknown>) {
   await _authReady;
-  const ref = await addDoc(collection(db, col), {
-    ...data,
-    createdAt: Timestamp.now(),
-    updatedAt: Timestamp.now(),
-  });
+  // isti timestamp: createdAt === updatedAt znači "nikad editovan" (koristi Nav obavještenje)
+  const now = Timestamp.now();
+  const ref = doc(collection(db, col));
+  await confirmOrQueue(setDoc(ref, { ...data, createdAt: now, updatedAt: now }));
   return getById(col, ref.id);
 }
 
 export async function update(col: string, id: string, data: Record<string, unknown>) {
   await _authReady;
-  await updateDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() });
+  await confirmOrQueue(updateDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() }));
   return getById(col, id);
 }
 
 export async function remove(col: string, id: string) {
   await _authReady;
-  await deleteDoc(doc(db, col, id));
+  await confirmOrQueue(deleteDoc(doc(db, col, id)));
 }
 
 export async function queryCol(
   col: string,
   constraints: Parameters<typeof query>[1][]
 ) {
-  await _authReady;
+  await ready(col);
   const ref = collection(db, col) as CollectionReference<DocumentData>;
   const q: Query<DocumentData> = constraints.length
     ? query(ref, ...constraints)

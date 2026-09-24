@@ -4,6 +4,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getMojiOdjeliData, getKorisnik, getKorisnici, updateKorisnik, preuzmiRjesenje, otpustiRjesenje } from "@/lib/db";
 import type { Korisnik, Odjel } from "@/lib/types";
+import { odjelZaGodinu } from "@/lib/plan-sjece";
+
+const tekucaGodina = new Date().getFullYear();
 
 const ELABORAT_URL = "https://pogonboskrupa.github.io/Pregled_po_odsjecima/";
 
@@ -198,8 +201,7 @@ export default function MojiOdjeliPage() {
             const takenByOther = owner && owner !== me?.id;
             const ownerKorisnik = takenByOther ? korisnici.find((k) => k.id === owner) : null;
             const stats = statsPerOdjel[odjel.id] ?? { ha: 0, stabala: 0, km: 0 };
-            const planCet = Number(odjel.plan_cet) || 0;
-            const planLis = Number(odjel.plan_lis) || 0;
+            const { plan_cet: planCet, plan_lis: planLis } = odjelZaGodinu(odjel, tekucaGodina);
             const povrsina = Number(odjel.povrsina) || 0;
             const postotak = povrsina > 0 ? Math.min(100, Math.round((stats.ha / povrsina) * 100)) : 0;
 
@@ -326,12 +328,12 @@ export default function MojiOdjeliPage() {
                     <div className="mt-3 flex gap-4">
                       {planCet > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Plan četinara: <span className="font-semibold text-gray-700 dark:text-gray-200">{planCet.toLocaleString("bs")} m³</span>
+                          Plan četinara {tekucaGodina}: <span className="font-semibold text-gray-700 dark:text-gray-200">{planCet.toLocaleString("bs")} m³</span>
                         </div>
                       )}
                       {planLis > 0 && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Plan lišćara: <span className="font-semibold text-gray-700 dark:text-gray-200">{planLis.toLocaleString("bs")} m³</span>
+                          Plan lišćara {tekucaGodina}: <span className="font-semibold text-gray-700 dark:text-gray-200">{planLis.toLocaleString("bs")} m³</span>
                         </div>
                       )}
                     </div>
