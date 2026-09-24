@@ -61,11 +61,14 @@ export interface UnosRada {
   napomena?: string | null;
   createdById?: string | null;
   createdByRole?: UserRole | null;
+  updatedById?: string | null;
+  updatedByRole?: UserRole | null;
   createdAt: string;
   updatedAt: string;
   inzinjer?: Inzinjer;
   korisnik?: Korisnik;
   creator?: Korisnik;
+  updater?: Korisnik;
   odjel?: Odjel;
 }
 

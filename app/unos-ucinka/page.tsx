@@ -361,11 +361,13 @@ export default function UnosUcinkaPage() {
       await updateUnos(editId, {
         vrsta: editForm.vrsta,
         inzinjerId: u.inzinjerId,
-        odjelId: editForm.odjelId,
+        odjelId: editForm.odjelId || undefined,
         brojStabala: editForm.vrsta === "DOZNAKA" && editForm.brojStabala ? Number(editForm.brojStabala.replace(",", ".")) : null,
         hektari: editForm.vrsta === "DOZNAKA" && editForm.hektari ? Number(editForm.hektari.replace(",", ".")) : null,
         kilometri: editForm.vrsta === "VLAKA" && editForm.kilometri ? Number(editForm.kilometri.replace(",", ".")) : null,
         napomena: editForm.napomena || null,
+        updatedById: session!.userId,
+        updatedByRole: session!.role,
       });
       setEditId(null);
       const fresh = await getUnosiZaDan(datum);

@@ -261,6 +261,8 @@ export async function updateUnos(id: string, data: {
   hektari?: number | null;
   kilometri?: number | null;
   napomena?: string | null;
+  updatedById?: string | null;
+  updatedByRole?: string | null;
 }): Promise<void> {
   await update('unosi', id, data as Record<string, unknown>);
 }
@@ -360,7 +362,7 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
   const do_ = new Date(year, month, 0);
   do_.setHours(23, 59, 59, 999);
 
-  const [unosiRaw, inzinjeriRaw, odjeliRaw] = await Promise.all([
+  const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
     queryCol('unosi', [
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
@@ -368,14 +370,19 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
     ]),
     getAll('inzinjeri'),
     getAll('odjeli'),
+    getAll('users'),
   ]);
 
   const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+  const korMap = Object.fromEntries(korisnaciRaw.map((k) => [k.id as string, k]));
 
   return unosiRaw.map((u) => ({
     ...(u as unknown as UnosRada),
     inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
+    korisnik: korMap[u.inzinjerId as string] as unknown as Korisnik,
+    creator: korMap[u.createdById as string] as unknown as Korisnik,
+    updater: korMap[(u as Record<string, unknown>).updatedById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
 }
