@@ -297,7 +297,7 @@ export default function UnosPage() {
                       className="hidden"
                       value={v}
                       checked={form.vrsta === v}
-                      onChange={() => setForm({ ...form, vrsta: v })}
+                      onChange={() => setForm({ ...form, vrsta: v, odjelId: "" })}
                     />
                     {v === "TEREN"
                       ? "🥾 Teren"
@@ -330,22 +330,24 @@ export default function UnosPage() {
               </div>
             )}
 
-            <div>
-              <label className={labelCls}>Odjel</label>
-              <select
-                className={inputCls}
-                value={form.odjelId}
-                onChange={(e) => setForm({ ...form, odjelId: e.target.value })}
-                required
-              >
-                <option value="">Odaberi odjel...</option>
-                {formOdjeli.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.gj} / {o.broj}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {(form.vrsta === "DOZNAKA" || form.vrsta === "VLAKA") && (
+              <div>
+                <label className={labelCls}>Odjel</label>
+                <select
+                  className={inputCls}
+                  value={form.odjelId}
+                  onChange={(e) => setForm({ ...form, odjelId: e.target.value })}
+                  required
+                >
+                  <option value="">Odaberi odjel...</option>
+                  {formOdjeli.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.gj} / {o.broj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {form.vrsta === "DOZNAKA" && (
               <div className="grid grid-cols-2 gap-3">
