@@ -462,7 +462,7 @@ export default function KalendarPage() {
         <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
           {DAY_NAMES.map((d, i) => (
             <div key={d} className={`text-center py-2.5 text-xs font-semibold tracking-wide ${
-              i === 6 ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-gray-500"
+              i >= 5 ? "text-slate-400 dark:text-slate-500" : "text-gray-400 dark:text-gray-500"
             }`}>
               {d}
             </div>
@@ -480,7 +480,8 @@ export default function KalendarPage() {
               }
               const ds = `${year}-${String(month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
               const entries = byDay[ds] ?? [];
-              const isSun    = idx % 7 === 6;
+              const isWeekend   = idx % 7 === 5 || idx % 7 === 6;
+              const isWorkWeekend = isWeekend && entries.length > 0;
               const isToday  = ds === todayStr;
               const isSelected = selectedDay === ds;
 
@@ -491,8 +492,8 @@ export default function KalendarPage() {
                   className={`min-h-[76px] p-1.5 border-b border-r border-gray-100 dark:border-gray-800 cursor-pointer transition-colors select-none
                     ${isSelected
                       ? "bg-green-50 dark:bg-green-950/50 ring-1 ring-inset ring-green-400/60 dark:ring-green-600/60"
-                      : isSun
-                      ? "bg-red-50/25 dark:bg-red-950/10 hover:bg-red-50/60 dark:hover:bg-red-950/25"
+                      : isWeekend && !isWorkWeekend
+                      ? "bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800/80"
                       : "hover:bg-gray-50/80 dark:hover:bg-gray-800/50"
                     }`}
                 >
@@ -500,8 +501,8 @@ export default function KalendarPage() {
                   <div className={`text-xs font-bold mb-1 w-5 h-5 flex items-center justify-center rounded-full leading-none
                     ${isToday
                       ? "bg-green-700 text-white"
-                      : isSun
-                      ? "text-red-500 dark:text-red-400"
+                      : isWeekend && !isWorkWeekend
+                      ? "text-slate-400 dark:text-slate-500"
                       : isSelected
                       ? "text-green-700 dark:text-green-400"
                       : "text-gray-600 dark:text-gray-400"
