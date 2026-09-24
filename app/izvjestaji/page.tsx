@@ -6,7 +6,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
 import { fmtDate } from "@/lib/format";
-import { godineEvidencije, mjeseciEvidencije } from "@/lib/godine";
+import { godineEvidencije, mjeseciEvidencije, EVIDENCIJA_OD_DATUM } from "@/lib/godine";
+import { localDateStr } from "@/lib/format";
 
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
@@ -49,6 +50,26 @@ type TabelaData = {
   do_: string;
 };
 
+function weekRefDate(weekOffset: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + weekOffset * 7);
+  return d;
+}
+
+function sedmicaLabel(offset: number): string {
+  if (offset === 0) return "Ova sedmica";
+  if (offset === -1) return "Prošla sedmica";
+  const n = -offset;
+  const paucal = n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
+  return `Prije ${n} ${paucal ? "sedmice" : "sedmica"}`;
+}
+
+function mondayOf(d: Date): Date {
+  const m = new Date(d);
+  m.setDate(d.getDate() - ((d.getDay() || 7) - 1));
+  return m;
+}
+
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -59,6 +80,7 @@ export default function IzvjestajiPage() {
   const [monthOptions] = useState(mjeseciEvidencije);
   const [selectedMonth, setSelectedMonth] = useState(() => mjeseciEvidencije()[0].value);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = tekuća sedmica, -1 = prošla...
   const [err, setErr] = useState("");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [tabelaData, setTabelaData] = useState<TabelaData | null>(null);
@@ -73,24 +95,25 @@ export default function IzvjestajiPage() {
     if (!session) return;
     const initialTip: Tip = session.role === "worker" ? "inzinjer" : "odjel";
     if (session.role === "worker") setTip(initialTip);
-    load(period, initialTip, selectedMonth, selectedYear);
+    load(period, initialTip, selectedMonth, selectedYear, weekOffset);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function refDateFor(p: Period, monthVal: string, yearVal: number): Date | undefined {
+  function refDateFor(p: Period, monthVal: string, yearVal: number, weekOff: number): Date | undefined {
     if (p === "godisnje") return new Date(yearVal, 6, 1);
+    if (p === "sedmicno") return weekRefDate(weekOff);
     if (p !== "mjesecno") return undefined;
     const [y, m] = monthVal.split("-").map(Number);
     return new Date(y, m - 1, 15); // mid-month → getDateRange calculates correct range
   }
 
-  async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth, yearVal: number = selectedYear) {
+  async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth, yearVal: number = selectedYear, weekOff: number = weekOffset) {
     const gen = ++genRef.current;
     setLoading(true);
     setErr("");
     try {
       const fetches: [Promise<unknown>, Promise<TabelaData | null>] = [
-        getIzvjestaj(p, t, refDateFor(p, monthVal, yearVal)),
-        p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela() : Promise.resolve(null),
+        getIzvjestaj(p, t, refDateFor(p, monthVal, yearVal, weekOff)),
+        p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela(weekRefDate(weekOff)) : Promise.resolve(null),
       ];
       const [json, tabela] = await Promise.all(fetches);
       if (gen !== genRef.current) return;
@@ -119,6 +142,15 @@ export default function IzvjestajiPage() {
     setSelectedMonth(val);
     load(period, tip, val);
   }
+
+  function handleWeek(delta: number) {
+    const next = Math.min(0, weekOffset + delta);
+    setWeekOffset(next);
+    load(period, tip, selectedMonth, selectedYear, next);
+  }
+
+  // ‹ se gasi na sedmici u kojoj počinje evidencija
+  const naPrvojSedmici = localDateStr(mondayOf(weekRefDate(weekOffset))) <= EVIDENCIJA_OD_DATUM;
 
   function handleYear(val: number) {
     setSelectedYear(val);
@@ -155,6 +187,29 @@ export default function IzvjestajiPage() {
         </div>
 
         {/* Month picker — only for "miesecno" */}
+        {period === "sedmicno" && (
+          <div>
+            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Sedmica</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleWeek(-1)}
+                disabled={naPrvojSedmici || loading}
+                aria-label="Prethodna sedmica"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+              >‹</button>
+              <span className="text-sm text-gray-700 dark:text-gray-200 px-2 min-w-[92px] text-center">
+                {sedmicaLabel(weekOffset)}
+              </span>
+              <button
+                onClick={() => handleWeek(1)}
+                disabled={weekOffset === 0 || loading}
+                aria-label="Sljedeća sedmica"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+              >›</button>
+            </div>
+          </div>
+        )}
+
         {period === "mjesecno" && (
           <div>
             <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Mjesec</span>

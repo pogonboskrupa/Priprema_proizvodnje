@@ -85,9 +85,10 @@ export function isOffline(): boolean {
 }
 
 // ── Sinhronizacija cache-a ────────────────────────────────────────────────────
-// Čitanja idu iz lokalnog cache-a (brzo, radi i offline). Listeneri ga drže svježim:
-// male kolekcije cijele, a unosi samo nedavno mijenjani (jeftino). Poređenje broja
-// dokumenata sa serverom otkriva nepotpun cache i tada se unosi jednom povuku cijeli.
+// Čitanja idu iz lokalnog cache-a (brzo, radi i offline). Listeneri ga drže svježim.
+// Male kolekcije se prate cijele. Unosi zavise od uloge (UnosiScope):
+//  - admin/operater: nedavno mijenjani unosi + provjera broja otkriva nepotpun cache
+//  - projektant: samo vlastiti unosi — tuđi podaci ne stižu na njegov uređaj
 
 const SYNC_TIMEOUT_MS = 5000;
 const UNOSI_PROZOR_DANA = 60;
@@ -100,11 +101,13 @@ export function onUnosiChanges(cb: (changes: DocumentChange<DocumentData>[]) => 
   return () => { unosiSubscribers.delete(cb); };
 }
 
-// Rješava se na prvi snapshot sa servera, odmah ako je uređaj offline, ili nakon timeouta
-function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: (c: DocumentChange<DocumentData>[]) => void }): Promise<void> {
-  return new Promise((resolve) => {
+interface Listener { ready: Promise<void>; stop: () => void }
+
+// ready se rješava na prvi snapshot sa servera, odmah ako je uređaj offline, ili nakon timeouta
+function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: (c: DocumentChange<DocumentData>[]) => void }): Listener {
+  let unsub: Unsubscribe | null = null;
+  const ready = new Promise<void>((resolve) => {
     let synced = false;
-    let unsub: Unsubscribe | null = null;
     const timer = setTimeout(resolve, isOffline() ? 0 : SYNC_TIMEOUT_MS);
     unsub = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
       if (!synced) {
@@ -119,9 +122,10 @@ function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: 
       if (changes.length) opts.onLaterChanges?.(changes);
     }, () => { clearTimeout(timer); resolve(); });
   });
+  return { ready, stop: () => unsub?.() };
 }
 
-async function ensureCompleteUnosi() {
+async function ensureCompleteUnosi(isActive: () => boolean) {
   if (isOffline()) return;
   try {
     const ref = collection(db, 'unosi');
@@ -129,24 +133,71 @@ async function ensureCompleteUnosi() {
       getCountFromServer(ref),
       getDocsFromCache(ref).catch(() => null),
     ]);
-    if (cached && cached.size === server.data().count) return;
+    if (!isActive() || (cached && cached.size === server.data().count)) return;
     // listener (ne jednokratni get) uklanja i dokumente obrisane na drugim uređajima
-    await listen(ref, { keep: false });
+    await listen(ref, { keep: false }).ready;
   } catch { /* bez mreže — ostaje cache */ }
+}
+
+export type UnosiScope = { kind: 'all' } | { kind: 'own'; ids: string[] };
+
+let scopeKey: string | null = null;
+let resolveFirstScope: (s: Promise<UnosiScope>) => void = () => {};
+let scopePromise: Promise<UnosiScope> = new Promise((r) => { resolveFirstScope = (s) => r(s); });
+let stopUnosiSync: () => void = () => {};
+
+/** Koje unose ovaj uređaj smije vidjeti; čeka dok AuthProvider ne postavi sesiju */
+export function unosiScope(): Promise<UnosiScope> {
+  return scopePromise;
+}
+
+// Stariji unosi su vezani za inzinjeri.id pa ulaze u projektantov skup ID-eva
+async function ownIds(userId: string): Promise<string[]> {
+  await ready('inzinjeri');
+  const q = query(collection(db, 'inzinjeri'), where('korisnikId', '==', userId));
+  const snap = await getDocsFromCache(q).catch(() => null);
+  // Firestore "in" podržava do 30 vrijednosti
+  return [userId, ...(snap?.docs.map((d) => d.id) ?? [])].slice(0, 30);
+}
+
+export function configureUnosiScope(userId: string, sviPodaci: boolean) {
+  if (typeof window === 'undefined') return;
+  const key = sviPodaci ? 'all' : `own:${userId}`;
+  if (key === scopeKey) return;
+  scopeKey = key;
+  stopUnosiSync();
+
+  const scope: Promise<UnosiScope> = sviPodaci
+    ? Promise.resolve({ kind: 'all' })
+    : ownIds(userId).then((ids) => ({ kind: 'own', ids }));
+  resolveFirstScope(scope);
+  scopePromise = scope;
+
+  let active = true;
+  const listeners: Listener[] = [];
+  stopUnosiSync = () => { active = false; listeners.forEach((l) => l.stop()); };
+  const notify = (changes: DocumentChange<DocumentData>[]) => unosiSubscribers.forEach((cb) => cb(changes));
+
+  syncReady.set('unosi', _authReady.then(() => scope).then(async (sc) => {
+    if (!active) return;
+    if (sc.kind === 'own') {
+      const l = listen(query(collection(db, 'unosi'), where('inzinjerId', 'in', sc.ids)), { keep: true, onLaterChanges: notify });
+      listeners.push(l);
+      await l.ready;
+      return;
+    }
+    const since = Timestamp.fromMillis(Date.now() - UNOSI_PROZOR_DANA * 86_400_000);
+    const l = listen(query(collection(db, 'unosi'), where('updatedAt', '>=', since)), { keep: true, onLaterChanges: notify });
+    listeners.push(l);
+    await l.ready;
+    await ensureCompleteUnosi(() => active);
+  }));
 }
 
 if (typeof window !== 'undefined') {
   for (const col of ['odjeli', 'users', 'inzinjeri']) {
-    syncReady.set(col, _authReady.then(() => listen(collection(db, col), { keep: true })));
+    syncReady.set(col, _authReady.then(() => listen(collection(db, col), { keep: true }).ready));
   }
-  syncReady.set('unosi', _authReady.then(async () => {
-    const since = Timestamp.fromMillis(Date.now() - UNOSI_PROZOR_DANA * 86_400_000);
-    await listen(query(collection(db, 'unosi'), where('updatedAt', '>=', since)), {
-      keep: true,
-      onLaterChanges: (changes) => unosiSubscribers.forEach((cb) => cb(changes)),
-    });
-    await ensureCompleteUnosi();
-  }));
 }
 
 async function ready(col: string) {
@@ -251,6 +302,13 @@ export async function queryCol(
   } catch { /* cache miss */ }
   const snaps = await getDocs(q);
   return snaps.docs.map(docToObj);
+}
+
+/** Samo iz lokalnog cache-a (bez servera) — za unose ograničene na projektanta */
+export async function queryColCache(col: string, constraints: Parameters<typeof query>[1][]) {
+  await ready(col);
+  const snap = await getDocsFromCache(query(collection(db, col), ...constraints)).catch(() => null);
+  return snap ? snap.docs.map(docToObj) : [];
 }
 
 export function authReady() {

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMojiOdjeliData, getKorisnik, getKorisnici, updateKorisnik, preuzmiRjesenje, otpustiRjesenje } from "@/lib/db";
+import { getMojiOdjeliData, getUcinakPoOdjelima, getKorisnik, getKorisnici, updateKorisnik, preuzmiRjesenje, otpustiRjesenje } from "@/lib/db";
 import type { Korisnik, Odjel } from "@/lib/types";
 import { odjelZaGodinu } from "@/lib/plan-sjece";
 
@@ -42,7 +42,6 @@ export default function MojiOdjeliPage() {
     ]).then(([data, meData]) => {
       setAllOdjeli(data.odjeli.filter((o) => !o.arhiviran));
       setKorisnici(data.korisnici);
-      setStatsPerOdjel(data.statsPerOdjel);
       if (meData) {
         setMe(meData);
       }
@@ -52,6 +51,17 @@ export default function MojiOdjeliPage() {
       setDataLoaded(true);
     });
   }, [session]);
+
+  // učinak se učitava samo za moje odjele i osvježava kad dodam/uklonim odjel
+  const mojiOdjeliKey = (me?.odjeliIds ?? []).join(",");
+  useEffect(() => {
+    if (!mojiOdjeliKey) { setStatsPerOdjel({}); return; }
+    let cancelled = false;
+    getUcinakPoOdjelima(mojiOdjeliKey.split(","))
+      .then((s) => { if (!cancelled) setStatsPerOdjel(s); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [mojiOdjeliKey]);
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 

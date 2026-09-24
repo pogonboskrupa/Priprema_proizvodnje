@@ -2,6 +2,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getSession, clearSession, saveSession, isRemembered, type Session } from "@/lib/auth";
 import { getKorisnik } from "@/lib/db";
+import { configureUnosiScope } from "@/lib/firebase";
+
+// admin i operater rade sa svim unosima; projektant vidi samo svoje
+function applyScope(ses: Session | null) {
+  if (ses) configureUnosiScope(ses.userId, ses.role === "admin" || !!ses.operater);
+}
 
 interface AuthCtx {
   session: Session | null;
@@ -17,7 +23,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   function refresh() {
-    setSession(getSession());
+    const ses = getSession();
+    // prije setSession: stranice čitaju unose tek kad dobiju sesiju, a tada opseg već postoji
+    applyScope(ses);
+    setSession(ses);
     setLoading(false);
   }
 
@@ -50,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       if (JSON.stringify(fresh) !== JSON.stringify(ses)) {
         saveSession(fresh, isRemembered());
+        applyScope(fresh);
         setSession(fresh);
       }
     }).catch(() => {});

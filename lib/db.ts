@@ -7,6 +7,8 @@ import {
   remove,
   queryCol,
   queryColFresh,
+  queryColCache,
+  unosiScope,
   Timestamp,
   where,
   orderBy,
@@ -24,7 +26,15 @@ import { localDateStr } from './format';
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
 // pa se ID ovdje svodi na korisnika (baza se ne mijenja).
 async function queryUnosi(constraints: Parameters<typeof queryCol>[1]) {
-  const [raw, inzinjeri] = await Promise.all([queryCol('unosi', constraints), getAll('inzinjeri')]);
+  const scope = await unosiScope();
+  const [raw, inzinjeri] = await Promise.all([
+    scope.kind === 'own'
+      // projektant: samo vlastiti unosi, iz cache-a koji puni sync listener
+      // (serverski upit "in + datum" bi tražio composite index)
+      ? queryColCache('unosi', [where('inzinjerId', 'in', scope.ids), ...constraints])
+      : queryCol('unosi', constraints),
+    getAll('inzinjeri'),
+  ]);
   const owner = new Map<string, string>();
   for (const i of inzinjeri) if (i.korisnikId) owner.set(i.id as string, i.korisnikId as string);
   if (!owner.size) return raw;
@@ -448,32 +458,34 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
 export async function getMojiOdjeliData(): Promise<{
   odjeli: Odjel[];
   korisnici: Korisnik[];
-  statsPerOdjel: Record<string, { ha: number; stabala: number; km: number }>;
 }> {
-  const [odjeliRaw, korisnaciRaw, unosiRaw] = await Promise.all([
-    getAll('odjeli'),
-    getAll('users'),
-    queryUnosi([]),
-  ]);
-
+  const [odjeliRaw, korisnaciRaw] = await Promise.all([getAll('odjeli'), getAll('users')]);
   const odjeli = (odjeliRaw as unknown as Odjel[]).sort((a, b) =>
     String(a.broj).localeCompare(String(b.broj))
   );
-  const korisnici = korisnaciRaw as unknown as Korisnik[];
+  return { odjeli, korisnici: korisnaciRaw as unknown as Korisnik[] };
+}
 
-  const statsPerOdjel: Record<string, { ha: number; stabala: number; km: number }> = {};
-  for (const u of unosiRaw) {
+export type OdjelUcinak = { ha: number; stabala: number; km: number };
+
+/** Ukupan rad svih projektanata, ali samo u traženim odjelima (ne cijela baza) */
+export async function getUcinakPoOdjelima(odjelIds: readonly string[]): Promise<Record<string, OdjelUcinak>> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < odjelIds.length; i += 30) chunks.push(odjelIds.slice(i, i + 30)); // limit za "in"
+  const results = await Promise.all(chunks.map((c) => queryColFresh('unosi', [where('odjelId', 'in', c)])));
+
+  const stats: Record<string, OdjelUcinak> = {};
+  for (const u of results.flat()) {
     const odjelId = u.odjelId as string;
-    if (!statsPerOdjel[odjelId]) statsPerOdjel[odjelId] = { ha: 0, stabala: 0, km: 0 };
+    if (!stats[odjelId]) stats[odjelId] = { ha: 0, stabala: 0, km: 0 };
     if (u.vrsta === 'DOZNAKA') {
-      statsPerOdjel[odjelId].ha += Number(u.hektari) || 0;
-      statsPerOdjel[odjelId].stabala += Number(u.brojStabala) || 0;
+      stats[odjelId].ha += Number(u.hektari) || 0;
+      stats[odjelId].stabala += Number(u.brojStabala) || 0;
     } else if (u.vrsta === 'VLAKA') {
-      statsPerOdjel[odjelId].km += Number(u.kilometri) || 0;
+      stats[odjelId].km += Number(u.kilometri) || 0;
     }
   }
-
-  return { odjeli, korisnici, statsPerOdjel };
+  return stats;
 }
 
 // ── Sedmična tabela ──────────────────────────────────────────────────────────
