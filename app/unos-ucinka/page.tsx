@@ -13,6 +13,7 @@ function today() {
 }
 
 const VRSTE: VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"];
+const NO_ODJEL_VRSTE = new Set<VrstaRada>(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"]);
 const VRSTA_LABEL: Record<string, string> = {
   DOZNAKA: "Doznaka", VLAKA: "Vlaka", TEREN: "Teren",
   GODISNJI: "Godišnji", KANCELARIJA: "Kancelarija", BOLOVANJE: "Bolovanje",
@@ -89,7 +90,8 @@ function RosterNewRow({
     (a.gj + a.broj).localeCompare(b.gj + b.broj)
   );
 
-  const isReady = !!(pending.odjelId && pending.vrsta);
+  const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
+  const isReady = !!(pending.vrsta && (noOdjelNeeded || pending.odjelId));
 
   return (
     <div className="px-3 py-3 space-y-2">
@@ -111,18 +113,20 @@ function RosterNewRow({
 
       {/* Odjel + Vrsta chips row */}
       <div className="flex flex-wrap items-start gap-2">
-        <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
-          <select
-            className={inputSmCls}
-            value={pending.odjelId}
-            onChange={(e) => onUpdate({ odjelId: e.target.value })}
-          >
-            <option value="">Odjel...</option>
-            {sortedOdjeli.map((o) => (
-              <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
-            ))}
-          </select>
-        </div>
+        {!noOdjelNeeded && (
+          <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
+            <select
+              className={inputSmCls}
+              value={pending.odjelId}
+              onChange={(e) => onUpdate({ odjelId: e.target.value })}
+            >
+              <option value="">Odjel...</option>
+              {sortedOdjeli.map((o) => (
+                <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-1">
           {VRSTE.map((v) => (
@@ -259,14 +263,18 @@ export default function UnosUcinkaPage() {
     }));
   }
 
-  const readyCount = korisnici.filter((k) => {
-    const p = pendingRows[k.id];
-    return !existingMap.has(k.id) && p?.odjelId && p?.vrsta;
-  }).length;
+  function isPendingReady(p: PendingRow | undefined) {
+    if (!p?.vrsta) return false;
+    return NO_ODJEL_VRSTE.has(p.vrsta) || !!p.odjelId;
+  }
+
+  const readyCount = korisnici.filter((k) =>
+    !existingMap.has(k.id) && isPendingReady(pendingRows[k.id])
+  ).length;
 
   async function savePendingRow(korisnikId: string) {
     const p = pendingRows[korisnikId];
-    if (!p?.odjelId || !p?.vrsta) return;
+    if (!isPendingReady(p)) return;
     setSavingRow(korisnikId);
     try {
       await createUnos({
@@ -295,10 +303,9 @@ export default function UnosUcinkaPage() {
   }
 
   async function saveAllReady() {
-    const ready = korisnici.filter((k) => {
-      const p = pendingRows[k.id];
-      return !existingMap.has(k.id) && p?.odjelId && p?.vrsta;
-    });
+    const ready = korisnici.filter((k) =>
+      !existingMap.has(k.id) && isPendingReady(pendingRows[k.id])
+    );
     if (!ready.length) return;
     setBatchSaving(true);
     try {
@@ -437,17 +444,19 @@ export default function UnosUcinkaPage() {
                     {displayKorisnik(k)}
                   </div>
                   <form onSubmit={handleSaveEdit} className="space-y-2">
-                    {/* Odjel */}
+                    {/* Odjel + Vrsta */}
                     <div className="flex flex-wrap items-start gap-2">
-                      <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
-                        <select className={inputSmCls} value={editForm.odjelId}
-                          onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
-                          <option value="">Odjel...</option>
-                          {allSortedOdjeli.map((o) => (
-                            <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
-                          ))}
-                        </select>
-                      </div>
+                      {!NO_ODJEL_VRSTE.has(editForm.vrsta) && (
+                        <div className="shrink-0" style={{ minWidth: 110, maxWidth: 160 }}>
+                          <select className={inputSmCls} value={editForm.odjelId}
+                            onChange={(e) => setEditForm((f) => ({ ...f, odjelId: e.target.value }))}>
+                            <option value="">Odjel...</option>
+                            {allSortedOdjeli.map((o) => (
+                              <option key={o.id} value={o.id}>{o.gj}/{o.broj}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       {/* Vrsta chips */}
                       <div className="flex flex-wrap gap-1">
                         {VRSTE.map((v) => (

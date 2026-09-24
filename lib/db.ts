@@ -218,7 +218,7 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
     datum,
     vrsta: form.vrsta,
     inzinjerId: form.inzinjerId,
-    odjelId: form.odjelId,
+    odjelId: form.odjelId || null,
     napomena: form.napomena || null,
     brojStabala: null,
     hektari: null,
@@ -238,7 +238,7 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
   const raw = await create('unosi', data);
   const [inzinjer, odjel, korisnik] = await Promise.all([
     getById('inzinjeri', form.inzinjerId),
-    getById('odjeli', form.odjelId),
+    form.odjelId ? getById('odjeli', form.odjelId) : Promise.resolve(null),
     getById('users', form.inzinjerId),
   ]);
   return {

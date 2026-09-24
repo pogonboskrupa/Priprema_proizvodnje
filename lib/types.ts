@@ -73,7 +73,7 @@ export interface UnosRadaForm {
   datum: string;
   vrsta: VrstaRada;
   inzinjerId: string;
-  odjelId: string;
+  odjelId?: string;
   brojStabala?: number;
   hektari?: number;
   kilometri?: number;
