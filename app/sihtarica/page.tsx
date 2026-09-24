@@ -39,7 +39,8 @@ const ODSUSTVA: readonly VrstaRada[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOL
 export default function SihtaricaPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const canPick = session?.role === "admin" || !!session?.operater;
+  // tuđu šihtaricu vidi samo admin; operater i projektant vide samo svoju
+  const canPick = session?.role === "admin";
 
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [korisniciLoaded, setKorisniciLoaded] = useState(false);
@@ -55,7 +56,6 @@ export default function SihtaricaPage() {
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // projektant uvijek gleda svoju šihtaricu; admin/operater bira
   const selectedId = canPick ? pickedId || korisnici[0]?.id || "" : session?.userId ?? "";
   const viewKey = `${selectedId}|${mjesec.year}-${mjesec.month}`;
   const loading = loadedKey !== viewKey;
