@@ -802,6 +802,69 @@ export async function getStatistikaUcinka(year: number, inzinjerId?: string): Pr
   return Array.from({ length: 12 }, (_, i) => ({ mjesec: i + 1, ...acc[i + 1] }));
 }
 
+export interface OdjelStatistika {
+  odjelId: string;
+  gj: string;
+  broj: string;
+  totalHa: number;
+  totalStabala: number;
+  totalKm: number;
+  projektanti: { radnikId: string; ime: string; ha: number; stabala: number; km: number }[];
+}
+
+export async function getStatistikaPoOdjelima(year: number, month?: number): Promise<OdjelStatistika[]> {
+  const od = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1);
+  const do_ = month ? new Date(year, month, 0, 23, 59, 59, 999) : new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const [unosiRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('odjeli'),
+    getAll('users'),
+  ]);
+
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
+  const korMap = Object.fromEntries(
+    (korisnaciRaw as unknown as Korisnik[]).map((k) => [k.id, k.fullName || k.ime])
+  );
+
+  // odjel → projektant → stats
+  const acc: Record<string, Record<string, { ha: number; stabala: number; km: number }>> = {};
+
+  for (const u of unosiRaw) {
+    const vrsta = u.vrsta as string;
+    if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
+    const odjelId = u.odjelId as string;
+    const radnikId = u.inzinjerId as string;
+    if (!odjelId || !radnikId) continue;
+    if (!acc[odjelId]) acc[odjelId] = {};
+    if (!acc[odjelId][radnikId]) acc[odjelId][radnikId] = { ha: 0, stabala: 0, km: 0 };
+    const a = acc[odjelId][radnikId];
+    if (vrsta === 'DOZNAKA') { a.ha += Number(u.hektari) || 0; a.stabala += Number(u.brojStabala) || 0; }
+    else a.km += Number(u.kilometri) || 0;
+  }
+
+  return Object.entries(acc)
+    .map(([odjelId, radnici]) => {
+      const o = odMap[odjelId];
+      const projektanti = Object.entries(radnici)
+        .map(([radnikId, s]) => ({ radnikId, ime: korMap[radnikId] ?? radnikId, ...s }))
+        .sort((a, b) => b.ha - a.ha);
+      return {
+        odjelId,
+        gj: o?.gj ?? '—',
+        broj: o?.broj ?? '—',
+        totalHa: projektanti.reduce((s, p) => s + p.ha, 0),
+        totalStabala: projektanti.reduce((s, p) => s + p.stabala, 0),
+        totalKm: projektanti.reduce((s, p) => s + p.km, 0),
+        projektanti,
+      };
+    })
+    .sort((a, b) => a.gj.localeCompare(b.gj) || a.broj.localeCompare(b.broj, undefined, { numeric: true }));
+}
+
 export interface UporedbaRed {
   radnikId: string;
   ime: string;
