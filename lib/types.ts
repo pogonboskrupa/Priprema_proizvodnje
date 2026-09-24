@@ -18,6 +18,8 @@ export interface Korisnik {
   arhiviran?: boolean;
   /** Godišnji plan doznake u ha, ključ je godina ("2026") */
   planHaPoGodini?: Record<string, number>;
+  /** Dana godišnjeg odmora po ugovoru; ključ je godina početka GO perioda (1. 7.) */
+  goDanaPoUgovoru?: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 }

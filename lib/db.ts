@@ -300,10 +300,12 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
   // GODISNJI, KANCELARIJA, BOLOVANJE, TEREN — nema numeričkih polja
 
   const raw = await create('unosi', data);
+  // upis je već u redu za slanje; offline promašaj cache-a ovdje ne smije prijaviti grešku
+  const lookup = (col: string, id: string) => getById(col, id).catch(() => null);
   const [inzinjer, odjel, korisnik] = await Promise.all([
-    getById('inzinjeri', form.inzinjerId),
-    form.odjelId ? getById('odjeli', form.odjelId) : Promise.resolve(null),
-    getById('users', form.inzinjerId),
+    lookup('inzinjeri', form.inzinjerId),
+    form.odjelId ? lookup('odjeli', form.odjelId) : Promise.resolve(null),
+    lookup('users', form.inzinjerId),
   ]);
   return {
     ...(raw as unknown as UnosRada),
@@ -451,6 +453,22 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
     updater: korMap[(u as Record<string, unknown>).updatedById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
+}
+
+// ── Šihtarica ────────────────────────────────────────────────────────────────
+
+export async function getSihtarica(korisnikId: string, year: number, month: number): Promise<UnosRada[]> {
+  return (await getUnosiZaMjesec(year, month)).filter((u) => u.inzinjerId === korisnikId);
+}
+
+// Filter samo po vrsti (jedno polje) — upit ne traži composite index; datum se filtrira u goPeriod
+export async function getGodisnjiUnosi(korisnikId: string): Promise<UnosRada[]> {
+  const raw = await queryUnosi([where('vrsta', '==', 'GODISNJI')]);
+  return (raw as unknown as UnosRada[]).filter((u) => u.inzinjerId === korisnikId);
+}
+
+export async function setGoDanaPoUgovoru(korisnikId: string, periodGodina: number, dana: number | null): Promise<void> {
+  await update('users', korisnikId, { [`goDanaPoUgovoru.${periodGodina}`]: dana });
 }
 
 // ── Moji odjeli ──────────────────────────────────────────────────────────────

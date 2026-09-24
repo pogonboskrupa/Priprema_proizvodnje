@@ -42,6 +42,7 @@ const adminLinks = [
   { href: "/unos-ucinka", label: "Unos učinka" },
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/kalendar", label: "Kalendar" },
+  { href: "/sihtarica", label: "Šihtarica" },
   { href: "/odjeli", label: "Odjeli" },
   { href: "/plan", label: "Plan sječe" },
   { href: "/plan-projektant", label: "Plan/projektant" },
@@ -56,6 +57,7 @@ const workerLinks = [
   { href: "/unos", label: "Unos rada" },
   { href: "/izvjestaji", label: "Izvještaji" },
   { href: "/kalendar", label: "Kalendar" },
+  { href: "/sihtarica", label: "Šihtarica" },
   { href: "/elaborat", label: "Elaborat" },
   { href: "/moji-odjeli", label: "Moji odjeli" },
   { href: "/postavke", label: "Postavke" },
@@ -224,7 +226,7 @@ export default function Nav() {
           <span>{toast}</span>
         </div>
       )}
-      <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50">
+      <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50 print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14">
           {/* Logo */}
           <Link href="/" className="font-bold text-sm mr-2 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
