@@ -3,25 +3,26 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
-  getStatistikaPrisutnosti, getStatistikaUcinka, getKorisnici,
-  PrisutnostRow, UcinakMjesec,
+  getStatistikaPrisutnosti, getStatistikaUcinka, getUporedbaUcinka, getKorisnici,
+  PrisutnostRow, UcinakMjesec, UporedbaRed,
 } from "@/lib/db";
 import type { Korisnik } from "@/lib/types";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
 
-type Tab = "prisutnost" | "ucanak";
+type Tab = "prisutnost" | "ucanak" | "usporedba";
 type PVrsta = "teren" | "kancelarija" | "godisnji" | "bolovanje";
+type SortKey = "ha" | "stabala" | "km";
 
 const VRSTA_CFG: Record<PVrsta, { label: string; color: string; bg: (n: number) => string }> = {
-  teren:      { label: "Teren",       color: "text-amber-700 dark:text-amber-300",
+  teren:      { label: "Teren",          color: "text-amber-700 dark:text-amber-300",
     bg: (n) => n === 0 ? "" : n <= 2 ? "bg-amber-50 dark:bg-amber-950/40" : n <= 5 ? "bg-amber-100 dark:bg-amber-900/60" : "bg-amber-200 dark:bg-amber-800/80" },
-  kancelarija:{ label: "Kancelarija", color: "text-violet-700 dark:text-violet-300",
+  kancelarija:{ label: "Kancelarija",    color: "text-violet-700 dark:text-violet-300",
     bg: (n) => n === 0 ? "" : n <= 2 ? "bg-violet-50 dark:bg-violet-950/40" : n <= 5 ? "bg-violet-100 dark:bg-violet-900/60" : "bg-violet-200 dark:bg-violet-800/80" },
   godisnji:   { label: "Godišnji odmor", color: "text-sky-700 dark:text-sky-300",
     bg: (n) => n === 0 ? "" : n <= 2 ? "bg-sky-50 dark:bg-sky-950/40" : n <= 5 ? "bg-sky-100 dark:bg-sky-900/60" : "bg-sky-200 dark:bg-sky-800/80" },
-  bolovanje:  { label: "Bolovanje",   color: "text-red-700 dark:text-red-300",
+  bolovanje:  { label: "Bolovanje",      color: "text-red-700 dark:text-red-300",
     bg: (n) => n === 0 ? "" : n <= 2 ? "bg-red-50 dark:bg-red-950/40" : n <= 5 ? "bg-red-100 dark:bg-red-900/60" : "bg-red-200 dark:bg-red-800/80" },
 };
 
@@ -34,15 +35,22 @@ export default function StatistikaPage() {
   const router = useRouter();
   const currentYear = new Date().getFullYear();
 
-  const [tab, setTab] = useState<Tab>("prisutnost");
+  const [tab, setTab]   = useState<Tab>("prisutnost");
   const [year, setYear] = useState(currentYear);
 
+  // Prisutnost
   const [prisutnostData, setPrisutnostData] = useState<PrisutnostRow[]>([]);
   const [vrsta, setVrsta] = useState<PVrsta>("teren");
 
-  const [ucinakData, setUcinakData] = useState<UcinakMjesec[]>([]);
-  const [radnici, setRadnici] = useState<Korisnik[]>([]);
+  // Učinak
+  const [ucinakData, setUcinakData]     = useState<UcinakMjesec[]>([]);
+  const [radnici, setRadnici]           = useState<Korisnik[]>([]);
   const [filterRadnik, setFilterRadnik] = useState("");
+
+  // Usporedba
+  const [uporedbaData, setUporedbaData]   = useState<UporedbaRed[]>([]);
+  const [upoMjesec, setUpoMjesec]         = useState<number>(0); // 0 = cijela godina
+  const [sortKey, setSortKey]             = useState<SortKey>("ha");
 
   const [busy, setBusy] = useState(false);
 
@@ -61,26 +69,32 @@ export default function StatistikaPage() {
     setBusy(true);
     if (tab === "prisutnost") {
       getStatistikaPrisutnosti(year).then(setPrisutnostData).finally(() => setBusy(false));
-    } else {
+    } else if (tab === "ucanak") {
       getStatistikaUcinka(year, filterRadnik || undefined).then(setUcinakData).finally(() => setBusy(false));
+    } else {
+      getUporedbaUcinka(year, upoMjesec || undefined).then(setUporedbaData).finally(() => setBusy(false));
     }
-  }, [session, tab, year, filterRadnik]);
+  }, [session, tab, year, filterRadnik, upoMjesec]);
 
   if (loading || !session || session.role !== "admin") return null;
 
   const years = yearOptions(currentYear);
 
   return (
-    <div className="py-6 space-y-6">
+    <div className="py-6 space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Statistika</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Presjeci po tipu dana i učinku projektanata</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Presjeci po tipu dana, učinku i usporedba projektanata</p>
       </div>
 
       {/* Main tabs */}
       <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit">
-        {([["prisutnost", "📅 Prisutnost"], ["ucanak", "🌲 Učinak"]] as [Tab, string][]).map(([t, label]) => (
+        {([
+          ["prisutnost",  "📅 Prisutnost"],
+          ["ucanak",      "🌲 Učinak"],
+          ["usporedba",   "🏆 Usporedba"],
+        ] as [Tab, string][]).map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -100,15 +114,10 @@ export default function StatistikaPage() {
         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Godina</span>
         <div className="flex gap-1">
           {years.map((y) => (
-            <button
-              key={y}
-              onClick={() => setYear(y)}
+            <button key={y} onClick={() => setYear(y)}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                year === y
-                  ? "bg-green-700 text-white"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-              }`}
-            >
+                year === y ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}>
               {y}
             </button>
           ))}
@@ -116,56 +125,95 @@ export default function StatistikaPage() {
         {busy && <span className="text-xs text-gray-400 animate-pulse">Učitava…</span>}
       </div>
 
-      {/* ── PRISUTNOST TAB ── */}
+      {/* ── PRISUTNOST ── */}
       {tab === "prisutnost" && (
         <div className="space-y-4">
-          {/* Vrsta selector */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Tip dana</span>
             {(Object.entries(VRSTA_CFG) as [PVrsta, typeof VRSTA_CFG[PVrsta]][]).map(([k, cfg]) => (
-              <button
-                key={k}
-                onClick={() => setVrsta(k)}
+              <button key={k} onClick={() => setVrsta(k)}
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
                   vrsta === k
                     ? `${cfg.color} border-current bg-current/10`
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                }`}
-              >
+                }`}>
                 {cfg.label}
               </button>
             ))}
           </div>
-
           {prisutnostData.length === 0 && !busy && (
             <p className="text-sm text-gray-400 py-4">Nema podataka za {year}. godinu.</p>
           )}
-
-          {prisutnostData.length > 0 && (
-            <PrisutnostTabela data={prisutnostData} vrsta={vrsta} year={year} />
-          )}
+          {prisutnostData.length > 0 && <PrisutnostTabela data={prisutnostData} vrsta={vrsta} year={year} />}
         </div>
       )}
 
-      {/* ── UČINAK TAB ── */}
+      {/* ── UČINAK ── */}
       {tab === "ucanak" && (
         <div className="space-y-4">
-          {/* Projektant filter */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Projektant</span>
             <select
               className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
               value={filterRadnik}
-              onChange={(e) => setFilterRadnik(e.target.value)}
-            >
+              onChange={(e) => setFilterRadnik(e.target.value)}>
               <option value="">Svi projektanti</option>
-              {radnici.map((r) => (
-                <option key={r.id} value={r.id}>{r.fullName || r.ime}</option>
-              ))}
+              {radnici.map((r) => <option key={r.id} value={r.id}>{r.fullName || r.ime}</option>)}
             </select>
           </div>
-
           {ucinakData.length > 0 && <UcinakTabela data={ucinakData} year={year} />}
+        </div>
+      )}
+
+      {/* ── USPOREDBA ── */}
+      {tab === "usporedba" && (
+        <div className="space-y-4">
+          {/* Period filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Period</span>
+            <button
+              onClick={() => setUpoMjesec(0)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                upoMjesec === 0 ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}>
+              Cijela godina
+            </button>
+            {MJ_SHORT.map((m, i) => (
+              <button key={i} onClick={() => setUpoMjesec(i + 1)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  upoMjesec === i + 1 ? "bg-green-700 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}>
+                {m}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sortiraj po</span>
+            {([["ha", "Hektarima"], ["stabala", "Stablima"], ["km", "Km vlaka"]] as [SortKey, string][]).map(([k, lbl]) => (
+              <button key={k} onClick={() => setSortKey(k)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
+                  sortKey === k
+                    ? "border-green-600 bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+
+          {uporedbaData.length === 0 && !busy && (
+            <p className="text-sm text-gray-400 py-4">Nema podataka za odabrani period.</p>
+          )}
+          {uporedbaData.length > 0 && (
+            <UporedbaView
+              data={uporedbaData}
+              sortKey={sortKey}
+              year={year}
+              mjesec={upoMjesec}
+            />
+          )}
         </div>
       )}
     </div>
@@ -178,28 +226,18 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
   const cfg = VRSTA_CFG[vrsta];
   const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() + 1 : 12;
 
-  const totalsPerMonth = MJ_SHORT.map((_, mi) => {
-    const m = mi + 1;
-    return data.reduce((s, row) => s + (row.podaci[m]?.[vrsta] ?? 0), 0);
-  });
+  const totalsPerMonth = MJ_SHORT.map((_, mi) =>
+    data.reduce((s, row) => s + (row.podaci[mi + 1]?.[vrsta] ?? 0), 0)
+  );
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-            <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px]">
-              Projektant
-            </th>
+            <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px]">Projektant</th>
             {MJ_SHORT.map((m, i) => (
-              <th
-                key={m}
-                className={`px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 min-w-[52px] ${
-                  i + 1 === currentMonth ? "underline underline-offset-4" : ""
-                }`}
-              >
-                {m}
-              </th>
+              <th key={m} className={`px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 min-w-[52px] ${i + 1 === currentMonth ? "underline underline-offset-4" : ""}`}>{m}</th>
             ))}
             <th className="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300 min-w-[60px]">∑</th>
           </tr>
@@ -209,19 +247,11 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
             const total = Object.values(row.podaci).reduce((s, v) => s + (v[vrsta] ?? 0), 0);
             return (
               <tr key={row.radnikId} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
-                <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200 text-sm truncate max-w-[180px]">
-                  {row.ime}
-                </td>
+                <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200 truncate max-w-[180px]">{row.ime}</td>
                 {MJ_SHORT.map((_, i) => {
-                  const m = i + 1;
-                  const n = row.podaci[m]?.[vrsta] ?? 0;
+                  const n = row.podaci[i + 1]?.[vrsta] ?? 0;
                   return (
-                    <td
-                      key={m}
-                      className={`px-3 py-2.5 text-center tabular-nums font-medium text-sm transition-colors ${
-                        n > 0 ? `${cfg.color} ${cfg.bg(n)}` : "text-gray-300 dark:text-gray-700"
-                      }`}
-                    >
+                    <td key={i} className={`px-3 py-2.5 text-center tabular-nums font-medium text-sm transition-colors ${n > 0 ? `${cfg.color} ${cfg.bg(n)}` : "text-gray-300 dark:text-gray-700"}`}>
                       {n > 0 ? n : "·"}
                     </td>
                   );
@@ -232,16 +262,10 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
               </tr>
             );
           })}
-
-          {/* Totals row */}
-          <tr className="bg-gray-50 dark:bg-gray-800/60 border-t-2 border-gray-200 dark:border-gray-700 font-semibold">
-            <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              Ukupno
-            </td>
+          <tr className="bg-gray-50 dark:bg-gray-800/60 border-t-2 border-gray-200 dark:border-gray-700">
+            <td className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ukupno</td>
             {totalsPerMonth.map((n, i) => (
-              <td key={i} className={`px-3 py-2.5 text-center tabular-nums text-sm font-bold ${n > 0 ? cfg.color : "text-gray-300 dark:text-gray-700"}`}>
-                {n > 0 ? n : "·"}
-              </td>
+              <td key={i} className={`px-3 py-2.5 text-center tabular-nums text-sm font-bold ${n > 0 ? cfg.color : "text-gray-300 dark:text-gray-700"}`}>{n > 0 ? n : "·"}</td>
             ))}
             <td className={`px-4 py-2.5 text-center font-extrabold tabular-nums ${cfg.color}`}>
               {totalsPerMonth.reduce((a, b) => a + b, 0) || "·"}
@@ -260,7 +284,6 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
   const totalHa = data.reduce((s, m) => s + m.ha, 0);
   const totalStabala = data.reduce((s, m) => s + m.stabala, 0);
   const totalKm = data.reduce((s, m) => s + m.km, 0);
-
   const maxHa = Math.max(...data.map((m) => m.ha), 1);
   const maxKm = Math.max(...data.map((m) => m.km), 1);
 
@@ -269,7 +292,7 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-            <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]">Mjesec</th>
+            <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[130px]">Mjesec</th>
             <th className="px-4 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[90px]">Ha</th>
             <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[90px]">Stabala</th>
             <th className="px-4 py-3 text-right font-semibold text-sky-700 dark:text-sky-400 min-w-[90px]">Km vlaka</th>
@@ -278,18 +301,9 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {data.map((m) => {
-            const haRatio = m.ha / maxHa;
-            const kmRatio = m.km / maxKm;
             const hasData = m.ha > 0 || m.stabala > 0 || m.km > 0;
             return (
-              <tr
-                key={m.mjesec}
-                className={`transition-colors ${
-                  m.mjesec === currentMonth
-                    ? "bg-green-50/60 dark:bg-green-950/20"
-                    : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"
-                }`}
-              >
+              <tr key={m.mjesec} className={`transition-colors ${m.mjesec === currentMonth ? "bg-green-50/60 dark:bg-green-950/20" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"}`}>
                 <td className={`px-4 py-3 font-medium ${m.mjesec === currentMonth ? "text-green-700 dark:text-green-400 font-bold" : "text-gray-700 dark:text-gray-300"}`}>
                   {MJ_FULL[m.mjesec - 1]}
                 </td>
@@ -305,20 +319,8 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
                 <td className="px-4 py-3">
                   {hasData && (
                     <div className="flex flex-col gap-1">
-                      {m.ha > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 rounded-full bg-emerald-200 dark:bg-emerald-900 flex-1 max-w-[100px] overflow-hidden">
-                            <div className="h-full bg-emerald-500 dark:bg-emerald-400 rounded-full" style={{ width: `${haRatio * 100}%` }} />
-                          </div>
-                        </div>
-                      )}
-                      {m.km > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 rounded-full bg-sky-200 dark:bg-sky-900 flex-1 max-w-[100px] overflow-hidden">
-                            <div className="h-full bg-sky-500 dark:bg-sky-400 rounded-full" style={{ width: `${kmRatio * 100}%` }} />
-                          </div>
-                        </div>
-                      )}
+                      {m.ha > 0 && <MiniBar ratio={m.ha / maxHa} color="bg-emerald-400 dark:bg-emerald-500" track="bg-emerald-100 dark:bg-emerald-900/50" />}
+                      {m.km > 0 && <MiniBar ratio={m.km / maxKm} color="bg-sky-400 dark:bg-sky-500"     track="bg-sky-100 dark:bg-sky-900/50" />}
                     </div>
                   )}
                 </td>
@@ -329,19 +331,141 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
         <tfoot>
           <tr className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60">
             <td className="px-4 py-3 font-extrabold text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wide">Godišnji ∑</td>
-            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">
-              {totalHa.toFixed(2)}
-            </td>
-            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-green-700 dark:text-green-300 font-mono">
-              {totalStabala.toLocaleString("bs-BA")}
-            </td>
-            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-sky-700 dark:text-sky-300 font-mono">
-              {totalKm.toFixed(2)}
-            </td>
+            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">{totalHa.toFixed(2)}</td>
+            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-green-700 dark:text-green-300 font-mono">{totalStabala.toLocaleString("bs-BA")}</td>
+            <td className="px-4 py-3 text-right tabular-nums font-extrabold text-sky-700 dark:text-sky-300 font-mono">{totalKm.toFixed(2)}</td>
             <td />
           </tr>
         </tfoot>
       </table>
+    </div>
+  );
+}
+
+// ── Usporedba view ────────────────────────────────────────────────────────────
+
+function UporedbaView({ data, sortKey, year, mjesec }: {
+  data: UporedbaRed[]; sortKey: SortKey; year: number; mjesec: number;
+}) {
+  const sorted = [...data].sort((a, b) => b[sortKey] - a[sortKey]);
+  const maxHa      = Math.max(...sorted.map((r) => r.ha), 0.01);
+  const maxStabala = Math.max(...sorted.map((r) => r.stabala), 1);
+  const maxKm      = Math.max(...sorted.map((r) => r.km), 0.01);
+
+  const periodLabel = mjesec === 0 ? `${year}. godina` : `${MJ_FULL[mjesec - 1]} ${year}`;
+
+  const hasHa  = sorted.some((r) => r.ha > 0);
+  const hasKm  = sorted.some((r) => r.km > 0);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{periodLabel} · sortirano po {sortKey === "ha" ? "hektarima" : sortKey === "stabala" ? "stablima" : "km vlaka"}</p>
+
+      <div className="space-y-2">
+        {sorted.map((row, idx) => {
+          const haRatio  = maxHa      > 0 ? row.ha      / maxHa      : 0;
+          const stRatio  = maxStabala > 0 ? row.stabala / maxStabala : 0;
+          const kmRatio  = maxKm      > 0 ? row.km      / maxKm      : 0;
+          const isEmpty  = row.ha === 0 && row.stabala === 0 && row.km === 0;
+          const medal    = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null;
+
+          return (
+            <div
+              key={row.radnikId}
+              className={`rounded-xl border transition-colors ${
+                isEmpty
+                  ? "border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+              } p-4`}
+            >
+              {/* Name row */}
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-bold text-gray-400 dark:text-gray-600 w-5 tabular-nums flex-shrink-0">
+                    {medal ?? `${idx + 1}.`}
+                  </span>
+                  <span className={`font-semibold text-sm truncate ${isEmpty ? "text-gray-400 dark:text-gray-600" : "text-gray-800 dark:text-gray-100"}`}>
+                    {row.ime}
+                  </span>
+                </div>
+                {/* Summary chips */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {row.ha > 0 && (
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 tabular-nums bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full">
+                      {row.ha.toFixed(2)} ha
+                    </span>
+                  )}
+                  {row.stabala > 0 && (
+                    <span className="text-xs font-bold text-green-700 dark:text-green-300 tabular-nums bg-green-50 dark:bg-green-950/50 px-2 py-0.5 rounded-full">
+                      {row.stabala.toLocaleString("bs-BA")} st
+                    </span>
+                  )}
+                  {row.km > 0 && (
+                    <span className="text-xs font-bold text-sky-700 dark:text-sky-300 tabular-nums bg-sky-50 dark:bg-sky-950/50 px-2 py-0.5 rounded-full">
+                      {row.km.toFixed(2)} km
+                    </span>
+                  )}
+                  {isEmpty && <span className="text-xs text-gray-400 dark:text-gray-600 italic">bez unosa</span>}
+                </div>
+              </div>
+
+              {/* Bars */}
+              {!isEmpty && (
+                <div className="space-y-1.5">
+                  {hasHa && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 w-16 text-right flex-shrink-0">Ha</span>
+                      <div className="flex-1 h-2.5 rounded-full bg-emerald-100 dark:bg-emerald-950 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 dark:from-emerald-500 dark:to-emerald-400 transition-all duration-500"
+                          style={{ width: `${haRatio * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300 w-14 text-right flex-shrink-0 tabular-nums">
+                        {row.ha > 0 ? row.ha.toFixed(2) : "—"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 w-16 text-right flex-shrink-0">Stabala</span>
+                    <div className="flex-1 h-2.5 rounded-full bg-green-100 dark:bg-green-950 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-green-400 to-green-600 dark:from-green-500 dark:to-green-400 transition-all duration-500"
+                        style={{ width: `${stRatio * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-mono text-green-700 dark:text-green-300 w-14 text-right flex-shrink-0 tabular-nums">
+                      {row.stabala > 0 ? row.stabala.toLocaleString("bs-BA") : "—"}
+                    </span>
+                  </div>
+                  {hasKm && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 w-16 text-right flex-shrink-0">Km vlaka</span>
+                      <div className="flex-1 h-2.5 rounded-full bg-sky-100 dark:bg-sky-950 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 dark:from-sky-500 dark:to-sky-400 transition-all duration-500"
+                          style={{ width: `${kmRatio * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-mono text-sky-700 dark:text-sky-300 w-14 text-right flex-shrink-0 tabular-nums">
+                        {row.km > 0 ? row.km.toFixed(2) : "—"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MiniBar({ ratio, color, track }: { ratio: number; color: string; track: string }) {
+  return (
+    <div className={`h-1.5 rounded-full ${track} flex-1 max-w-[100px] overflow-hidden`}>
+      <div className={`h-full rounded-full ${color}`} style={{ width: `${ratio * 100}%` }} />
     </div>
   );
 }

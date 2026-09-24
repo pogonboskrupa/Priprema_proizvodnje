@@ -801,3 +801,52 @@ export async function getStatistikaUcinka(year: number, inzinjerId?: string): Pr
 
   return Array.from({ length: 12 }, (_, i) => ({ mjesec: i + 1, ...acc[i + 1] }));
 }
+
+export interface UporedbaRed {
+  radnikId: string;
+  ime: string;
+  ha: number;
+  stabala: number;
+  km: number;
+}
+
+export async function getUporedbaUcinka(year: number, month?: number): Promise<UporedbaRed[]> {
+  const od = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1);
+  const do_ = month ? new Date(year, month, 0, 23, 59, 59, 999) : new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const [unosiRaw, korisnaciRaw] = await Promise.all([
+    queryCol('unosi', [
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('users'),
+  ]);
+
+  const acc: Record<string, { ha: number; stabala: number; km: number }> = {};
+
+  for (const u of unosiRaw) {
+    const vrsta = u.vrsta as string;
+    if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
+    const id = u.inzinjerId as string;
+    if (!id) continue;
+    if (!acc[id]) acc[id] = { ha: 0, stabala: 0, km: 0 };
+    if (vrsta === 'DOZNAKA') {
+      acc[id].ha += Number(u.hektari) || 0;
+      acc[id].stabala += Number(u.brojStabala) || 0;
+    } else {
+      acc[id].km += Number(u.kilometri) || 0;
+    }
+  }
+
+  const workers = (korisnaciRaw as unknown as Korisnik[])
+    .filter((k) => k.role === 'worker')
+    .sort((a, b) => (acc[b.id]?.ha ?? 0) - (acc[a.id]?.ha ?? 0));
+
+  return workers.map((k) => ({
+    radnikId: k.id,
+    ime: k.fullName || k.ime,
+    ha: acc[k.id]?.ha ?? 0,
+    stabala: acc[k.id]?.stabala ?? 0,
+    km: acc[k.id]?.km ?? 0,
+  }));
+}
