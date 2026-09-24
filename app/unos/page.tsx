@@ -159,7 +159,26 @@ export default function UnosPage() {
     return true;
   });
 
-  const formOdjeli = odjeli;
+  const currentInzinjerId = isWorker ? session.userId : form.inzinjerId;
+  const recentOdjelIds = (() => {
+    if (!currentInzinjerId) return [] as string[];
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (const u of [...unosi]
+      .filter((u) => u.inzinjerId === currentInzinjerId && u.odjelId)
+      .sort((a, b) => b.datum.localeCompare(a.datum))) {
+      if (!seen.has(u.odjelId)) { seen.add(u.odjelId); ids.push(u.odjelId); }
+    }
+    return ids;
+  })();
+  const recentOdjelSet = new Set(recentOdjelIds);
+  const formOdjeliRecent = recentOdjelIds.flatMap((id) => {
+    const o = odjeli.find((o) => o.id === id);
+    return o ? [o] : [];
+  });
+  const formOdjeliRest = odjeli
+    .filter((o) => !recentOdjelSet.has(o.id))
+    .sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
 
   const filterSummary = filteredUnosi.reduce(
     (acc, u) => {
@@ -340,11 +359,18 @@ export default function UnosPage() {
                   required
                 >
                   <option value="">Odaberi odjel...</option>
-                  {formOdjeli.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.gj} / {o.broj}
-                    </option>
-                  ))}
+                  {formOdjeliRecent.length > 0 && (
+                    <optgroup label="Nedavno rađeni">
+                      {formOdjeliRecent.map((o) => (
+                        <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label={formOdjeliRecent.length > 0 ? "Ostali odjeli" : "Odjeli"}>
+                    {formOdjeliRest.map((o) => (
+                      <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
             )}

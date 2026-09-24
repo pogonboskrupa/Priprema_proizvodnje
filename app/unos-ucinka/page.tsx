@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import { getOdjeli, getKorisnici, getUnosiZaDan, createUnos, updateUnos, deleteUnos } from "@/lib/db";
+import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
@@ -74,11 +74,12 @@ const labelCls = "block text-[11px] font-medium text-gray-500 dark:text-gray-400
 // ── RosterNewRow ──────────────────────────────────────────────────────────────
 
 function RosterNewRow({
-  korisnik, pending, odjeli, onUpdate, onSave, saving,
+  korisnik, pending, odjeli, recentOdjelIds, onUpdate, onSave, saving,
 }: {
   korisnik: Korisnik;
   pending: PendingRow;
   odjeli: Odjel[];
+  recentOdjelIds: string[];
   onUpdate: (patch: Partial<PendingRow>) => void;
   onSave: () => void;
   saving: boolean;
@@ -86,9 +87,14 @@ function RosterNewRow({
   const availOdjeli = korisnik.odjeliIds?.length
     ? odjeli.filter((o) => korisnik.odjeliIds.includes(o.id))
     : odjeli;
-  const sortedOdjeli = [...availOdjeli].sort((a, b) =>
-    (a.gj + a.broj).localeCompare(b.gj + b.broj)
-  );
+  const recentSet = new Set(recentOdjelIds);
+  const recentOdjeli = recentOdjelIds.flatMap((id) => {
+    const o = availOdjeli.find((o) => o.id === id);
+    return o ? [o] : [];
+  });
+  const sortedOdjeli = availOdjeli
+    .filter((o) => !recentSet.has(o.id))
+    .sort((a, b) => (a.gj + a.broj).localeCompare(b.gj + b.broj));
 
   const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
   const isReady = !!(pending.vrsta && (noOdjelNeeded || pending.odjelId));
@@ -121,9 +127,18 @@ function RosterNewRow({
               onChange={(e) => onUpdate({ odjelId: e.target.value })}
             >
               <option value="">Odjel...</option>
-              {sortedOdjeli.map((o) => (
-                <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
-              ))}
+              {recentOdjeli.length > 0 && (
+                <optgroup label="Nedavno rađeni">
+                  {recentOdjeli.map((o) => (
+                    <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
+                  ))}
+                </optgroup>
+              )}
+              <optgroup label={recentOdjeli.length > 0 ? "Ostali odjeli" : "Odjeli"}>
+                {sortedOdjeli.map((o) => (
+                  <option key={o.id} value={o.id}>{o.gj} / {o.broj}</option>
+                ))}
+              </optgroup>
             </select>
           </div>
         )}
@@ -205,6 +220,7 @@ export default function UnosUcinkaPage() {
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [fetching, setFetching] = useState(false);
 
+  const [allUnosi, setAllUnosi] = useState<UnosRada[]>([]);
   const [pendingRows, setPendingRows] = useState<Record<string, PendingRow>>({});
   const [savingRow, setSavingRow] = useState<string | null>(null);
   const [batchSaving, setBatchSaving] = useState(false);
@@ -222,7 +238,8 @@ export default function UnosUcinkaPage() {
   }, [session, authLoading]);
 
   useEffect(() => {
-    Promise.all([getOdjeli(), getKorisnici()]).then(([od, kor]) => {
+    Promise.all([getOdjeli(), getKorisnici(), getUnosi()]).then(([od, kor, allUn]) => {
+      setAllUnosi(allUn as UnosRada[]);
       const workers = kor
         .filter((k) => k.role === "worker")
         .sort((a, b) => displayKorisnik(a).localeCompare(displayKorisnik(b)));
@@ -251,6 +268,21 @@ export default function UnosUcinkaPage() {
   if (authLoading || !session) return null;
 
   const existingMap = new Map(unosi.map((u) => [u.inzinjerId, u]));
+
+  const recentOdjeliPerKorisnik = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    for (const k of korisnici) {
+      const seen = new Set<string>();
+      const ids: string[] = [];
+      for (const u of [...allUnosi]
+        .filter((u) => u.inzinjerId === k.id && u.odjelId)
+        .sort((a, b) => b.datum.localeCompare(a.datum))) {
+        if (!seen.has(u.odjelId)) { seen.add(u.odjelId); ids.push(u.odjelId); }
+      }
+      result[k.id] = ids;
+    }
+    return result;
+  }, [allUnosi, korisnici]);
 
   function getPending(korisnikId: string): PendingRow {
     return pendingRows[korisnikId] ?? emptyPending();
@@ -565,6 +597,7 @@ export default function UnosUcinkaPage() {
                 korisnik={k}
                 pending={getPending(k.id)}
                 odjeli={odjeli}
+                recentOdjelIds={recentOdjeliPerKorisnik[k.id] ?? []}
                 onUpdate={(patch) => updatePending(k.id, patch)}
                 onSave={() => savePendingRow(k.id)}
                 saving={savingRow === k.id}
