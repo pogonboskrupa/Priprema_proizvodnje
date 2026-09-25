@@ -18,8 +18,9 @@ import {
   runTransaction,
   arrayUnion,
   arrayRemove,
+  setDocById,
 } from './firebase';
-import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik } from './types';
+import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog } from './types';
 import { localDateStr, cmpOdjel } from './format';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
@@ -1134,4 +1135,40 @@ export async function getDetaljanPregledPoOdjelima(year: number): Promise<Detalj
       };
     })
     .sort(cmpOdjel);
+}
+
+// ── Pomoćni radnici ───────────────────────────────────────────────────────────
+
+export async function getPomocniRadnici(): Promise<PomocniRadnik[]> {
+  const raw = await getAllFresh('pomocniRadnici');
+  return (raw as unknown as PomocniRadnik[])
+    .sort((a, b) => (a.prezime + a.ime).localeCompare(b.prezime + b.ime));
+}
+
+export async function createPomocniRadnik(
+  data: Pick<PomocniRadnik, 'ime' | 'prezime'> & { aktivan?: boolean; projektantId?: string | null }
+): Promise<PomocniRadnik> {
+  const raw = await create('pomocniRadnici', { ...data, aktivan: data.aktivan ?? true } as Record<string, unknown>);
+  return raw as unknown as PomocniRadnik;
+}
+
+export async function updatePomocniRadnik(
+  id: string,
+  data: Partial<Pick<PomocniRadnik, 'ime' | 'prezime' | 'aktivan' | 'projektantId'>>
+): Promise<void> {
+  await update('pomocniRadnici', id, data as Record<string, unknown>);
+}
+
+export async function getSihtaPomocnog(
+  radnikId: string, godina: number, mjesec: number
+): Promise<Record<string, VrstaPomocnog>> {
+  const id = `${radnikId}_${godina}_${mjesec}`;
+  const raw = await getById('sihtaPomocnih', id);
+  return (raw as unknown as { dani?: Record<string, VrstaPomocnog> })?.dani ?? {};
+}
+
+export async function saveSihtaPomocnog(
+  radnikId: string, godina: number, mjesec: number, dani: Record<string, VrstaPomocnog>
+): Promise<void> {
+  await setDocById('sihtaPomocnih', `${radnikId}_${godina}_${mjesec}`, { radnikId, godina, mjesec, dani });
 }

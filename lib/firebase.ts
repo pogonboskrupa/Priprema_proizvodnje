@@ -330,4 +330,9 @@ export function authReady() {
   return _authReady;
 }
 
+export async function setDocById(col: string, id: string, data: Record<string, unknown>): Promise<void> {
+  await _authReady;
+  await confirmOrQueue(setDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() }));
+}
+
 export { collection, doc, query, where, orderBy, Timestamp, onSnapshot, limit, runTransaction, arrayUnion, arrayRemove };

@@ -1,5 +1,6 @@
 // Firestore document IDs are strings
 export type VrstaRada = 'DOZNAKA' | 'VLAKA' | 'GODISNJI' | 'KANCELARIJA' | 'BOLOVANJE' | 'TEREN';
+export type VrstaPomocnog = 'TEREN' | 'GODISNJI' | 'BOLOVANJE' | 'KANCELARIJA' | 'OSTALO';
 export type PeriodIzvjestaja = 'sedmicno' | 'mjesecno' | 'godisnje';
 export type UserRole = 'admin' | 'worker';
 
@@ -87,6 +88,28 @@ export interface UnosRada {
   creator?: Korisnik;
   updater?: Korisnik;
   odjel?: Odjel;
+}
+
+export interface PomocniRadnik {
+  id: string;
+  ime: string;
+  prezime: string;
+  aktivan: boolean;
+  /** ID korisnika (projektanta) s kojim radnik radi */
+  projektantId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Šihta pomoćnog radnika za jedan mjesec. ID = "${radnikId}_${godina}_${mjesec}" */
+export interface SihtaPomocnog {
+  id: string;
+  radnikId: string;
+  godina: number;
+  mjesec: number;
+  /** ključ = broj dana ("1"–"31"), vrijednost = vrsta aktivnosti */
+  dani: Record<string, VrstaPomocnog>;
+  updatedAt: string;
 }
 
 export interface UnosRadaForm {
