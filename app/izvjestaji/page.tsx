@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
-import { getIzvjestaj, getSedmicnaTabela, type DnevnaAktivnost } from "@/lib/db";
+import { getIzvjestaj, getSedmicnaTabela, getDetaljanPregledPoOdjelima, type DnevnaAktivnost, type DetaljanOdjelRed } from "@/lib/db";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -76,6 +76,12 @@ export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
+  const [mainTab, setMainTab] = useState<"statistike" | "odjeli">("statistike");
+  const [odjeliYear, setOdjeliYear] = useState(() => new Date().getFullYear());
+  const [odjeliData, setOdjeliData] = useState<DetaljanOdjelRed[]>([]);
+  const [odjeliLoading, setOdjeliLoading] = useState(false);
+  const [odjeliErr, setOdjeliErr] = useState("");
+  const odjeliGenRef = useRef(0);
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
   // Computed inside state initializer to avoid SSR/client timezone mismatch
@@ -101,6 +107,24 @@ export default function IzvjestajiPage() {
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useUnosiRefresh(() => { if (session) load(); });
+
+  async function loadOdjeli(year = odjeliYear) {
+    const gen = ++odjeliGenRef.current;
+    setOdjeliLoading(true);
+    setOdjeliErr("");
+    try {
+      const rows = await getDetaljanPregledPoOdjelima(year);
+      if (gen === odjeliGenRef.current) setOdjeliData(rows);
+    } catch {
+      if (gen === odjeliGenRef.current) setOdjeliErr("Greška pri učitavanju — provjeri internet.");
+    } finally {
+      if (gen === odjeliGenRef.current) setOdjeliLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (mainTab === "odjeli" && session) loadOdjeli();
+  }, [mainTab, odjeliYear, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function refDateFor(p: Period, monthVal: string, yearVal: number, weekOff: number): Date | undefined {
     if (p === "godisnje") return new Date(yearVal, 6, 1);
@@ -167,9 +191,32 @@ export default function IzvjestajiPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Izvještaji</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Izvještaji</h1>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
+      {/* Glavni tabovi */}
+      <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+        {([["statistike", "Statistike"], ["odjeli", "Detaljan pregled po odjelima"]] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setMainTab(id)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+              mainTab === id
+                ? "border-green-700 text-green-700 dark:text-green-400 dark:border-green-400"
+                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}>{label}</button>
+        ))}
+      </div>
+
+      {mainTab === "odjeli" && (
+        <DetaljOdjeli
+          data={odjeliData}
+          loading={odjeliLoading}
+          err={odjeliErr}
+          year={odjeliYear}
+          yearOptions={yearOptions}
+          onYear={(y) => setOdjeliYear(y)}
+        />
+      )}
+
+      {mainTab === "statistike" && (<><div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
         {/* Period */}
         <div>
           <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Period</span>
@@ -301,6 +348,7 @@ export default function IzvjestajiPage() {
           filterRadnikId={isWorker ? session.userId : null}
         />
       )}
+    </>)}
     </div>
   );
 }
@@ -658,6 +706,160 @@ function fmtDayInTable(mondayIso: string, dow: number): string {
   const [y, m, d] = mondayIso.split("-").map(Number);
   const date = new Date(y, m - 1, d + (dow - 1));
   return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}.`;
+}
+
+function DetaljOdjeli({
+  data,
+  loading,
+  err,
+  year,
+  yearOptions,
+  onYear,
+}: {
+  data: DetaljanOdjelRed[];
+  loading: boolean;
+  err: string;
+  year: number;
+  yearOptions: number[];
+  onYear: (y: number) => void;
+}) {
+  // Group by GJ, preserving cmpOdjel sort order from DB
+  const byGj: Map<string, DetaljanOdjelRed[]> = new Map();
+  for (const row of data) {
+    if (!byGj.has(row.gj)) byGj.set(row.gj, []);
+    byGj.get(row.gj)!.push(row);
+  }
+
+  function fmtPeriod(od: string | null, do_: string | null): string {
+    if (!od) return "–";
+    if (!do_ || od === do_) return fmtDate(od);
+    return `${fmtDate(od)} – ${fmtDate(do_)}`;
+  }
+
+  return (
+    <div>
+      {/* Year selector */}
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
+        <div>
+          <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Godina</span>
+          <select
+            value={year}
+            onChange={(e) => onYear(Number(e.target.value))}
+            className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
+          >
+            {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        {!loading && data.length > 0 && (
+          <span className="text-xs text-gray-500 dark:text-gray-400 self-end pb-1">
+            {data.length} odjela · {byGj.size} GJ
+          </span>
+        )}
+      </div>
+
+      {err && (
+        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+          {err}
+        </div>
+      )}
+
+      {loading && <div className="text-center py-16 text-gray-500 dark:text-gray-400">Učitavam...</div>}
+
+      {!loading && !err && data.length === 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
+          <p className="text-2xl mb-2">📭</p>
+          <p className="font-medium">Nema unesenih odjela za {year}. godinu</p>
+        </div>
+      )}
+
+      {!loading && byGj.size > 0 && (
+        <div className="space-y-6">
+          {[...byGj.entries()].map(([gj, rows]) => {
+            const gjHa = rows.reduce((s, r) => s + r.totalHa, 0);
+            const gjSt = rows.reduce((s, r) => s + r.totalStabala, 0);
+            const gjKm = rows.reduce((s, r) => s + r.totalKm, 0);
+            return (
+              <div key={gj} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                {/* GJ header */}
+                <div className="px-5 py-3 bg-green-50 dark:bg-green-950 border-b border-green-200 dark:border-green-800 flex flex-wrap gap-4 items-center">
+                  <h2 className="font-bold text-green-900 dark:text-green-100 text-base flex-1">{gj}</h2>
+                  <div className="flex gap-4 text-xs text-green-800 dark:text-green-200">
+                    <span><span className="font-semibold">{rows.length}</span> odjela</span>
+                    {gjHa > 0 && <span><span className="font-semibold">{gjHa.toFixed(2)}</span> ha</span>}
+                    {gjSt > 0 && <span><span className="font-semibold">{gjSt}</span> st.</span>}
+                    {gjKm > 0 && <span><span className="font-semibold">{gjKm.toFixed(2)}</span> km vlaka</span>}
+                  </div>
+                </div>
+
+                {/* Odjel rows */}
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {rows.map((r) => (
+                    <div key={r.odjelId} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      {/* Odjel header row */}
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 items-baseline mb-2">
+                        <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{r.broj}</span>
+                        {r.povrsina != null && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {r.povrsina.toFixed(2)} ha površina
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Doznaka + Vlaka info */}
+                      <div className="flex flex-wrap gap-4 mb-2">
+                        {r.doznakaOd && (
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="inline-block bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded mt-0.5">DOZ</span>
+                            <div>
+                              <div className="text-gray-700 dark:text-gray-200">{fmtPeriod(r.doznakaOd, r.doznakaDo)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-0.5">
+                                <span>{r.doznakaRadnihDana} rad. dana</span>
+                                {r.totalHa > 0 && <span>· {r.totalHa.toFixed(2)} ha</span>}
+                                {r.totalStabala > 0 && <span>· {r.totalStabala} stabala</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {r.vlakaOd && (
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="inline-block bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs font-semibold px-2 py-0.5 rounded mt-0.5">VLA</span>
+                            <div>
+                              <div className="text-gray-700 dark:text-gray-200">{fmtPeriod(r.vlakaOd, r.vlakaDo)}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-0.5">
+                                <span>{r.vlakaRadnihDana} rad. dana</span>
+                                {r.totalKm > 0 && <span>· {r.totalKm.toFixed(2)} km</span>}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Projektanti */}
+                      {r.projektanti.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {r.projektanti.map((p) => (
+                            <span key={p.radnikId} className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full">
+                              <span className="font-medium">{p.ime}</span>
+                              {p.ha > 0 && <span className="text-gray-500 dark:text-gray-400">{p.ha.toFixed(1)} ha</span>}
+                              {p.stabala > 0 && <span className="text-gray-500 dark:text-gray-400">{p.stabala} st.</span>}
+                              {p.km > 0 && <span className="text-gray-500 dark:text-gray-400">{p.km.toFixed(1)} km</span>}
+                              <span className="text-gray-400 dark:text-gray-500">
+                                {[p.dozDana > 0 ? `${p.dozDana}d doz` : null, p.vlaDana > 0 ? `${p.vlaDana}d vla` : null].filter(Boolean).join(", ")}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function StatCard({

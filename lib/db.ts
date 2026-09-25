@@ -1023,3 +1023,115 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
     km: acc[k.id]?.km ?? 0,
   }));
 }
+
+// ── Detaljan pregled po odjelima ──────────────────────────────────────────────
+
+export interface DetaljanOdjelRed {
+  odjelId: string;
+  gj: string;
+  broj: string;
+  povrsina: number | null;
+  totalHa: number;
+  totalStabala: number;
+  totalKm: number;
+  doznakaOd: string | null;
+  doznakaDo: string | null;
+  doznakaRadnihDana: number;
+  vlakaOd: string | null;
+  vlakaDo: string | null;
+  vlakaRadnihDana: number;
+  projektanti: { radnikId: string; ime: string; ha: number; stabala: number; km: number; dozDana: number; vlaDana: number }[];
+}
+
+export async function getDetaljanPregledPoOdjelima(year: number): Promise<DetaljanOdjelRed[]> {
+  const od = new Date(year, 0, 1);
+  const do_ = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const [unosiRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
+    queryUnosi([
+      where('datum', '>=', Timestamp.fromDate(od)),
+      where('datum', '<=', Timestamp.fromDate(do_)),
+    ]),
+    getAll('odjeli'),
+    getAll('users'),
+  ]);
+
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
+  const korMap = Object.fromEntries(
+    (korisnaciRaw as unknown as Korisnik[]).map((k) => [k.id, k.fullName || k.ime])
+  );
+
+  type OdjelAcc = {
+    doz: { dates: Set<string>; ha: number; stabala: number };
+    vla: { dates: Set<string>; km: number };
+    projektanti: Record<string, { ha: number; stabala: number; km: number; dozDani: Set<string>; vlaDani: Set<string> }>;
+  };
+  const acc: Record<string, OdjelAcc> = {};
+
+  for (const u of unosiRaw) {
+    const vrsta = u.vrsta as string;
+    if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
+    const odjelId = u.odjelId as string;
+    const radnikId = u.inzinjerId as string;
+    if (!odjelId || !radnikId) continue;
+    const datum = (u.datum as string).slice(0, 10);
+    if (!acc[odjelId]) acc[odjelId] = {
+      doz: { dates: new Set(), ha: 0, stabala: 0 },
+      vla: { dates: new Set(), km: 0 },
+      projektanti: {},
+    };
+    const a = acc[odjelId];
+    if (!a.projektanti[radnikId]) a.projektanti[radnikId] = { ha: 0, stabala: 0, km: 0, dozDani: new Set(), vlaDani: new Set() };
+    const p = a.projektanti[radnikId];
+    if (vrsta === 'DOZNAKA') {
+      a.doz.dates.add(datum);
+      a.doz.ha += Number(u.hektari) || 0;
+      a.doz.stabala += Number(u.brojStabala) || 0;
+      p.dozDani.add(datum);
+      p.ha += Number(u.hektari) || 0;
+      p.stabala += Number(u.brojStabala) || 0;
+    } else {
+      a.vla.dates.add(datum);
+      a.vla.km += Number(u.kilometri) || 0;
+      p.vlaDani.add(datum);
+      p.km += Number(u.kilometri) || 0;
+    }
+  }
+
+  const minMax = (s: Set<string>) => { const a = [...s].sort(); return { min: a[0] ?? null, max: a[a.length - 1] ?? null, size: a.length }; };
+
+  return Object.entries(acc)
+    .map(([odjelId, a]) => {
+      const o = odMap[odjelId];
+      const doz = minMax(a.doz.dates);
+      const vla = minMax(a.vla.dates);
+      const projektanti = Object.entries(a.projektanti)
+        .map(([radnikId, p]) => ({
+          radnikId,
+          ime: korMap[radnikId] ?? radnikId,
+          ha: p.ha,
+          stabala: p.stabala,
+          km: p.km,
+          dozDana: p.dozDani.size,
+          vlaDana: p.vlaDani.size,
+        }))
+        .sort((x, y) => y.ha - x.ha || y.km - x.km);
+      return {
+        odjelId,
+        gj: o?.gj ?? '—',
+        broj: o?.broj ?? '—',
+        povrsina: (o as unknown as Record<string, unknown>)?.povrsina as number ?? null,
+        totalHa: a.doz.ha,
+        totalStabala: a.doz.stabala,
+        totalKm: a.vla.km,
+        doznakaOd: doz.min,
+        doznakaDo: doz.max,
+        doznakaRadnihDana: doz.size,
+        vlakaOd: vla.min,
+        vlakaDo: vla.max,
+        vlakaRadnihDana: vla.size,
+        projektanti,
+      };
+    })
+    .sort(cmpOdjel);
+}
