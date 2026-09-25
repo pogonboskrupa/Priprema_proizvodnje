@@ -1167,6 +1167,16 @@ export async function getSihtaPomocnog(
   return (raw as unknown as { dani?: Record<string, VrstaPomocnog> })?.dani ?? {};
 }
 
+/** Sve šihte pomoćnih radnika za mjesec, ključ = radnikId */
+export async function getSihteZaMjesec(
+  godina: number, mjesec: number
+): Promise<Record<string, Record<string, VrstaPomocnog>>> {
+  const raw = await queryColFresh('sihtaPomocnih', [where('godina', '==', godina), where('mjesec', '==', mjesec)]);
+  return Object.fromEntries(
+    raw.map((s) => [s.radnikId as string, (s.dani as Record<string, VrstaPomocnog> | undefined) ?? {}])
+  );
+}
+
 export async function saveSihtaPomocnog(
   radnikId: string, godina: number, mjesec: number, dani: Record<string, VrstaPomocnog>
 ): Promise<void> {
