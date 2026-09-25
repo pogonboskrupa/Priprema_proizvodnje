@@ -151,6 +151,15 @@ export function prethodniPopunjen(dani: readonly DanSihtarice[], datum: string):
   return null;
 }
 
+/** Ko je unio podatak, ako to nije sam radnik (admin/operater preko Unosa učinka ili Unosa rada) */
+export function unioDrugi(u: UnosRada): { ime: string; puno: string } | null {
+  if (!u.createdById || u.createdById === u.inzinjerId) return null;
+  const k = u.creator;
+  if (k) return { ime: k.ime, puno: k.fullName || k.ime };
+  const uloga = u.createdByRole === "admin" ? "admin" : "operater";
+  return { ime: uloga, puno: uloga };
+}
+
 export const fmtBroj = (n: number, dec = 2) => n.toLocaleString("bs-BA", { maximumFractionDigits: dec });
 
 /** "1,5 ha · 120 st." / "0,8 km" / "" */

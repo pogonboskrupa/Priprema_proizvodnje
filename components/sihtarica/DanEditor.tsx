@@ -4,11 +4,17 @@ import type { Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type UnosEditPayload } from "@/lib/unos-edit";
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
-import { zabranaUpisa, zabranaIzmjene, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
+import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
 
 const UCINAK: readonly VrstaRada[] = ["DOZNAKA", "VLAKA"];
+
+function fmtVrijeme(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 const BRZI: readonly VrstaRada[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE"];
 
 const prazanForm = (vrsta: VrstaRada = "DOZNAKA", odjelId = ""): Form => ({
@@ -138,6 +144,11 @@ export function DanEditor({
                 {u.odjel && <span className="font-mono text-gray-600 dark:text-gray-300">{u.odjel.gj} / {u.odjel.broj}</span>}
                 <span className="tabular-nums text-gray-500 dark:text-gray-400">{ucinakLabel(u)}</span>
                 <span className="flex-1 min-w-0 truncate italic text-xs text-gray-400">{u.napomena}</span>
+                {unioDrugi(u) && (
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    unio {unioDrugi(u)!.puno}{u.createdAt ? ` · ${fmtVrijeme(u.createdAt)}` : ""}
+                  </span>
+                )}
                 <button type="button" onClick={() => { setEdit({ id: u.id, form: formIzUnosa(u) }); setError(""); }}
                   className="text-xs font-medium text-green-700 dark:text-green-400 hover:underline">Uredi</button>
                 <button type="button" onClick={() => onDelete(u)}

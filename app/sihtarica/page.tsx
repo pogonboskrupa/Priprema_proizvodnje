@@ -10,7 +10,7 @@ import { isOffline } from "@/lib/firebase";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import type { Korisnik, Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import type { UnosEditPayload } from "@/lib/unos-edit";
-import { daniMjeseca, rezime, fmtBroj, DANI_KRATKO, ucinakLabel, prethodniPopunjen } from "@/lib/sihtarica";
+import { daniMjeseca, rezime, fmtBroj, DANI_KRATKO, ucinakLabel, prethodniPopunjen, unioDrugi } from "@/lib/sihtarica";
 import { goPeriod, iskoristenoDanaGO } from "@/lib/godisnji";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { monthYearLabel, fmtDate } from "@/lib/format";
@@ -216,13 +216,14 @@ export default function SihtaricaPage() {
     const { exportXlsx } = await import("@/lib/export");
     const rows = dani.flatMap((d) => {
       const base = { Datum: fmtDate(d.datum), Dan: DANI_KRATKO[d.weekday] };
-      if (!d.unosi.length) return [{ ...base, Vrsta: d.praznik ?? (d.vikend ? "vikend" : ""), Odjel: "", Učinak: "", Napomena: "" }];
+      if (!d.unosi.length) return [{ ...base, Vrsta: d.praznik ?? (d.vikend ? "vikend" : ""), Odjel: "", Učinak: "", Napomena: "", Unio: "" }];
       return d.unosi.map((u) => ({
         ...base,
         Vrsta: VRSTA[u.vrsta]?.label ?? u.vrsta,
         Odjel: u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : "",
         Učinak: ucinakLabel(u),
         Napomena: u.napomena ?? "",
+        Unio: unioDrugi(u)?.puno ?? "",
       }));
     });
     const ime = (korisnik?.ime ?? "projektant").replace(/[^\w-]/g, "_");

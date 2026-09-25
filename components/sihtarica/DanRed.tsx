@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import { DANI_KRATKO, ucinakLabel, type DanSihtarice } from "@/lib/sihtarica";
+import { DANI_KRATKO, ucinakLabel, unioDrugi, type DanSihtarice } from "@/lib/sihtarica";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 
 export function DanRed({
@@ -55,6 +55,7 @@ export function DanRed({
           {dan.unosi.map((u) => {
             const vs = vrstaStyle(u.vrsta);
             const ucinak = ucinakLabel(u);
+            const unio = unioDrugi(u);
             return (
               <span key={u.id}
                 className={`inline-flex items-center gap-1.5 max-w-full rounded-md border-l-[3px] ${vs.borderL} ${vs.badge} px-2 py-1 text-xs print:bg-transparent`}>
@@ -62,6 +63,7 @@ export function DanRed({
                 {u.odjel && <span className="font-mono opacity-90">{u.odjel.gj}/{u.odjel.broj}</span>}
                 {ucinak && <span className="tabular-nums">{ucinak}</span>}
                 {u.napomena && <span className="italic opacity-70 truncate max-w-[14rem]" title={u.napomena}>„{u.napomena}“</span>}
+                {unio && <span className="text-[10px] font-semibold opacity-60" title={`Unio: ${unio.puno}`}>· {unio.ime}</span>}
               </span>
             );
           })}
