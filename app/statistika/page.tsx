@@ -88,7 +88,7 @@ export default function StatistikaPage() {
   const years = godineEvidencije();
 
   return (
-    <div className="py-6 space-y-5">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Statistika</h1>

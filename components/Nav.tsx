@@ -6,6 +6,10 @@ import { db, collection, query, onUnosiChanges } from "@/lib/firebase";
 import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
 import { useAuth } from "@/context/AuthContext";
+import { navFor, isActive, type NavItem } from "@/lib/nav";
+import { Icon } from "@/components/Icon";
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 type Status = "checking" | "online" | "offline";
 
@@ -36,32 +40,6 @@ function useConnectionStatus(): Status {
 
   return status;
 }
-
-const adminLinks = [
-  { href: "/", label: "Početna" },
-  { href: "/unos-ucinka", label: "Unos učinka" },
-  { href: "/izvjestaji", label: "Izvještaji" },
-  { href: "/kalendar", label: "Kalendar" },
-  { href: "/sihtarica", label: "Šihtarica" },
-  { href: "/odjeli", label: "Odjeli" },
-  { href: "/plan", label: "Plan sječe" },
-  { href: "/plan-projektant", label: "Plan/projektant" },
-  { href: "/realizacija", label: "Realizacija" },
-  { href: "/elaborat", label: "Elaborat" },
-  { href: "/statistika", label: "Statistika" },
-  { href: "/postavke", label: "Postavke" },
-];
-
-const workerLinks = [
-  { href: "/", label: "Početna" },
-  { href: "/unos", label: "Unos rada" },
-  { href: "/izvjestaji", label: "Izvještaji" },
-  { href: "/kalendar", label: "Kalendar" },
-  { href: "/sihtarica", label: "Šihtarica" },
-  { href: "/elaborat", label: "Elaborat" },
-  { href: "/moji-odjeli", label: "Moji odjeli" },
-  { href: "/postavke", label: "Postavke" },
-];
 
 function useNewEntryNotifier() {
   const [toast, setToast] = useState<string | null>(null);
@@ -185,8 +163,19 @@ function UserMenu({ status }: { status: Status }) {
             </div>
           </div>
 
+          <div className="px-3 pt-2.5">
+            <Link
+              href="/postavke"
+              onClick={() => setOpen(false)}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <Icon name="gear" className="w-4 h-4 flex-shrink-0" />
+              Postavke i profil
+            </Link>
+          </div>
+
           {/* Logout */}
-          <div className="px-3 py-2.5">
+          <div className="px-3 pb-2.5">
             <button
               onClick={() => { setOpen(false); logout(); }}
               className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
@@ -203,20 +192,166 @@ function UserMenu({ status }: { status: Status }) {
   );
 }
 
+function Logo() {
+  return (
+    <Link href="/" className="flex items-center gap-2 flex-shrink-0 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60" aria-label="Početna">
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export, slika je već optimizovana */}
+      <img src={`${BASE}/icons/logo.png`} alt="" width={34} height={34} className="w-[34px] h-[34px] rounded-full ring-2 ring-white/25 bg-white" />
+      <span className="hidden xl:flex flex-col leading-none">
+        <span className="text-[13px] font-bold tracking-wide">Priprema</span>
+        <span className="text-[10px] font-medium text-white/60 tracking-[0.12em] uppercase mt-0.5">proizvodnje</span>
+      </span>
+    </Link>
+  );
+}
+
+function TopLink({ item, path }: { item: NavItem; path: string }) {
+  const active = isActive(path, item.href);
+  return (
+    <Link
+      href={item.href}
+      aria-current={active ? "page" : undefined}
+      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+        active ? "bg-white/15 text-white font-semibold shadow-[inset_0_-2px_0_0_rgba(255,255,255,0.7)]" : "hover:bg-white/10 text-white/75 hover:text-white"
+      }`}
+    >
+      {item.label}
+    </Link>
+  );
+}
+
+/** Srednje širine (tablet, manji laptop): glavne stavke + padajući "Više" */
+function TopMore({ items, path }: { items: NavItem[]; path: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const active = items.some((i) => isActive(path, i.href));
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); window.removeEventListener("keydown", onKey); };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative flex-shrink-0">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
+        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+          active || open ? "bg-white/15 text-white font-semibold" : "hover:bg-white/10 text-white/75 hover:text-white"
+        }`}>
+        Više
+        <svg className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+8px)] w-64 rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 z-[100]">
+          {items.map((i) => {
+            const on = isActive(path, i.href);
+            return (
+              <Link key={i.href} href={i.href} onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors ${
+                  on ? "bg-green-50 dark:bg-green-950/50 text-green-800 dark:text-green-300 font-semibold" : "text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}>
+                <Icon name={i.icon} className="w-[18px] h-[18px] text-green-700 dark:text-green-400" />
+                {i.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; path: string }) {
+  const [open, setOpen] = useState(false);
+  const moreActive = more.some((m) => isActive(path, m.href));
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  const cell = (active: boolean) => `relative flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 text-[10.5px] font-medium transition-colors ${
+    active ? "text-green-800 dark:text-green-300" : "text-gray-500 dark:text-gray-400 active:text-gray-800"
+  }`;
+  const indicator = <span className="absolute top-0 inset-x-5 h-[3px] rounded-b-full bg-green-700 dark:bg-green-400" aria-hidden />;
+
+  return (
+    <>
+      {open && (
+        <div className="md:hidden fixed inset-0 z-[60] print:hidden" role="dialog" aria-modal="true" aria-label="Više stranica">
+          <button type="button" className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={() => setOpen(false)} aria-label="Zatvori" />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white dark:bg-gray-900 shadow-2xl px-4 pt-3"
+            style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom, 0px))" }}>
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" aria-hidden />
+            <nav className="grid grid-cols-2 gap-2">
+              {more.map((m) => {
+                const active = isActive(path, m.href);
+                return (
+                  <Link key={m.href} href={m.href} onClick={() => setOpen(false)}
+                    className={`flex items-center gap-3 rounded-2xl px-3 py-3 border transition-colors ${
+                      active
+                        ? "border-green-600 bg-green-50 dark:bg-green-950/50"
+                        : "border-gray-200 dark:border-gray-800 active:bg-gray-50 dark:active:bg-gray-800"
+                    }`}>
+                    <span className="w-9 h-9 flex-shrink-0 rounded-xl bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 flex items-center justify-center">
+                      <Icon name={m.icon} className="w-[18px] h-[18px]" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{m.label}</span>
+                      <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{m.desc}</span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      )}
+      <nav aria-label="Glavna navigacija"
+        className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-white/95 dark:bg-gray-950/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex print:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+        {items.map((it) => {
+          const active = isActive(path, it.href) && !open;
+          return (
+            <Link key={it.href} href={it.href} className={cell(active)} aria-current={active ? "page" : undefined}>
+              {active && indicator}
+              <Icon name={it.icon} className="w-[22px] h-[22px]" strokeWidth={active ? 2.2 : 1.8} />
+              {it.short ?? it.label}
+            </Link>
+          );
+        })}
+        {more.length > 0 && (
+          <button type="button" onClick={() => setOpen((v) => !v)} className={cell(open || moreActive)} aria-expanded={open}>
+            {(open || moreActive) && indicator}
+            <Icon name={open ? "close" : "grid"} className="w-[22px] h-[22px]" strokeWidth={open || moreActive ? 2.2 : 1.8} />
+            Više
+          </button>
+        )}
+      </nav>
+    </>
+  );
+}
+
 export default function Nav() {
   const path = usePathname();
   const status = useConnectionStatus();
   const { session } = useAuth();
   const toast = useNewEntryNotifier();
 
-  const links =
-    session?.role === "admin"
-      ? adminLinks
-      : session?.operater
-      ? [...workerLinks, { href: "/unos-ucinka", label: "Unos učinka" }]
-      : workerLinks;
-
   if (!session) return null;
+
+  const nav = navFor(session);
+  const more = nav.all.filter((l) => !nav.primary.includes(l));
+  const current = nav.all.find((l) => isActive(path, l.href));
+  // Postavke su u korisničkom meniju na desktopu
+  const desktopAll = nav.all.filter((l) => l.href !== "/postavke");
 
   return (
     <>
@@ -226,39 +361,28 @@ export default function Nav() {
           <span>{toast}</span>
         </div>
       )}
-      <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 flex items-center gap-1 h-14">
-          {/* Logo */}
-          <Link href="/" className="font-bold text-sm mr-2 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-            🌲 <span className="tracking-wide">PP</span>
-          </Link>
+      <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50 print:hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-3 h-14">
+          <Logo />
 
-          {/* Separator */}
-          <span className="w-px h-5 bg-white/20 mr-1 flex-shrink-0" />
+          {/* Mobitel: naziv trenutne stranice; linkovi su u donjoj traci */}
+          <span className="md:hidden flex-1 min-w-0 truncate text-[15px] font-semibold">{current?.label ?? ""}</span>
 
-          {/* Links — scrollable */}
-          <div className="flex items-center gap-0.5 overflow-x-auto flex-1 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-                  path === l.href
-                    ? "bg-white/20 text-white font-semibold"
-                    : "hover:bg-white/10 text-white/80 hover:text-white"
-                }`}
-              >
-                {l.label}
-              </Link>
-            ))}
+          <span className="hidden md:block w-px h-6 bg-white/15 flex-shrink-0" aria-hidden />
+          {/* xl+: sve stavke */}
+          <div className="hidden xl:flex items-center gap-0.5 flex-1 min-w-0">
+            {desktopAll.map((l) => <TopLink key={l.href} item={l} path={path} />)}
+          </div>
+          {/* md–xl: glavne stavke + Više */}
+          <div className="hidden md:flex xl:hidden items-center gap-0.5 flex-1 min-w-0">
+            {nav.primary.map((l) => <TopLink key={l.href} item={l} path={path} />)}
+            <TopMore items={desktopAll.filter((l) => !nav.primary.includes(l))} path={path} />
           </div>
 
-          {/* User menu */}
-          <div className="ml-2">
-            <UserMenu status={status} />
-          </div>
+          <UserMenu status={status} />
         </div>
       </nav>
+      <BottomBar items={nav.primary} more={more} path={path} />
     </>
   );
 }

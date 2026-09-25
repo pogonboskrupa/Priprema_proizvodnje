@@ -290,7 +290,7 @@ export default function SihtaricaPage() {
       </header>
 
       {msg && (
-        <div role="status" className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg print:hidden ${
+        <div role="status" className={`fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg print:hidden ${
           msg.error ? "bg-red-600 text-white" : "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
         }`}>
           {msg.text}

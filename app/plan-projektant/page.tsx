@@ -64,7 +64,7 @@ export default function PlanPoProjectantPage() {
   const years = godineEvidencije({ iSljedeca: true });
 
   return (
-    <div className="py-6">
+    <div>
       <div className="flex items-center gap-3 mb-6 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Plan po projektantima</h1>
         <select

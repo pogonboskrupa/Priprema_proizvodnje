@@ -427,7 +427,7 @@ export default function UnosUcinkaPage() {
   }
 
   return (
-    <div className="py-6">
+    <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Unos učinka</h1>

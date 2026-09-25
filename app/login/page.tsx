@@ -76,8 +76,16 @@ export default function LoginPage() {
         boxShadow: "0 12px 48px rgba(0,0,0,.16)", padding: "28px 22px",
         width: "100%", maxWidth: 360
       }}>
-        <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: "var(--brand)", marginBottom: 4 }}>
-          🌲 Priprema Proizvodnje
+        {/* eslint-disable-next-line @next/next/no-img-element -- static export */}
+        <img
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/icons/logo.png`}
+          alt=""
+          width={76}
+          height={76}
+          style={{ display: "block", margin: "0 auto 12px", width: 76, height: 76, borderRadius: "50%", boxShadow: "0 6px 20px rgba(22,101,52,.18)" }}
+        />
+        <div style={{ textAlign: "center", fontSize: 20, fontWeight: 700, color: "var(--brand)", marginBottom: 4, letterSpacing: "-0.01em" }}>
+          Priprema Proizvodnje
         </div>
         <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 12, marginBottom: 18 }}>
           Unesi ime i PIN

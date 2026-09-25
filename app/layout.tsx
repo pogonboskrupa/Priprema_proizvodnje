@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${geist.className} ${libreBaskerville.variable} min-h-screen`}>
         <AuthProvider>
           <Nav />
-          <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>
+          <main className="max-w-7xl mx-auto px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-10">{children}</main>
           <InstallBanner />
         </AuthProvider>
         <script

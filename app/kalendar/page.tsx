@@ -395,7 +395,7 @@ export default function KalendarPage() {
   const showWorkerName  = !isWorker && !selectedWorkerId;
 
   return (
-    <div className="py-6">
+    <div>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>

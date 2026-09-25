@@ -41,7 +41,7 @@ export default function InstallBanner() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-green-700 text-white flex items-center gap-3 px-4 py-3 shadow-lg">
+    <div className="fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] md:bottom-0 z-50 bg-green-700 text-white flex items-center gap-3 px-4 py-3 shadow-lg">
       <span className="text-lg flex-shrink-0">📲</span>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold leading-tight">Instaliraj Priprema Proizvodnje</div>
