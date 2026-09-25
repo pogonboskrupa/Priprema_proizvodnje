@@ -19,7 +19,7 @@ function fmtDan(dateStr: string): string {
   return `${DANI[d.getDay()]}, ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}.`;
 }
 
-function fmtLastLogin(iso: string | undefined): string {
+function fmtLastOnline(iso: string | undefined): string {
   if (!iso) return "–";
   const d = new Date(iso);
   const now = new Date();
@@ -413,12 +413,12 @@ export default function PostavkePage() {
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
-                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnja prijava</th>
+                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnji online</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {korisnici.filter((k) => !k.arhiviran).sort((a, b) => (b.lastLoginAt ?? "").localeCompare(a.lastLoginAt ?? "")).map((k) => (
+                {korisnici.filter((k) => !k.arhiviran).sort((a, b) => (b.lastOnlineAt ?? b.lastLoginAt ?? "").localeCompare(a.lastOnlineAt ?? a.lastLoginAt ?? "")).map((k) => (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
@@ -430,7 +430,7 @@ export default function PostavkePage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {fmtLastLogin(k.lastLoginAt)}
+                      {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       {k.role === "worker" && (

@@ -10,6 +10,8 @@ import { fmtDate } from "@/lib/format";
 import { godineEvidencije, mjeseciEvidencije, EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { localDateStr } from "@/lib/format";
 
+const pak = (st: number) => (st / 30).toFixed(1);
+
 type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
 
@@ -400,7 +402,7 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
         <StatCard label="Ukupna površina" value={`${ukupnoPovrsina.toFixed(2)} ha`} color="blue" />
-        <StatCard label="Doznačenih stabala" value={ukupnoSt.toString()} color="emerald" />
+        <StatCard label="Doznačenih stabala" value={ukupnoSt > 0 ? `${ukupnoSt} st · ${pak(ukupnoSt)} pak.` : "0"} color="emerald" />
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
       </div>
 
@@ -445,7 +447,11 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
                   <td className={`px-4 py-3 text-right font-medium ${r.preostalo <= 0 ? "text-green-600 dark:text-green-400" : "text-gray-700 dark:text-gray-200"}`}>
                     {r.preostalo <= 0 ? "✓ Završeno" : r.preostalo.toFixed(2)}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
+                    {r.ukupnoStabala > 0 ? (
+                      <><span>{r.ukupnoStabala}</span><span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
+                    ) : "–"}
+                  </td>
                   <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -519,7 +525,7 @@ function InzinjerIzvjestaj({
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
-        <StatCard label="Doznačenih stabala" value={ukupnoSt.toString()} color="emerald" />
+        <StatCard label="Doznačenih stabala" value={ukupnoSt > 0 ? `${ukupnoSt} st · ${pak(ukupnoSt)} pak.` : "0"} color="emerald" />
         <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
         <StatCard label="Radni dani" value={ukupnoRadniDani.toString()} color="orange" />
         <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
@@ -579,7 +585,11 @@ function InzinjerIzvjestaj({
                   <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
                     {r.ukupnoHektara > 0 ? r.ukupnoHektara.toFixed(2) : "–"}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoStabala > 0 ? r.ukupnoStabala : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
+                    {r.ukupnoStabala > 0 ? (
+                      <><span>{r.ukupnoStabala}</span><span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
+                    ) : "–"}
+                  </td>
                   <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
                   <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">{(r.danaTeren ?? 0) > 0 ? r.danaTeren : "–"}</td>
                   <td className="px-4 py-3 text-right text-sky-600 dark:text-sky-400">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
@@ -798,7 +808,7 @@ function DetaljOdjeli({
                   <div className="flex gap-4 text-xs text-green-800 dark:text-green-200">
                     <span><span className="font-semibold">{rows.length}</span> odjela</span>
                     {gjHa > 0 && <span><span className="font-semibold">{gjHa.toFixed(2)}</span> ha</span>}
-                    {gjSt > 0 && <span><span className="font-semibold">{gjSt}</span> st.</span>}
+                    {gjSt > 0 && <span><span className="font-semibold">{gjSt}</span> st. <span className="opacity-70">({pak(gjSt)} pak.)</span></span>}
                     {gjKm > 0 && <span><span className="font-semibold">{gjKm.toFixed(2)}</span> km vlaka</span>}
                   </div>
                 </div>
@@ -827,7 +837,7 @@ function DetaljOdjeli({
                               <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-0.5">
                                 <span>{r.doznakaRadnihDana} rad. dana</span>
                                 {r.totalHa > 0 && <span>· {r.totalHa.toFixed(2)} ha</span>}
-                                {r.totalStabala > 0 && <span>· {r.totalStabala} stabala</span>}
+                                {r.totalStabala > 0 && <span>· {r.totalStabala} stabala <span className="opacity-70">({pak(r.totalStabala)} pak.)</span></span>}
                               </div>
                             </div>
                           </div>
@@ -853,7 +863,7 @@ function DetaljOdjeli({
                             <span key={p.radnikId} className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full">
                               <span className="font-medium">{p.ime}</span>
                               {p.ha > 0 && <span className="text-gray-500 dark:text-gray-400">{p.ha.toFixed(1)} ha</span>}
-                              {p.stabala > 0 && <span className="text-gray-500 dark:text-gray-400">{p.stabala} st.</span>}
+                              {p.stabala > 0 && <span className="text-gray-500 dark:text-gray-400">{p.stabala} st. ({pak(p.stabala)} pak.)</span>}
                               {p.km > 0 && <span className="text-gray-500 dark:text-gray-400">{p.km.toFixed(1)} km</span>}
                               <span className="text-gray-400 dark:text-gray-500">
                                 {[p.dozDana > 0 ? `${p.dozDana}d doz` : null, p.vlaDana > 0 ? `${p.vlaDana}d vla` : null].filter(Boolean).join(", ")}

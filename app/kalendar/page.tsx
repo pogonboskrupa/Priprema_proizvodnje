@@ -14,6 +14,7 @@ import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { zabranaIzmjene } from "@/lib/sihtarica";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
+const pak = (st: number) => (st / 30).toFixed(1);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,7 +147,7 @@ function SingleWorkerRecap({ recap, monthLabel }: { recap: ReturnType<typeof com
                 <div className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-snug">
                   {s.ha > 0 && <span>{s.ha.toFixed(2)} ha</span>}
                   {s.ha > 0 && s.stabala > 0 && <span className="mx-1">·</span>}
-                  {s.stabala > 0 && <span>{s.stabala.toLocaleString()} stabala</span>}
+                  {s.stabala > 0 && <span>{s.stabala.toLocaleString()} stabala <span className="opacity-70">({pak(s.stabala)} pak.)</span></span>}
                 </div>
               )}
               {vrsta === "VLAKA" && s.km > 0 && (
@@ -577,7 +578,7 @@ export default function KalendarPage() {
                           )}
                           {u.vrsta === "DOZNAKA" && (u.brojStabala != null || u.hektari != null) && (
                             <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-                              {u.brojStabala != null && `${u.brojStabala} st`}
+                              {u.brojStabala != null && `${u.brojStabala} st (${pak(u.brojStabala)} pak.)`}
                               {u.brojStabala != null && u.hektari != null && " · "}
                               {u.hektari != null && `${u.hektari.toFixed(2)} ha`}
                             </span>

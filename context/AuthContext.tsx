@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getSession, clearSession, saveSession, isRemembered, type Session } from "@/lib/auth";
-import { getKorisnik } from "@/lib/db";
+import { getKorisnik, updateKorisnik } from "@/lib/db";
 import { configureUnosiScope } from "@/lib/firebase";
 
 // admin i operater rade sa svim unosima; projektant vidi samo svoje
@@ -49,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const ses = getSession();
       if (!ses || ses.userId !== userId) return;
       if (!k || k.arhiviran) { logout(); return; }
+      updateKorisnik(userId, { lastOnlineAt: new Date().toISOString() }).catch(() => {});
       const fresh: Session = {
         ...ses,
         role: k.role,
