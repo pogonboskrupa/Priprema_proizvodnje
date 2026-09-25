@@ -194,14 +194,26 @@ export default function IzvjestajiPage() {
       <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Izvještaji</h1>
 
       {/* Glavni tabovi */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
-        {([["statistike", "Statistike"], ["odjeli", "Detaljan pregled po odjelima"]] as const).map(([id, label]) => (
-          <button key={id} onClick={() => setMainTab(id)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+      <div className="flex gap-2 mb-6 flex-wrap">
+        {([
+          ["statistike", "📊", "Statistike", "Pregled aktivnosti po periodima"],
+          ["odjeli",     "🗺️", "Detaljan pregled po odjelima", "Svi odjeli razvrstani po GJ"],
+        ] as const).map(([id, icon, label, sub]) => (
+          <button
+            key={id}
+            onClick={() => setMainTab(id)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
               mainTab === id
-                ? "border-green-700 text-green-700 dark:text-green-400 dark:border-green-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            }`}>{label}</button>
+                ? "bg-green-700 border-green-700 text-white shadow-md"
+                : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-950/40"
+            }`}
+          >
+            <span className="text-xl leading-none">{icon}</span>
+            <span>
+              <span className="block text-sm font-semibold leading-tight">{label}</span>
+              <span className={`block text-xs mt-0.5 ${mainTab === id ? "text-green-100" : "text-gray-400 dark:text-gray-500"}`}>{sub}</span>
+            </span>
+          </button>
         ))}
       </div>
 
