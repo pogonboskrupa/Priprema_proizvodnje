@@ -223,8 +223,8 @@ async function ready(col: string) {
 function confirmOrQueue(write: Promise<void>): Promise<void> {
   pendingStart();
   write
-    .catch((e) => console.error('Firestore upis odbijen', e))
-    .finally(() => pendingDone());
+    .then(() => pendingDone(true))
+    .catch((e) => { console.error('Firestore upis odbijen', e); pendingDone(false); });
   const wait = isOffline() ? 300 : 10000;
   return Promise.race([write, new Promise<void>((r) => setTimeout(r, wait))]);
 }

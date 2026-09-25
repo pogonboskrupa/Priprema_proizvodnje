@@ -4,11 +4,13 @@
 export interface NetState {
   online: boolean;
   pending: number;
+  syncFailed: boolean; // imao upis koji je server odbio u tekućoj grupi
 }
 
 let state: NetState = {
   online: typeof navigator !== "undefined" ? navigator.onLine : true,
   pending: 0,
+  syncFailed: false,
 };
 
 type Listener = (s: NetState) => void;
@@ -19,7 +21,9 @@ function emit() {
   for (const cb of listeners) cb(snap);
 }
 
-if (typeof window !== "undefined") {
+// Guard: registruj listenere samo jednom po window instanci (HMR / hot reload)
+if (typeof window !== "undefined" && !(window as unknown as Record<string, unknown>).__netStatusInit) {
+  (window as unknown as Record<string, unknown>).__netStatusInit = true;
   window.addEventListener("online",  () => { state = { ...state, online: true };  emit(); });
   window.addEventListener("offline", () => { state = { ...state, online: false }; emit(); });
 }
@@ -32,11 +36,20 @@ export function onNetState(cb: Listener): () => void {
 }
 
 export function pendingStart(): void {
-  state = { ...state, pending: state.pending + 1 };
+  if (typeof window === "undefined") return; // no-op na serveru
+  // Pri prelasku 0→1 resetuj grešku prethodne grupe
+  const fresh = state.pending === 0;
+  state = { ...state, pending: state.pending + 1, syncFailed: fresh ? false : state.syncFailed };
   emit();
 }
 
-export function pendingDone(): void {
-  state = { ...state, pending: Math.max(0, state.pending - 1) };
+// ok=true: server potvrdio; ok=false: server odbio (permission error, network fail)
+export function pendingDone(ok = true): void {
+  if (typeof window === "undefined") return;
+  state = {
+    ...state,
+    pending: Math.max(0, state.pending - 1),
+    syncFailed: state.syncFailed || !ok,
+  };
   emit();
 }

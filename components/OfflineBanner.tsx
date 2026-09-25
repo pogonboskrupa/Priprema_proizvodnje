@@ -5,7 +5,7 @@ import { useNetStatus } from "@/hooks/useNetStatus";
 type Phase = "offline" | "syncing" | "synced" | "idle";
 
 export default function OfflineBanner() {
-  const { online, pending } = useNetStatus();
+  const { online, pending, syncFailed } = useNetStatus();
   const [phase, setPhase] = useState<Phase>("idle");
   const wasSyncingRef = useRef(false);
 
@@ -23,16 +23,19 @@ export default function OfflineBanner() {
     // pending === 0 && online
     if (wasSyncingRef.current) {
       wasSyncingRef.current = false;
-      setPhase("synced");
-      const t = setTimeout(() => setPhase("idle"), 3000);
-      return () => clearTimeout(t);
+      // Ako je ikoji upis bio odbijen, ne pokazuj lažnu potvrdu
+      if (!syncFailed) {
+        setPhase("synced");
+        const t = setTimeout(() => setPhase("idle"), 3000);
+        return () => clearTimeout(t);
+      }
     }
     setPhase("idle");
-  }, [online, pending]);
+  }, [online, pending, syncFailed]);
 
   if (phase === "idle") return null;
 
-  const configs = {
+  const configs: Record<Exclude<Phase, "idle">, { bg: string; icon: string; text: string }> = {
     offline: {
       bg: "bg-amber-500",
       icon: "⚡",
@@ -48,9 +51,10 @@ export default function OfflineBanner() {
       icon: "✓",
       text: "Sinhronizovano",
     },
-  } as const;
+  };
 
-  const cfg = configs[phase as keyof typeof configs];
+  const cfg = configs[phase as Exclude<Phase, "idle">];
+  if (!cfg) return null;
 
   return (
     <div
