@@ -35,7 +35,6 @@ function pomjeri(m: Mjesec, delta: number): Mjesec {
   return { year: d.getFullYear(), month: d.getMonth() + 1 };
 }
 
-const ODSUSTVA: readonly VrstaRada[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE"];
 
 export default function SihtaricaPage() {
   const { session, loading: authLoading } = useAuth();
@@ -291,7 +290,7 @@ export default function SihtaricaPage() {
 
       {/* Rezime + GO */}
       <div className="grid gap-3 lg:grid-cols-[1fr_22rem]">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-700">
+        <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-700">
           <div className="bg-white dark:bg-gray-900 p-4">
             <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Popunjeno</div>
             <div className="mt-1 text-2xl font-bold tabular-nums text-gray-800 dark:text-gray-100">
@@ -316,19 +315,6 @@ export default function SihtaricaPage() {
             </div>
             <div className="mt-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">{rez.daniPoVrsti.VLAKA} d</div>
           </div>
-          <div className="bg-white dark:bg-gray-900 p-4">
-            <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Prisustvo (dana)</div>
-            <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-              {ODSUSTVA.map((v) => (
-                <div key={v} className="flex items-center justify-between gap-1">
-                  <dt className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                    <span className={`w-2 h-2 rounded-full ${VRSTA[v].dot}`} aria-hidden />{VRSTA[v].short}
-                  </dt>
-                  <dd className="font-semibold tabular-nums text-gray-800 dark:text-gray-100">{rez.daniPoVrsti[v]}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
         </div>
 
         <GoKartica
@@ -340,6 +326,84 @@ export default function SihtaricaPage() {
           onSave={handleUgovor}
         />
       </div>
+
+      {/* Rekapitulacija */}
+      {!loading && rez.popunjeno > 0 && (() => {
+        const terenUkupno = rez.daniPoVrsti.DOZNAKA + rez.daniPoVrsti.VLAKA + rez.daniPoVrsti.TEREN;
+        const TERENSKE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN"];
+        const OSTALE: readonly VrstaRada[] = ["KANCELARIJA", "GODISNJI", "BOLOVANJE"];
+        const sati = (d: number) => d ? `${d * 8}` : "–";
+        const numCls = (d: number) => d
+          ? "text-gray-800 dark:text-gray-100 font-semibold"
+          : "text-gray-300 dark:text-gray-600";
+        return (
+          <section className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Rekapitulacija</h2>
+              <span className="text-xs text-gray-500 dark:text-gray-400 capitalize tabular-nums">
+                {monthYearLabel(mjesec.year, mjesec.month)}{imeProjektanta ? ` · ${imeProjektanta}` : ""}
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[320px]">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <th className="px-4 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 w-full">Aktivnost</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">Dana</th>
+                    <th className="px-4 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 whitespace-nowrap">Sati (8h)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Teren group */}
+                  {TERENSKE.map((v) => {
+                    const d = rez.daniPoVrsti[v] ?? 0;
+                    return (
+                      <tr key={v} className="border-b border-gray-50 dark:border-gray-800/50">
+                        <td className="px-4 py-2.5">
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${VRSTA[v].dot}`} aria-hidden />
+                            <span className="text-gray-600 dark:text-gray-300">{VRSTA[v].label}</span>
+                          </span>
+                        </td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums ${numCls(d)}`}>{d || "–"}</td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400 ${!d && "text-gray-300 dark:text-gray-600"}`}>{sati(d)}</td>
+                      </tr>
+                    );
+                  })}
+                  {/* Teren subtotal */}
+                  <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40">
+                    <td className="px-4 py-2.5 pl-8 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Teren ukupno</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums text-base ${numCls(terenUkupno)}`}>{terenUkupno || "–"}</td>
+                    <td className={`px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400 ${!terenUkupno && "text-gray-300 dark:text-gray-600"}`}>{sati(terenUkupno)}</td>
+                  </tr>
+                  {/* Ostale vrste */}
+                  {OSTALE.map((v) => {
+                    const d = rez.daniPoVrsti[v] ?? 0;
+                    return (
+                      <tr key={v} className="border-b border-gray-50 dark:border-gray-800/50">
+                        <td className="px-4 py-2.5">
+                          <span className="flex items-center gap-2">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${VRSTA[v].dot}`} aria-hidden />
+                            <span className="text-gray-600 dark:text-gray-300">{VRSTA[v].label}</span>
+                          </span>
+                        </td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums ${numCls(d)}`}>{d || "–"}</td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums text-gray-500 dark:text-gray-400 ${!d && "text-gray-300 dark:text-gray-600"}`}>{sati(d)}</td>
+                      </tr>
+                    );
+                  })}
+                  {/* Ukupno */}
+                  <tr className="bg-gray-50 dark:bg-gray-800/60">
+                    <td className="px-4 py-3 font-bold text-gray-700 dark:text-gray-200">Ukupno radnih dana</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-lg font-bold text-gray-900 dark:text-gray-50">{rez.popunjeno}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-gray-600 dark:text-gray-300">{rez.popunjeno * 8}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })()}
 
       {!loading && <MjesecTraka dani={dani} onPick={otvoriDan} />}
 
