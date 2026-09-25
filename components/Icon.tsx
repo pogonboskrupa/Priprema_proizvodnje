@@ -19,6 +19,7 @@ const PATHS = {
   hardhat: "M4 15a8 8 0 0 1 16 0M2 15h20v3H2zM10 7.3V5h4v2.3",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.35-4.35",
   plus: "M12 5v14M5 12h14",
+  user: "M19 20v-1a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v1M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z",
   download: "M12 4v11M7 10l5 5 5-5M5 20h14",
 } as const;
 

@@ -6,6 +6,7 @@ import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKori
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -545,8 +546,8 @@ export default function PostavkePage() {
                             </span>
                           )}
 
-                          <span className="basis-full sm:basis-auto sm:ml-auto text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                            {u.creator && u.creator.id !== u.inzinjerId ? `unio ${u.creator.ime} · ` : ""}
+                          <span className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                            {u.creator && u.creator.id !== u.inzinjerId && <UnioOtkrij>unio {u.creator.ime}</UnioOtkrij>}
                             {u.updatedAt && u.updatedAt !== u.createdAt
                               ? `izmijenjeno ${fmtUnijeto(u.updatedAt)}`
                               : fmtUnijeto(u.createdAt)}

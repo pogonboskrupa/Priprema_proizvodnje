@@ -1,4 +1,5 @@
 "use client";
+import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { useEffect, useState } from "react";
 import { getOdjeli, getKorisnici, getUnosi, createUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
@@ -582,11 +583,11 @@ export default function UnosPage() {
                             {vrstaStyle(u.vrsta).emoji} {vrstaStyle(u.vrsta).label}
                           </span>
                           {isWorker && u.createdById && u.createdById !== u.inzinjerId && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                            <UnioOtkrij>
                               {u.creator
                                 ? u.creator.fullName?.split(" ")[0] || u.creator.ime
                                 : "admin"}
-                            </span>
+                            </UnioOtkrij>
                           )}
                         </div>
                       </td>

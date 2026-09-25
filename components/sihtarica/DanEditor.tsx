@@ -5,6 +5,7 @@ import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type Unos
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
+import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
 
@@ -145,8 +146,9 @@ export function DanEditor({
                 <span className="tabular-nums text-gray-500 dark:text-gray-400">{ucinakLabel(u)}</span>
                 <span className="flex-1 min-w-0 truncate italic text-xs text-gray-400">{u.napomena}</span>
                 {unioDrugi(u) && (
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                    unio {unioDrugi(u)!.puno}{u.createdAt ? ` · ${fmtVrijeme(u.createdAt)}` : ""}
+                  <span className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                    <UnioOtkrij>unio {unioDrugi(u)!.puno}</UnioOtkrij>
+                    {u.createdAt && fmtVrijeme(u.createdAt)}
                   </span>
                 )}
                 <button type="button" onClick={() => { setEdit({ id: u.id, form: formIzUnosa(u) }); setError(""); }}

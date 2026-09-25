@@ -12,6 +12,7 @@ import { UnosEditForm } from "@/components/UnosEditForm";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { zabranaIzmjene } from "@/lib/sihtarica";
+import { UnioOtkrij } from "@/components/UnioOtkrij";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const pak = (st: number) => (st / 30).toFixed(1);
@@ -618,15 +619,14 @@ export default function KalendarPage() {
                       <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                         <span className="text-gray-300 dark:text-gray-600">↑</span>
                         <span>
-                          Unio:{" "}
-                          <span className="font-medium text-gray-500 dark:text-gray-400">
+                          <UnioOtkrij>
                             {personName(u.creator)}
-                          </span>
-                          {u.creator && (
-                            <span className="ml-1 px-1 py-px rounded text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                              {roleLabel(u.creator)}
-                            </span>
-                          )}
+                            {u.creator && (
+                              <span className="ml-1 px-1 py-px rounded text-[10px] font-semibold bg-gray-200/70 dark:bg-gray-700 text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                {roleLabel(u.creator)}
+                              </span>
+                            )}
+                          </UnioOtkrij>
                           {" — "}
                           {fmtAuditTime(u.createdAt)}
                         </span>
@@ -637,15 +637,14 @@ export default function KalendarPage() {
                         <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                           <span className="text-amber-400 dark:text-amber-500">✎</span>
                           <span>
-                            Editovao:{" "}
-                            <span className="font-medium text-gray-500 dark:text-gray-400">
+                            <UnioOtkrij label="ko je izmijenio?">
                               {personName(u.updater)}
-                            </span>
-                            {u.updater && (
-                              <span className="ml-1 px-1 py-px rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 uppercase tracking-wide">
-                                {roleLabel(u.updater)}
-                              </span>
-                            )}
+                              {u.updater && (
+                                <span className="ml-1 px-1 py-px rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                                  {roleLabel(u.updater)}
+                                </span>
+                              )}
+                            </UnioOtkrij>
                             {" — "}
                             {fmtAuditTime(u.updatedAt)}
                           </span>

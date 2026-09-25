@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getOdjelPregled, type OdjelPregledData } from "@/lib/db";
 import { statistikaOdjela, godineRada, type Faza } from "@/lib/odjel-pregled";
 import { fmtBroj, ucinakLabel, unioDrugi, DANI_KRATKO } from "@/lib/sihtarica";
+import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDate, fmtDateLong, monthYearLabel } from "@/lib/format";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -231,7 +232,7 @@ function OdjelPregled() {
                       <span className="basis-full sm:basis-auto text-xs text-gray-400 dark:text-gray-500 sm:order-last sm:w-full sm:pl-[7.75rem]">
                         {u.napomena && <span className="italic">„{u.napomena}“</span>}
                         {u.napomena && unio && " · "}
-                        {unio && `unio ${unio.puno}`}
+                        {unio && <UnioOtkrij>unio {unio.puno}</UnioOtkrij>}
                       </span>
                     )}
                   </li>
