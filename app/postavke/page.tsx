@@ -8,6 +8,7 @@ import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 
 type Tab = "profil" | "korisnici" | "unosi";
 
@@ -73,6 +74,8 @@ export default function PostavkePage() {
 
   const [zadnjiUnosi, setZadnjiUnosi] = useState<UnosRada[]>([]);
   const [loadingUnosi, setLoadingUnosi] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  useUnosiRefresh(() => setRefreshTick((t) => t + 1));
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -87,7 +90,8 @@ export default function PostavkePage() {
   useEffect(() => {
     if (tab !== "unosi" || !canSeeUnosi) return;
     let cancelled = false;
-    setLoadingUnosi(true);
+    // spinner samo pri otvaranju taba; osvježavanje uživo ne prazni listu
+    if (refreshTick === 0 || !zadnjiUnosi.length) setLoadingUnosi(true);
     const od = new Date();
     od.setDate(od.getDate() - ZADNJI_DANA);
     const odStr = localDateStr(od);
@@ -96,7 +100,7 @@ export default function PostavkePage() {
       .catch(() => { if (!cancelled) toast("Greška pri učitavanju unosa."); })
       .finally(() => { if (!cancelled) setLoadingUnosi(false); });
     return () => { cancelled = true; };
-  }, [tab]);
+  }, [tab, refreshTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadMe(id: string) {
     // offline bez keširanog profila getKorisnik baca — forma tada ostaje prazna, stranica radi

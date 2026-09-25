@@ -52,10 +52,14 @@ function useNewEntryNotifier() {
       Notification.requestPermission();
     }
     // dijeli sync listener iz lib/firebase — nema zasebnog čitanja cijele kolekcije
-    const unsub = onUnosiChanges((changes) => {
+    const unsub = onUnosiChanges((changes, meta) => {
+      // dolazak na mrežu donese sve propušteno odjednom — to nije "novi unos"
+      if (meta.initialSync) return;
       // edit starog unosa ga uvodi u sync prozor kao "added"; novi unos ima createdAt === updatedAt
       const added = changes.filter((c) => {
         if (c.type !== "added") return false;
+        // vlastiti upis s ovog uređaja nije "novi unos" za obavještenje
+        if (c.doc.metadata.hasPendingWrites) return false;
         const { createdAt, updatedAt } = c.doc.data();
         return !!createdAt && !!updatedAt && createdAt.isEqual(updatedAt);
       });

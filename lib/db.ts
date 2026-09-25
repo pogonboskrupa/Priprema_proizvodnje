@@ -651,8 +651,9 @@ export async function getIzvjestaj(
       godisnji: Set<string>; kancelarija: Set<string>; bolovanje: Set<string>;
       odjeliIds: Set<string>;
       terenDani: Set<string>;
+      radniDani: Set<string>;
     }> = {};
-    const emptyGroup = () => ({ ha: 0, stabala: 0, km: 0, count: 0, godisnji: new Set<string>(), kancelarija: new Set<string>(), bolovanje: new Set<string>(), odjeliIds: new Set<string>(), terenDani: new Set<string>() });
+    const emptyGroup = () => ({ ha: 0, stabala: 0, km: 0, count: 0, godisnji: new Set<string>(), kancelarija: new Set<string>(), bolovanje: new Set<string>(), odjeliIds: new Set<string>(), terenDani: new Set<string>(), radniDani: new Set<string>() });
     for (const u of unosiRaw) {
       const key = u.inzinjerId as string;
       if (!grouped[key]) grouped[key] = emptyGroup();
@@ -666,6 +667,8 @@ export async function getIzvjestaj(
       else if (u.vrsta === 'KANCELARIJA') grouped[key].kancelarija.add(dan);
       else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje.add(dan);
       else if (u.vrsta === 'TEREN' || u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') grouped[key].terenDani.add(dan);
+      // dan s terenom i kancelarijom je jedan radni dan, ne dva
+      if (u.vrsta !== 'GODISNJI' && u.vrsta !== 'BOLOVANJE') grouped[key].radniDani.add(dan);
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])
@@ -691,6 +694,7 @@ export async function getIzvjestaj(
           danaKancelarija: g.kancelarija.size,
           danaBolovanje: g.bolovanje.size,
           danaTeren: g.terenDani.size,
+          danaRadnih: g.radniDani.size,
           brojUnosa: g.count,
         };
       });
@@ -815,7 +819,8 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
 
   const acc: Record<string, Record<number, { teren: number; kancelarija: number; godisnji: number; bolovanje: number }>> = {};
   const seen = new Set<string>();
-  const KEY = { TEREN: 'teren', KANCELARIJA: 'kancelarija', GODISNJI: 'godisnji', BOLOVANJE: 'bolovanje' } as const;
+  // doznaka i vlaka su terenski dani — isto brojanje kao Izvještaji i Početna
+  const KEY = { TEREN: 'teren', DOZNAKA: 'teren', VLAKA: 'teren', KANCELARIJA: 'kancelarija', GODISNJI: 'godisnji', BOLOVANJE: 'bolovanje' } as const;
 
   for (const u of unosiRaw) {
     const key = KEY[u.vrsta as keyof typeof KEY];

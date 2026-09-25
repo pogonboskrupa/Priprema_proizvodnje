@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { getIzvjestaj, getSedmicnaTabela, type DnevnaAktivnost } from "@/lib/db";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { useAuth } from "@/context/AuthContext";
@@ -32,6 +33,7 @@ type InzinjerRow = {
   danaKancelarija: number;
   danaBolovanje: number;
   danaTeren: number;
+  danaRadnih?: number;
   brojUnosa: number;
 };
 
@@ -97,6 +99,8 @@ export default function IzvjestajiPage() {
     if (session.role === "worker") setTip(initialTip);
     load(period, initialTip, selectedMonth, selectedYear, weekOffset);
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useUnosiRefresh(() => { if (session) load(); });
 
   function refDateFor(p: Period, monthVal: string, yearVal: number, weekOff: number): Date | undefined {
     if (p === "godisnje") return new Date(yearVal, 6, 1);
@@ -422,7 +426,7 @@ function InzinjerIzvjestaj({
   const ukupnoSt = visibleRows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = visibleRows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoOdsustvo = visibleRows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaBolovanje ?? 0), 0);
-  const ukupnoRadniDani = visibleRows.reduce((s, r) => s + (r.danaTeren ?? 0) + (r.danaKancelarija ?? 0), 0);
+  const ukupnoRadniDani = visibleRows.reduce((s, r) => s + (r.danaRadnih ?? (r.danaTeren ?? 0) + (r.danaKancelarija ?? 0)), 0);
 
   const isPersonal = !!filterInzinjerId;
 

@@ -9,6 +9,7 @@ import {
 import type { Korisnik, VrstaRada } from "@/lib/types";
 import { VRSTA, heatClass } from "@/lib/vrste";
 import { godineEvidencije } from "@/lib/godine";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
@@ -53,6 +54,8 @@ export default function StatistikaPage() {
   const [odjeliMjesec, setOdjeliMjesec]   = useState<number>(0);
 
   const [busy, setBusy] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+  useUnosiRefresh(() => setRefreshTick((t) => t + 1));
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -81,7 +84,7 @@ export default function StatistikaPage() {
       .catch(() => { if (!cancelled) setErr("Greška pri učitavanju statistike. Provjeri internet i pokušaj ponovo."); })
       .finally(() => { if (!cancelled) setBusy(false); });
     return () => { cancelled = true; };
-  }, [session, tab, year, filterRadnik, upoMjesec, odjeliMjesec]);
+  }, [session, tab, year, filterRadnik, upoMjesec, odjeliMjesec, refreshTick]);
 
   if (loading || !session || session.role !== "admin") return null;
 
@@ -154,6 +157,7 @@ export default function StatistikaPage() {
                 {cfg.label}
               </button>
             ))}
+            {vrsta === "teren" && <span className="text-xs text-gray-400 dark:text-gray-500">uključuje dane doznake i vlaka</span>}
           </div>
           {prisutnostData.length === 0 && !busy && (
             <p className="text-sm text-gray-400 py-4">Nema podataka za {year}. godinu.</p>

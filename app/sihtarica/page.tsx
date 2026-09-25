@@ -6,7 +6,8 @@ import {
   getKorisnici, getKorisnik, getOdjeli, getSihtarica, getGodisnjiUnosi,
   createUnos, updateUnos, deleteUnos, setGoDanaPoUgovoru,
 } from "@/lib/db";
-import { onUnosiChanges, isOffline } from "@/lib/firebase";
+import { isOffline } from "@/lib/firebase";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import type { Korisnik, Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import type { UnosEditPayload } from "@/lib/unos-edit";
 import { daniMjeseca, rezime, fmtBroj, DANI_KRATKO, ucinakLabel, prethodniPopunjen } from "@/lib/sihtarica";
@@ -102,17 +103,7 @@ export default function SihtaricaPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Unos učinka / Unos rada na drugom uređaju odmah se vidi ovdje
-  const loadRef = useRef(load);
-  useEffect(() => { loadRef.current = load; }, [load]);
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | undefined;
-    const unsub = onUnosiChanges(() => {
-      clearTimeout(t);
-      t = setTimeout(() => loadRef.current(), 400);
-    });
-    return () => { unsub(); clearTimeout(t); };
-  }, []);
+  useUnosiRefresh(load);
 
   const korisnik = korisnici.find((k) => k.id === selectedId) ?? null;
   const dani = useMemo(() => daniMjeseca(mjesec.year, mjesec.month, unosi), [mjesec, unosi]);

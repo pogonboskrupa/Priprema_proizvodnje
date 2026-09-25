@@ -93,34 +93,44 @@ export function isOffline(): boolean {
 const SYNC_TIMEOUT_MS = 5000;
 const UNOSI_PROZOR_DANA = 60;
 const syncReady = new Map<string, Promise<void>>();
-const unosiSubscribers = new Set<(changes: DocumentChange<DocumentData>[]) => void>();
+export interface UnosiChangeMeta {
+  /** Prva serverska slika nakon offline starta — sadrži sve što je stiglo, nisu "novi" unosi */
+  initialSync: boolean;
+}
+type UnosiSubscriber = (changes: DocumentChange<DocumentData>[], meta: UnosiChangeMeta) => void;
+const unosiSubscribers = new Set<UnosiSubscriber>();
 
-/** Promjene unosa sa servera nakon početne sinhronizacije (za obavještenja) */
-export function onUnosiChanges(cb: (changes: DocumentChange<DocumentData>[]) => void): () => void {
+/** Promjene unosa (lokalni upis, drugi tab ili server) nakon početnog učitavanja */
+export function onUnosiChanges(cb: UnosiSubscriber): () => void {
   unosiSubscribers.add(cb);
   return () => { unosiSubscribers.delete(cb); };
 }
 
 interface Listener { ready: Promise<void>; stop: () => void }
 
-// ready se rješava na prvi snapshot sa servera, odmah ako je uređaj offline, ili nakon timeouta
-function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: (c: DocumentChange<DocumentData>[]) => void }): Listener {
+// ready se rješava na prvi snapshot sa servera, odmah ako je uređaj offline, ili nakon timeouta.
+// Od tada promjene idu pretplatnicima — i offline, da se upis u drugom tabu/stranici vidi odmah.
+function listen(q: Query<DocumentData>, opts: { keep: boolean; onLaterChanges?: UnosiSubscriber }): Listener {
   let unsub: Unsubscribe | null = null;
   const ready = new Promise<void>((resolve) => {
-    let synced = false;
-    const timer = setTimeout(resolve, isOffline() ? 0 : SYNC_TIMEOUT_MS);
+    let serverSynced = false;
+    let live = false;
+    const timer = setTimeout(() => { live = true; resolve(); }, isOffline() ? 0 : SYNC_TIMEOUT_MS);
     unsub = onSnapshot(q, { includeMetadataChanges: true }, (snap) => {
-      if (!synced) {
-        if (snap.metadata.fromCache) return;
-        synced = true;
+      let initialSync = false;
+      if (!serverSynced && !snap.metadata.fromCache) {
+        serverSynced = true;
         clearTimeout(timer);
         resolve();
-        if (!opts.keep) unsub?.();
-        return;
+        if (!opts.keep) { unsub?.(); return; }
+        // online start: prva slika je početno stanje, nije promjena
+        if (!live) { live = true; return; }
+        initialSync = true;
       }
+      if (!live) return;
       const changes = snap.docChanges();
-      if (changes.length) opts.onLaterChanges?.(changes);
-    }, () => { clearTimeout(timer); resolve(); });
+      if (changes.length) opts.onLaterChanges?.(changes, { initialSync });
+    }, () => { clearTimeout(timer); live = true; resolve(); });
   });
   return { ready, stop: () => unsub?.() };
 }
@@ -176,7 +186,7 @@ export function configureUnosiScope(userId: string, sviPodaci: boolean) {
   let active = true;
   const listeners: Listener[] = [];
   stopUnosiSync = () => { active = false; listeners.forEach((l) => l.stop()); };
-  const notify = (changes: DocumentChange<DocumentData>[]) => unosiSubscribers.forEach((cb) => cb(changes));
+  const notify: UnosiSubscriber = (changes, meta) => unosiSubscribers.forEach((cb) => cb(changes, meta));
 
   syncReady.set('unosi', _authReady.then(() => scope).then(async (sc) => {
     if (!active) return;

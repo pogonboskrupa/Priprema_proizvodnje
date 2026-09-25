@@ -11,6 +11,7 @@ import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { EVIDENCIJA_OD_DATUM, mjeseciEvidencije } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { praznik, jeRadniDan } from "@/lib/praznici";
 import { zabranaUpisa } from "@/lib/sihtarica";
 
@@ -101,6 +102,8 @@ export default function UnosPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useUnosiRefresh(() => { load(); });
 
   if (authLoading || !session) return null;
 

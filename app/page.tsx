@@ -8,6 +8,7 @@ import { mesecLabel, fmtDateLong, localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 import { navFor } from "@/lib/nav";
 import { Icon } from "@/components/Icon";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { vrsta } from "@/lib/vrste";
 
 type Rezime = MjesecniRezime;
@@ -19,6 +20,8 @@ export default function Home() {
   const [myRezime, setMyRezime] = useState<Rezime | null>(null);
   const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
   const isWorker = session?.role === "worker";
+  const [refreshTick, setRefreshTick] = useState(0);
+  useUnosiRefresh(() => setRefreshTick((t) => t + 1));
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
@@ -39,16 +42,13 @@ export default function Home() {
           getMjesecniRezimePoOdjelima(ids).then(setOdjeliRezime).catch(() => {});
         });
     }
-  }, [session, isWorker]);
+  }, [session, isWorker, refreshTick]);
 
   if (loading || !session) return null;
 
   const danas = new Date();
   const mesec = mesecLabel(danas);
   const nav = navFor(session);
-  const ime = (session.fullName || session.ime).split(" ")[0];
-  const sat = danas.getHours();
-  const pozdrav = sat < 11 ? "Dobro jutro" : sat < 18 ? "Dobar dan" : "Dobro veče";
   const uloga = session.role === "admin" ? "Administrator" : session.operater ? "Projektant · operater" : "Projektant";
 
   const displayRezime = isWorker ? myRezime : rezime;
@@ -58,13 +58,10 @@ export default function Home() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-green-700 dark:text-green-400 first-letter:uppercase">
-          {fmtDateLong(localDateStr(danas))}
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Početna</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <span className="capitalize">{fmtDateLong(localDateStr(danas))}</span> · {uloga}
         </p>
-        <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50 text-balance">
-          {pozdrav}, {ime}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{uloga} · Priprema proizvodnje</p>
       </header>
 
       <Link href={nav.cta.href}

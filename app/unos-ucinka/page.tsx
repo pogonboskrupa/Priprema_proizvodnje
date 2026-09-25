@@ -9,7 +9,8 @@ import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
-import { zabranaUpisa } from "@/lib/sihtarica";
+import { zabranaUpisa, zabranaIzmjene } from "@/lib/sihtarica";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
@@ -239,14 +240,22 @@ export default function UnosUcinkaPage() {
     }).catch(() => setMsg("Greška pri učitavanju podataka. Osvježi stranicu."));
   }, []);
 
+  // promjena dana zatvara izmjenu i prikazuje učitavanje; osvježavanje uživo to ne radi
+  useEffect(() => { setEditId(null); setFetching(true); }, [datum]);
+
+  const [refreshTick, setRefreshTick] = useState(0);
+  useUnosiRefresh(() => setRefreshTick((t) => t + 1));
+
   useEffect(() => {
     if (!session) return;
-    setFetching(true);
+    // brzo listanje dana: kasni odgovor za prethodni dan ne smije pregaziti tekući
+    let cancelled = false;
     getUnosiZaDan(datum)
-      .then(setUnosi)
-      .finally(() => setFetching(false));
-    setEditId(null);
-  }, [session, datum]);
+      .then((u) => { if (!cancelled) setUnosi(u); })
+      .catch(() => { if (!cancelled) setMsg("Greška pri učitavanju dana. Provjeri internet."); })
+      .finally(() => { if (!cancelled) setFetching(false); });
+    return () => { cancelled = true; };
+  }, [session, datum, refreshTick]);
 
   const recentOdjeliPerKorisnik = useMemo(() => recentOdjelIdsByInzinjer(allUnosi), [allUnosi]);
 
@@ -392,6 +401,9 @@ export default function UnosUcinkaPage() {
     if (!editId) return;
     const parsed = editFormToPayload(editForm);
     if (!parsed.ok) { setEditError(parsed.error); return; }
+    const original = unosi.find((u) => u.id === editId);
+    const z = original && zabranaIzmjene(original, parsed.data.vrsta, unosi);
+    if (z) { setEditError(z); return; }
     setEditSaving(true);
     setEditError("");
     try {

@@ -4,7 +4,7 @@ import type { Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type UnosEditPayload } from "@/lib/unos-edit";
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
-import { zabranaUpisa, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
+import { zabranaUpisa, zabranaIzmjene, ucinakLabel, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
 
@@ -92,6 +92,9 @@ export function DanEditor({
     if (!edit) return;
     const r = editFormToPayload(edit.form);
     if (!r.ok) { setError(r.error); return; }
+    const original = dan.unosi.find((u) => u.id === edit.id);
+    const z = original && zabranaIzmjene(original, r.data.vrsta, dan.unosi);
+    if (z) { setError(z); return; }
     if (await run(() => onUpdate(edit.id, r.data))) setEdit(null);
   }
 

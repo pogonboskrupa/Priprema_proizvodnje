@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { parseDecimal } from "@/lib/format";
 import { godineEvidencije } from "@/lib/godine";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 
 export default function PlanPoProjectantPage() {
   const { session, loading } = useAuth();
@@ -24,17 +25,20 @@ export default function PlanPoProjectantPage() {
     if (!loading && !session) router.replace("/login/");
   }, [session, loading]);
 
+  // "Učitavanje..." samo pri promjeni godine; osvježavanje uživo ne prazni tabelu
+  useEffect(() => { setFetching(true); setErr(""); }, [year]);
+  const [refreshTick, setRefreshTick] = useState(0);
+  useUnosiRefresh(() => setRefreshTick((t) => t + 1));
+
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
-    setFetching(true);
-    setErr("");
     getGodisnjePlanPoProjektantu(year)
       .then((data) => { if (!cancelled) setRows(data); })
       .catch(() => { if (!cancelled) setErr("Greška pri učitavanju plana."); })
       .finally(() => { if (!cancelled) setFetching(false); });
     return () => { cancelled = true; };
-  }, [session, year]);
+  }, [session, year, refreshTick]);
 
   if (loading || !session) return null;
 

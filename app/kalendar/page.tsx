@@ -10,6 +10,8 @@ import { editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edi
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm } from "@/components/UnosEditForm";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
+import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
+import { zabranaIzmjene } from "@/lib/sihtarica";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 
@@ -315,6 +317,8 @@ export default function KalendarPage() {
     return computeAllWorkersRecap(unosi, shownWorkers);
   }, [isAdmin, selectedWorkerId, shownWorkers, unosi]);
 
+  useUnosiRefresh(() => { if (session) reload().catch(() => {}); });
+
   if (authLoading || !session) return null;
 
   function prevMonth() {
@@ -354,6 +358,9 @@ export default function KalendarPage() {
     if (!editId) return;
     const parsed = editFormToPayload(editForm);
     if (!parsed.ok) { setEditError(parsed.error); return; }
+    const original = unosi.find((u) => u.id === editId);
+    const z = original && zabranaIzmjene(original, parsed.data.vrsta, unosi);
+    if (z) { setEditError(z); return; }
     setEditSaving(true);
     setEditError("");
     try {

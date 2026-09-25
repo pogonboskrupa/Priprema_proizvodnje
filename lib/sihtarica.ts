@@ -82,6 +82,21 @@ export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRa
   return null;
 }
 
+/**
+ * Ista pravila za izmjenu postojećeg unosa. Provjera ide samo kad se mijenja vrsta,
+ * pa se količina na ranije upisanom (konfliktnom) danu i dalje može ispraviti.
+ */
+export function zabranaIzmjene(
+  u: Pick<UnosRada, "id" | "datum" | "vrsta" | "inzinjerId">,
+  novaVrsta: VrstaRada,
+  sviUnosi: readonly Pick<UnosRada, "id" | "datum" | "vrsta" | "inzinjerId">[],
+): string | null {
+  if (novaVrsta === u.vrsta) return null;
+  const dan = u.datum.slice(0, 10);
+  const ostali = sviUnosi.filter((x) => x.id !== u.id && x.inzinjerId === u.inzinjerId && x.datum.slice(0, 10) === dan);
+  return zabranaUpisa(dan, ostali, novaVrsta);
+}
+
 export interface SihtaricaRezime {
   radnihDana: number;
   popunjeno: number;
