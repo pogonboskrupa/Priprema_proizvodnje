@@ -3,6 +3,7 @@ import { Geist, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import InstallBanner from "@/components/InstallBanner";
+import OfflineBanner from "@/components/OfflineBanner";
 import { AuthProvider } from "@/context/AuthContext";
 
 const geist = Geist({ subsets: ["latin"] });
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Nav />
           <main className="max-w-7xl mx-auto px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] md:pb-10">{children}</main>
           <InstallBanner />
+          <OfflineBanner />
         </AuthProvider>
         <script
           dangerouslySetInnerHTML={{

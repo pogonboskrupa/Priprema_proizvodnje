@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { pendingStart, pendingDone } from './netStatus';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import {
   initializeFirestore,
@@ -218,8 +219,12 @@ async function ready(col: string) {
 
 // Offline Firestore upiše lokalno i pošalje kad bude mreže, ali promise čeka server.
 // Da UI ne visi na "Čuvanje...", nakon kratkog čekanja upis se smatra prihvaćenim.
+// pendingStart/Done prate broj upisa koji čekaju potvrdu — koristi OfflineBanner.
 function confirmOrQueue(write: Promise<void>): Promise<void> {
-  write.catch((e) => console.error('Firestore upis odbijen', e));
+  pendingStart();
+  write
+    .catch((e) => console.error('Firestore upis odbijen', e))
+    .finally(() => pendingDone());
   const wait = isOffline() ? 300 : 10000;
   return Promise.race([write, new Promise<void>((r) => setTimeout(r, wait))]);
 }
