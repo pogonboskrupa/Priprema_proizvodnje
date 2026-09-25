@@ -336,7 +336,7 @@ export default function SihtaricaPage() {
           period={period}
           ugovor={korisnik?.goDanaPoUgovoru?.[String(period.godina)] ?? undefined}
           iskoristeno={iskoristeno}
-          canEdit={canPick}
+          canEdit={canPick || selectedId === session?.userId}
           onSave={handleUgovor}
         />
       </div>
