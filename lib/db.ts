@@ -27,14 +27,16 @@ import { localDateStr, cmpOdjel } from './format';
 // pa se ID ovdje svodi na korisnika (baza se ne mijenja).
 async function queryUnosi(constraints: Parameters<typeof queryCol>[1]) {
   const scope = await unosiScope();
-  const [raw, inzinjeri] = await Promise.all([
-    scope.kind === 'own'
-      // projektant: samo vlastiti unosi, iz cache-a koji puni sync listener
-      // (serverski upit "in + datum" bi tražio composite index)
-      ? queryColCache('unosi', [where('inzinjerId', 'in', scope.ids), ...constraints])
-      : queryCol('unosi', constraints),
-    getAll('inzinjeri'),
-  ]);
+  const raw = scope.kind === 'own'
+    // projektant: samo vlastiti unosi, iz cache-a koji puni sync listener
+    // (serverski upit "in + datum" bi tražio composite index)
+    ? await queryColCache('unosi', [where('inzinjerId', 'in', scope.ids), ...constraints])
+    : await queryCol('unosi', constraints);
+  return normalizujProjektante(raw);
+}
+
+async function normalizujProjektante(raw: Record<string, unknown>[]) {
+  const inzinjeri = await getAll('inzinjeri');
   const owner = new Map<string, string>();
   for (const i of inzinjeri) if (i.korisnikId) owner.set(i.id as string, i.korisnikId as string);
   if (!owner.size) return raw;
@@ -437,6 +439,33 @@ export async function getUnosiZaMjesec(year: number, month: number): Promise<Uno
     updater: korMap[(u as Record<string, unknown>).updatedById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
+}
+
+// ── Pregled odjela ───────────────────────────────────────────────────────────
+
+export interface OdjelPregledData {
+  odjel: Odjel | null;
+  unosi: UnosRada[];
+}
+
+/**
+ * Svi unosi u odjelu, svih projektanata (kao Moji odjeli: rad u odjelu je zajednički).
+ * Server-first jer projektantov cache ima samo njegove unose; offline pada na cache.
+ */
+export async function getOdjelPregled(odjelId: string): Promise<OdjelPregledData> {
+  const [raw, odjelRaw, usersRaw] = await Promise.all([
+    queryColFresh('unosi', [where('odjelId', '==', odjelId)]),
+    getById('odjeli', odjelId).catch(() => null),
+    getAll('users'),
+  ]);
+  const korMap = Object.fromEntries(usersRaw.map((k) => [k.id as string, k as unknown as Korisnik]));
+  const unosi = (await normalizujProjektante(raw)).map((u) => ({
+    ...(u as unknown as UnosRada),
+    korisnik: korMap[u.inzinjerId as string],
+    creator: korMap[u.createdById as string],
+  }));
+  unosi.sort((a, b) => a.datum.localeCompare(b.datum));
+  return { odjel: odjelRaw as unknown as Odjel | null, unosi };
 }
 
 // ── Šihtarica ────────────────────────────────────────────────────────────────

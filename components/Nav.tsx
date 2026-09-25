@@ -370,7 +370,7 @@ export default function Nav() {
           <Logo />
 
           {/* Mobitel: naziv trenutne stranice; linkovi su u donjoj traci */}
-          <span className="md:hidden flex-1 min-w-0 truncate text-[15px] font-semibold">{current?.label ?? ""}</span>
+          <span className="md:hidden flex-1 min-w-0 truncate text-[15px] font-semibold">{current?.label ?? (path.startsWith("/odjel/") ? "Pregled odjela" : "")}</span>
 
           <span className="hidden md:block w-px h-6 bg-white/15 flex-shrink-0" aria-hidden />
           {/* xl+: sve stavke */}

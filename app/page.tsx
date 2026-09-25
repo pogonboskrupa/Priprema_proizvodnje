@@ -151,9 +151,12 @@ function Stat({ label, value, unit, tone, note }: { label: string; value: string
 
 function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
   return (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2">
-      <div className="font-semibold text-sm text-gray-800 dark:text-gray-100 leading-tight truncate">
-        {odjel.gj} / {odjel.broj}
+    <Link href={`/odjel/?id=${encodeURIComponent(odjel.odjelId)}`}
+      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2 hover:border-green-600/60 hover:shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+      aria-label={`Pregled odjela ${odjel.gj} / ${odjel.broj}`}>
+      <div className="flex items-center gap-1 font-semibold text-sm text-gray-800 dark:text-gray-100 leading-tight">
+        <span className="truncate">{odjel.gj} / {odjel.broj}</span>
+        <Icon name="arrow" className="ml-auto w-3.5 h-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
       </div>
       <div className="flex flex-wrap gap-1">
         {odjel.vrste.map((v) => {
@@ -170,6 +173,6 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
           {odjel.km > 0 && <div>{odjel.km.toFixed(2)} km</div>}
         </div>
       )}
-    </div>
+    </Link>
   );
 }
