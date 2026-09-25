@@ -206,14 +206,16 @@ export default function PostavkePage() {
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
   const unosiPoDanu = useMemo(() => {
+    const ts = (u: UnosRada) => u.updatedAt ?? u.createdAt ?? "";
     const grouped = new Map<string, UnosRada[]>();
     for (const u of zadnjiUnosi) {
       const d = u.datum.slice(0, 10);
       if (!grouped.has(d)) grouped.set(d, []);
       grouped.get(d)!.push(u);
     }
-    for (const list of grouped.values()) list.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
-    return [...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+    for (const list of grouped.values()) list.sort((a, b) => ts(b).localeCompare(ts(a)));
+    // sort groups by most recently touched entry, not by working day
+    return [...grouped.entries()].sort((a, b) => ts(b[1][0]).localeCompare(ts(a[1][0])));
   }, [zadnjiUnosi]);
 
   if (loading || !session) return null;
@@ -542,7 +544,9 @@ export default function PostavkePage() {
 
                           <span className="basis-full sm:basis-auto sm:ml-auto text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
                             {u.creator && u.creator.id !== u.inzinjerId ? `unio ${u.creator.ime} · ` : ""}
-                            {fmtUnijeto(u.createdAt)}
+                            {u.updatedAt && u.updatedAt !== u.createdAt
+                              ? `izmijenjeno ${fmtUnijeto(u.updatedAt)}`
+                              : fmtUnijeto(u.createdAt)}
                           </span>
                         </div>
                       );
