@@ -354,8 +354,7 @@ export default function Nav() {
   const nav = navFor(session);
   const more = nav.all.filter((l) => !nav.primary.includes(l));
   const current = nav.all.find((l) => isActive(path, l.href));
-  // Postavke su u korisničkom meniju na desktopu
-  const desktopAll = nav.all.filter((l) => l.href !== "/postavke");
+  const desktopAll = nav.all;
 
   return (
     <>

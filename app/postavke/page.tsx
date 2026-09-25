@@ -22,15 +22,19 @@ function fmtDan(dateStr: string): string {
 function fmtLastLogin(iso: string | undefined): string {
   if (!iso) return "–";
   const d = new Date(iso);
-  const diffMs = Date.now() - d.getTime();
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
   const diffMin = Math.floor(diffMs / 60000);
-  const diffH = Math.floor(diffMin / 60);
-  const diffD = Math.floor(diffH / 24);
+  const diffD = Math.floor(diffMs / 86_400_000);
+  const sameDay = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const wasYesterday = d.toDateString() === yesterday.toDateString();
+  const time = d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" });
   if (diffMin < 1) return "Upravo";
-  if (diffMin < 60) return `${diffMin} min ago`;
-  if (diffH < 24) return `Danas ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diffD === 1) return `Jučer ${d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" })}`;
-  if (diffD < 7) return `${diffD} dana ago`;
+  if (diffMin < 60) return `${diffMin} min`;
+  if (sameDay) return `Danas ${time}`;
+  if (wasYesterday) return `Jučer ${time}`;
+  if (diffD < 7) return `${diffD} dana · ${time}`;
   return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
@@ -414,7 +418,7 @@ export default function PostavkePage() {
                 </tr>
               </thead>
               <tbody>
-                {korisnici.filter((k) => !k.arhiviran).map((k) => (
+                {korisnici.filter((k) => !k.arhiviran).sort((a, b) => (b.lastLoginAt ?? "").localeCompare(a.lastLoginAt ?? "")).map((k) => (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
