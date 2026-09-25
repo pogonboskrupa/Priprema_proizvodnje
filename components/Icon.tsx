@@ -16,6 +16,7 @@ const PATHS = {
   grid: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
   arrow: "M5 12h14M13 6l6 6-6 6",
   close: "M6 6l12 12M18 6 6 18",
+  hardhat: "M12 3a8 8 0 0 1 8 8H4a8 8 0 0 1 8-8zM3 13h18M12 3v5",
 } as const;
 
 export type IconName = keyof typeof PATHS;

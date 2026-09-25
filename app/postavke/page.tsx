@@ -9,9 +9,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
-import PomocniRadniciTab from "@/components/PomocniRadniciTab";
-
-type Tab = "profil" | "korisnici" | "unosi" | "pomocniRadnici";
+type Tab = "profil" | "korisnici" | "unosi";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
 
@@ -229,7 +227,6 @@ export default function PostavkePage() {
     { id: "profil", label: "Profil" },
     ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }] : []),
     ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
-    ...(canSeeUnosi ? [{ id: "pomocniRadnici" as Tab, label: "Pomoćni radnici" }] : []),
   ];
 
   return (
@@ -563,11 +560,6 @@ export default function PostavkePage() {
             </div>
           )}
         </div>
-      )}
-
-      {/* ── TAB: Pomoćni radnici ──────────────────────────────── */}
-      {tab === "pomocniRadnici" && canSeeUnosi && (
-        <PomocniRadniciTab korisnici={korisnici} />
       )}
 
       {confirmState && (

@@ -24,6 +24,7 @@ const I = {
   elaborat: { href: "/elaborat", label: "Elaborat", desc: "Drvna masa i prirast po odsjecima", icon: "book" },
   statistika: { href: "/statistika", label: "Statistika", desc: "Prisutnost, učinak, usporedba", icon: "pie" },
   mojiOdjeli: { href: "/moji-odjeli", label: "Moji odjeli", desc: "Moji odjeli i rješenja", icon: "map" },
+  pomocniRadnici: { href: "/pomocni-radnici", label: "Pomoćni radnici", short: "Radnici", desc: "Evidencija pomoćnih radnika", icon: "hardhat" },
   postavke: { href: "/postavke", label: "Postavke", desc: "Profil i PIN", icon: "gear" },
 } satisfies Record<string, NavItem>;
 
@@ -39,12 +40,12 @@ export interface RoleNav {
 export function navFor(ses: Pick<Session, "role" | "operater"> | null): RoleNav {
   if (ses?.role === "admin") {
     return {
-      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.planProjektant, I.realizacija, I.elaborat, I.statistika, I.postavke],
+      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.planProjektant, I.realizacija, I.elaborat, I.statistika, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
       cta: I.unosUcinka,
     };
   }
-  const base = [I.pocetna, I.unos, ...(ses?.operater ? [I.unosUcinka] : []), I.izvjestaji, I.kalendar, I.sihtarica, I.elaborat, I.mojiOdjeli, I.postavke];
+  const base = [I.pocetna, I.unos, ...(ses?.operater ? [I.unosUcinka] : []), I.izvjestaji, I.kalendar, I.sihtarica, I.elaborat, I.mojiOdjeli, ...(ses?.operater ? [I.pomocniRadnici] : []), I.postavke];
   return {
     all: base,
     primary: ses?.operater ? [I.pocetna, I.unos, I.unosUcinka, I.sihtarica] : [I.pocetna, I.unos, I.sihtarica, I.kalendar],
