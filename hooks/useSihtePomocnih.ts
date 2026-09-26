@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSihteZaMjesec, saveSihtaPomocnog } from "@/lib/db";
+import { getSihteZaMjesec, upisiDaneSihte } from "@/lib/db";
 import type { VrstaPomocnog } from "@/lib/types";
 import type { DaniSihte } from "@/lib/pomocni";
 
@@ -12,6 +12,8 @@ const SAVE_DELAY_MS = 600;
 const EMPTY: Sihte = {};
 
 interface Stanje { key: string; sihte: Sihte; error: boolean }
+/** Izmjene radnika koje čekaju upis; ključ = broj dana, null = obrisan dan */
+interface Cekanje { timer: ReturnType<typeof setTimeout>; izmjene: Record<string, VrstaPomocnog | null> }
 
 export function useSihtePomocnih(year: number, month: number, onSaveError: () => void) {
   const key = `${year}-${month}`;
@@ -19,23 +21,23 @@ export function useSihtePomocnih(year: number, month: number, onSaveError: () =>
   const [stanje, setStanje] = useState<Stanje | null>(null);
   const data = useRef<Sihte>({});
   const ym = useRef({ year, month, key });
-  const pending = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const pending = useRef(new Map<string, Cekanje>());
   const onError = useRef(onSaveError);
 
   useEffect(() => { onError.current = onSaveError; }, [onSaveError]);
 
   const persist = useCallback((radnikId: string) => {
+    const c = pending.current.get(radnikId);
+    if (!c) return;
+    clearTimeout(c.timer);
+    pending.current.delete(radnikId);
     const { year: y, month: m } = ym.current;
-    saveSihtaPomocnog(radnikId, y, m, data.current[radnikId] ?? {}).catch(() => onError.current());
+    upisiDaneSihte(radnikId, y, m, c.izmjene).catch(() => onError.current());
   }, []);
 
-  // Čita data/ym prije nego ih novi mjesec zamijeni — zato se zove iz cleanup-a
+  // Čita ym prije nego ga novi mjesec zamijeni — zato se zove iz cleanup-a
   const flush = useCallback(() => {
-    for (const [radnikId, t] of pending.current) {
-      clearTimeout(t);
-      persist(radnikId);
-    }
-    pending.current.clear();
+    for (const radnikId of [...pending.current.keys()]) persist(radnikId);
   }, [persist]);
 
   useEffect(() => {
@@ -66,12 +68,12 @@ export function useSihtePomocnih(year: number, month: number, onSaveError: () =>
     data.current = { ...data.current, [radnikId]: next };
     setStanje({ key: ym.current.key, sihte: data.current, error: false });
 
-    const t = pending.current.get(radnikId);
-    if (t) clearTimeout(t);
-    pending.current.set(radnikId, setTimeout(() => {
-      pending.current.delete(radnikId);
-      persist(radnikId);
-    }, SAVE_DELAY_MS));
+    const prev = pending.current.get(radnikId);
+    if (prev) clearTimeout(prev.timer);
+    pending.current.set(radnikId, {
+      izmjene: { ...prev?.izmjene, ...izmjene },
+      timer: setTimeout(() => persist(radnikId), SAVE_DELAY_MS),
+    });
   }, [persist]);
 
   const loading = stanje?.key !== key;

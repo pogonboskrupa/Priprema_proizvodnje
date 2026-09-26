@@ -19,6 +19,7 @@ import {
   arrayUnion,
   arrayRemove,
   setDocById,
+  deleteField,
 } from './firebase';
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog } from './types';
 import { localDateStr, cmpOdjel } from './format';
@@ -1160,14 +1161,6 @@ export async function updatePomocniRadnik(
   await update('pomocniRadnici', id, data as Record<string, unknown>);
 }
 
-export async function getSihtaPomocnog(
-  radnikId: string, godina: number, mjesec: number
-): Promise<Record<string, VrstaPomocnog>> {
-  const id = `${radnikId}_${godina}_${mjesec}`;
-  const raw = await getById('sihtaPomocnih', id);
-  return (raw as unknown as { dani?: Record<string, VrstaPomocnog> })?.dani ?? {};
-}
-
 /** Sve šihte pomoćnih radnika za mjesec, ključ = radnikId */
 export async function getSihteZaMjesec(
   godina: number, mjesec: number
@@ -1178,8 +1171,13 @@ export async function getSihteZaMjesec(
   );
 }
 
-export async function saveSihtaPomocnog(
-  radnikId: string, godina: number, mjesec: number, dani: Record<string, VrstaPomocnog>
+/**
+ * Upisuje samo promijenjene dane (null = obriši dan). Cijela mapa bi prepisala dane koje je
+ * u međuvremenu upisao drugi uređaj, ili cijeli mjesec kad lokalno učitavanje nije uspjelo.
+ */
+export async function upisiDaneSihte(
+  radnikId: string, godina: number, mjesec: number, izmjene: Readonly<Record<string, VrstaPomocnog | null>>
 ): Promise<void> {
-  await setDocById('sihtaPomocnih', `${radnikId}_${godina}_${mjesec}`, { radnikId, godina, mjesec, dani });
+  const dani = Object.fromEntries(Object.entries(izmjene).map(([dan, v]) => [dan, v ?? deleteField()]));
+  await setDocById('sihtaPomocnih', `${radnikId}_${godina}_${mjesec}`, { radnikId, godina, mjesec, dani }, { merge: true });
 }

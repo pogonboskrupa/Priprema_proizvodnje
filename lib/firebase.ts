@@ -30,6 +30,7 @@ import {
   arrayUnion,
   arrayRemove,
   getCountFromServer,
+  deleteField,
   type DocumentChange,
   type Unsubscribe,
 } from 'firebase/firestore';
@@ -330,9 +331,10 @@ export function authReady() {
   return _authReady;
 }
 
-export async function setDocById(col: string, id: string, data: Record<string, unknown>): Promise<void> {
+/** merge: upisana polja (i ugniježđene mape) se spajaju s postojećim dokumentom umjesto da ga zamijene */
+export async function setDocById(col: string, id: string, data: Record<string, unknown>, opts: { merge?: boolean } = {}): Promise<void> {
   await _authReady;
-  await confirmOrQueue(setDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() }));
+  await confirmOrQueue(setDoc(doc(db, col, id), { ...data, updatedAt: Timestamp.now() }, { merge: !!opts.merge }));
 }
 
-export { collection, doc, query, where, orderBy, Timestamp, onSnapshot, limit, runTransaction, arrayUnion, arrayRemove };
+export { collection, doc, query, where, orderBy, Timestamp, onSnapshot, limit, runTransaction, arrayUnion, arrayRemove, deleteField };
