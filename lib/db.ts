@@ -275,6 +275,7 @@ export async function getUnosi(): Promise<UnosRada[]> {
     inzinjer: inzMap[u.inzinjerId as string] as unknown as Inzinjer,
     korisnik: korMap[u.inzinjerId as string] as unknown as Korisnik,
     creator: korMap[u.createdById as string] as unknown as Korisnik,
+    updater: korMap[u.updatedById as string] as unknown as Korisnik,
     odjel: odMap[u.odjelId as string] as unknown as Odjel,
   }));
 }

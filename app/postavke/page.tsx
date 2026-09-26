@@ -10,6 +10,7 @@ import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
+import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
 type Tab = "profil" | "korisnici" | "unosi";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
@@ -39,6 +40,16 @@ function fmtLastOnline(iso: string | undefined): string {
 }
 
 const ZADNJI_DANA = 30;
+
+const DIJELOVI: { id: DioUnosa; label: string; opis: string; grupa: string }[] = [
+  { id: "prosli", label: "Prošli mjeseci", grupa: "Promjena", opis: "Unosi dodani ili izmijenjeni za datume iz ranijih mjeseci — provjeri da li su opravdani." },
+  { id: "izmjene", label: "Izmjene", grupa: "Izmijenjeno", opis: "Izmijenjeni unosi tekućeg mjeseca." },
+  { id: "novi", label: "Novi unosi", grupa: "Uneseno", opis: "Novi unosi tekućeg mjeseca." },
+];
+
+function fmtDatumRada(iso: string): string {
+  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}.`;
+}
 
 function fmtUnijeto(iso: string | undefined): string {
   if (!iso) return "";
@@ -77,7 +88,10 @@ export default function PostavkePage() {
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
 
   const [zadnjiUnosi, setZadnjiUnosi] = useState<UnosRada[]>([]);
-  const [loadingUnosi, setLoadingUnosi] = useState(false);
+  const [unosiUcitani, setUnosiUcitani] = useState(false);
+  // spinner samo do prvog učitavanja; osvježavanje uživo ne prazni listu
+  const loadingUnosi = !unosiUcitani;
+  const [dio, setDio] = useState<DioUnosa | null>(null);
   const [refreshTick, setRefreshTick] = useState(0);
   useUnosiRefresh(() => setRefreshTick((t) => t + 1));
 
@@ -94,15 +108,13 @@ export default function PostavkePage() {
   useEffect(() => {
     if (tab !== "unosi" || !canSeeUnosi) return;
     let cancelled = false;
-    // spinner samo pri otvaranju taba; osvježavanje uživo ne prazni listu
-    if (refreshTick === 0 || !zadnjiUnosi.length) setLoadingUnosi(true);
     const od = new Date();
     od.setDate(od.getDate() - ZADNJI_DANA);
     const odStr = localDateStr(od);
     getUnosi()
-      .then((u) => { if (!cancelled) setZadnjiUnosi(u.filter((x) => (x.updatedAt ?? x.createdAt ?? "").slice(0, 10) >= odStr)); })
+      .then((u) => { if (!cancelled) setZadnjiUnosi(u.filter((x) => danAktivnosti(x) >= odStr)); })
       .catch(() => { if (!cancelled) toast("Greška pri učitavanju unosa."); })
-      .finally(() => { if (!cancelled) setLoadingUnosi(false); });
+      .finally(() => { if (!cancelled) setUnosiUcitani(true); });
     return () => { cancelled = true; };
   }, [tab, refreshTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -209,17 +221,16 @@ export default function PostavkePage() {
 
   function toast(m: string) { setMsg(m); setTimeout(() => setMsg(""), 3000); }
 
-  const unosiPoDanu = useMemo(() => {
-    const ts = (u: UnosRada) => u.updatedAt ?? u.createdAt ?? "";
-    const grouped = new Map<string, UnosRada[]>();
-    for (const u of zadnjiUnosi) {
-      const d = ts(u).slice(0, 10); // grupiraj po datumu izmjene, ne datumu rada
-      if (!grouped.has(d)) grouped.set(d, []);
-      grouped.get(d)!.push(u);
-    }
-    for (const list of grouped.values()) list.sort((a, b) => ts(b).localeCompare(ts(a)));
-    return [...grouped.entries()].sort(([a], [b]) => b.localeCompare(a)); // najnovije izmjene gore
+  const dijelovi = useMemo(() => {
+    const po = podijeliUnose(zadnjiUnosi);
+    return {
+      broj: { prosli: po.prosli.length, izmjene: po.izmjene.length, novi: po.novi.length } satisfies Record<DioUnosa, number>,
+      grupe: { prosli: grupisiPoDanuAktivnosti(po.prosli), izmjene: grupisiPoDanuAktivnosti(po.izmjene), novi: grupisiPoDanuAktivnosti(po.novi) },
+    };
   }, [zadnjiUnosi]);
+  // bez ručnog izbora otvori prvi neprazan dio — prošli mjeseci imaju prednost
+  const aktivniDio = dio ?? DIJELOVI.find((d) => dijelovi.broj[d.id] > 0)?.id ?? "prosli";
+  const aktivniOpis = DIJELOVI.find((d) => d.id === aktivniDio)!;
 
   if (loading || !session) return null;
 
@@ -490,75 +501,49 @@ export default function PostavkePage() {
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
       {tab === "unosi" && canSeeUnosi && (
-        <div>
+        <div className="space-y-4">
+          <div role="tablist" aria-label="Vrsta promjene" className="flex flex-wrap gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 w-fit">
+            {DIJELOVI.map((d) => {
+              const on = aktivniDio === d.id;
+              const n = dijelovi.broj[d.id];
+              const upozorenje = d.id === "prosli" && n > 0;
+              return (
+                <button key={d.id} type="button" role="tab" aria-selected={on} onClick={() => setDio(d.id)}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 ${
+                    on ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}>
+                  {d.label}
+                  <span className={`min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-[11px] leading-none tabular-nums ${
+                    upozorenje ? "bg-amber-500 text-white" : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-200"
+                  }`}>
+                    {loadingUnosi ? "…" : n}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{aktivniOpis.opis}</p>
+
           {loadingUnosi ? (
             <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Učitavam unose…</div>
-          ) : unosiPoDanu.length === 0 ? (
-            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">Nema unosa u zadnjih {ZADNJI_DANA} dana.</div>
+          ) : dijelovi.grupe[aktivniDio].length === 0 ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">
+              {aktivniDio === "prosli" ? "Niko nije dirao prošle mjesece" : "Nema ništa"} u zadnjih {ZADNJI_DANA} dana.
+            </div>
           ) : (
             <div className="space-y-4">
-              {unosiPoDanu.map(([datum, unosi]) => (
-                <div
-                  key={datum}
-                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
-                >
-                  {/* Day header — datum izmjene */}
+              {dijelovi.grupe[aktivniDio].map(([dan, unosi]) => (
+                <div key={dan} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
                   <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      Izmijenjeno — {fmtDan(datum)}
+                      {aktivniOpis.grupa} — {fmtDan(dan)}
                     </span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">
                       {unosi.length} {unosi.length % 10 === 1 && unosi.length % 100 !== 11 ? "unos" : "unosa"}
                     </span>
                   </div>
-
-                  {/* Entries */}
                   <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {unosi.map((u) => {
-                      const vs = vrstaStyle(u.vrsta);
-                      return (
-                        <div key={u.id} className="px-4 py-3 flex items-center gap-3 flex-wrap">
-                          {/* Korisnik */}
-                          <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[60px]">
-                            {u.korisnik?.ime ?? u.inzinjerId.slice(0, 6)}
-                          </span>
-
-                          {/* Datum rada */}
-                          <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {u.datum.slice(8, 10)}.{u.datum.slice(5, 7)}.
-                          </span>
-
-                          {/* Vrsta badge */}
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${vs.badge}`}>
-                            {vs.short}
-                          </span>
-
-                          {/* Odjel */}
-                          <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 min-w-[80px]">
-                            {u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : "–"}
-                          </span>
-
-                          {/* Količina */}
-                          <span className="text-sm tabular-nums text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {kolicina(u)}
-                          </span>
-
-                          {/* Napomena */}
-                          {u.napomena && (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate max-w-[200px]" title={u.napomena}>
-                              {u.napomena}
-                            </span>
-                          )}
-
-                          <span className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                            {u.creator && u.creator.id !== u.inzinjerId && <UnioOtkrij>unio {u.creator.ime}</UnioOtkrij>}
-                            {u.updatedAt && u.updatedAt !== u.createdAt
-                              ? `izmijenjeno ${fmtUnijeto(u.updatedAt)}`
-                              : fmtUnijeto(u.createdAt)}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {unosi.map((u) => <UnosRed key={u.id} u={u} prosliMjesec={aktivniDio === "prosli"} />)}
                   </div>
                 </div>
               ))}
@@ -576,6 +561,38 @@ export default function PostavkePage() {
           onCancel={() => setConfirmState(null)}
         />
       )}
+    </div>
+  );
+}
+
+function UnosRed({ u, prosliMjesec }: { u: UnosRada; prosliMjesec: boolean }) {
+  const vs = vrstaStyle(u.vrsta);
+  const izmijenjen = jeIzmijenjen(u);
+  return (
+    <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
+      <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[60px]">
+        {u.korisnik?.ime ?? u.inzinjerId.slice(0, 6)}
+      </span>
+      <span title="Datum rada" className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded whitespace-nowrap ${
+        prosliMjesec
+          ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 font-semibold"
+          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+      }`}>
+        {fmtDatumRada(u.datum)}
+      </span>
+      <span className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${vs.badge}`}>{vs.short}</span>
+      <span className="text-sm text-gray-600 dark:text-gray-300 flex-1 min-w-[80px]">
+        {u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : "–"}
+      </span>
+      <span className="text-sm tabular-nums text-gray-500 dark:text-gray-400 whitespace-nowrap">{kolicina(u)}</span>
+      {u.napomena && (
+        <span className="text-xs text-gray-400 dark:text-gray-500 italic truncate max-w-[200px]" title={u.napomena}>{u.napomena}</span>
+      )}
+      <span className="basis-full sm:basis-auto sm:ml-auto flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 whitespace-nowrap">
+        {u.creator && u.creator.id !== u.inzinjerId && <UnioOtkrij>unio {u.creator.ime}</UnioOtkrij>}
+        {izmijenjen && u.updater && <UnioOtkrij label="Ko je izmijenio?">izmijenio {u.updater.ime}</UnioOtkrij>}
+        {izmijenjen ? `izmijenjeno ${fmtUnijeto(u.updatedAt)}` : fmtUnijeto(u.createdAt)}
+      </span>
     </div>
   );
 }
