@@ -72,7 +72,11 @@ export default function OdjeliPage() {
   }, [session, authLoading]);
 
   async function load() {
-    setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true, saBrojem: true }));
+    try {
+      setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true, saBrojem: true }));
+    } catch {
+      setErr("Greška pri učitavanju odjela. Provjeri internet i osvježi stranicu.");
+    }
   }
 
   useEffect(() => { load(); }, []);

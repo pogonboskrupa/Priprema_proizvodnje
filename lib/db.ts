@@ -709,9 +709,11 @@ export async function getIzvjestaj(
 
     const data = workers.map((k) => {
         const g = grouped[k.id] || emptyGroup();
+        // samo broj je dvosmislen: isti broj odjela postoji u više GJ
         const odjeli = Array.from(g.odjeliIds)
-          .map((id) => (odMap[id] as Record<string, unknown>)?.broj as string ?? id)
-          .sort((a, b) => a.localeCompare(b));
+          .flatMap((id) => { const o = odMap[id] as unknown as Odjel | undefined; return o ? [o] : []; })
+          .sort(cmpOdjel)
+          .map((o) => `${o.gj}/${o.broj}`);
         return {
           inzinjer: {
             id: k.id,

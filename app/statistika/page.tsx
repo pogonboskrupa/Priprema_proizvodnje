@@ -65,7 +65,7 @@ export default function StatistikaPage() {
 
   useEffect(() => {
     if (!session) return;
-    getKorisnici({ ukljuciArhivirane: true }).then((k) => setRadnici(k.filter((x) => x.role === "worker")));
+    getKorisnici({ ukljuciArhivirane: true }).then((k) => setRadnici(k.filter((x) => x.role === "worker"))).catch(() => {});
   }, [session]);
 
   useEffect(() => {
