@@ -8,7 +8,6 @@ import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, type
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
-import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 
 const UCINAK: readonly VrstaRada[] = ["DOZNAKA", "VLAKA"];
 
@@ -167,8 +166,6 @@ export function DanEditor({
           })}
         </ul>
       )}
-
-      {mjesecZakljucan && <ZakljucanoNapomena />}
 
       {!mjesecZakljucan && dan.zakljucan && !edit && (
         <p className="text-xs text-gray-500 dark:text-gray-400">Nedjelja je neradni dan — postojeći unos možeš samo ispraviti ili obrisati.</p>

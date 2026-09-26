@@ -16,7 +16,6 @@ import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
-import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 
 const today = () => localDateStr();
 
@@ -491,7 +490,6 @@ export default function UnosUcinkaPage() {
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 capitalize">{fmtDateLong(datum)}</p>
-      {danZakljucan && <div className="mb-4"><ZakljucanoNapomena tekst="Ovaj dan je u zaključanom mjesecu — izmjene može napraviti samo admin." /></div>}
 
       {msg && (
         <div className={`mb-4 rounded-lg px-4 py-2.5 text-sm border ${

@@ -13,7 +13,6 @@ import { CetkaTraka, type Cetka } from "@/components/pomocni/Cetka";
 import { PregledMatrica } from "@/components/pomocni/PregledMatrica";
 import { SihtaKalendar } from "@/components/pomocni/SihtaKalendar";
 import { Evidencija } from "@/components/pomocni/Evidencija";
-import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 
 type View = "pregled" | "sihtarica" | "evidencija";
@@ -234,8 +233,6 @@ export default function PomocniRadniciPage() {
             hint={ukupno.nepopunjeno ? "označeni isprekidano" : "sve popunjeno"} />
         </div>
       )}
-
-      {view !== "evidencija" && mjesecZakljucan && <ZakljucanoNapomena />}
 
       {view !== "evidencija" && aktivni.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

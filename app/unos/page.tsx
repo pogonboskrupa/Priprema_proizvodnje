@@ -17,7 +17,6 @@ import { praznik, jeRadniDan } from "@/lib/praznici";
 import { zabranaUpisa } from "@/lib/sihtarica";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
-import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 import { Icon } from "@/components/Icon";
 
 const today = () => localDateStr();
@@ -265,7 +264,6 @@ export default function UnosPage() {
                   ⛔ Nedjelja je neradni dan — unos nije moguć.
                 </div>
               )}
-              {datumZakljucan && <div className="mt-1.5"><ZakljucanoNapomena /></div>}
               {isSaturday && (
                 <div className="mt-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ℹ️ Subota je inače neradni dan — unos je moguć ako je bila radna subota.

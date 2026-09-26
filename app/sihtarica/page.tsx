@@ -22,7 +22,6 @@ import { DanEditor } from "@/components/sihtarica/DanEditor";
 import { GoKartica } from "@/components/sihtarica/GoKartica";
 import { PopuniPeriod } from "@/components/sihtarica/PopuniPeriod";
 import { MjesecTraka } from "@/components/sihtarica/MjesecTraka";
-import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
 
@@ -420,7 +419,6 @@ export default function SihtaricaPage() {
         </button>
       )}
 
-      {mjesecZakljucan && <ZakljucanoNapomena />}
       {showPopuni && !mjesecZakljucan && <PopuniPeriod key={viewKey} dani={dani} onSubmit={handlePopuni} onClose={() => setShowPopuni(false)} />}
 
       {/* Dani */}
