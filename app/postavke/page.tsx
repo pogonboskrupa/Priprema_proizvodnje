@@ -100,7 +100,7 @@ export default function PostavkePage() {
     od.setDate(od.getDate() - ZADNJI_DANA);
     const odStr = localDateStr(od);
     getUnosi()
-      .then((u) => { if (!cancelled) setZadnjiUnosi(u.filter((x) => x.datum.slice(0, 10) >= odStr)); })
+      .then((u) => { if (!cancelled) setZadnjiUnosi(u.filter((x) => (x.updatedAt ?? x.createdAt ?? "").slice(0, 10) >= odStr)); })
       .catch(() => { if (!cancelled) toast("Greška pri učitavanju unosa."); })
       .finally(() => { if (!cancelled) setLoadingUnosi(false); });
     return () => { cancelled = true; };
@@ -213,13 +213,12 @@ export default function PostavkePage() {
     const ts = (u: UnosRada) => u.updatedAt ?? u.createdAt ?? "";
     const grouped = new Map<string, UnosRada[]>();
     for (const u of zadnjiUnosi) {
-      const d = u.datum.slice(0, 10);
+      const d = ts(u).slice(0, 10); // grupiraj po datumu izmjene, ne datumu rada
       if (!grouped.has(d)) grouped.set(d, []);
       grouped.get(d)!.push(u);
     }
     for (const list of grouped.values()) list.sort((a, b) => ts(b).localeCompare(ts(a)));
-    // sort groups by most recently touched entry, not by working day
-    return [...grouped.entries()].sort((a, b) => ts(b[1][0]).localeCompare(ts(a[1][0])));
+    return [...grouped.entries()].sort(([a], [b]) => b.localeCompare(a)); // najnovije izmjene gore
   }, [zadnjiUnosi]);
 
   if (loading || !session) return null;
@@ -503,10 +502,10 @@ export default function PostavkePage() {
                   key={datum}
                   className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden shadow-sm"
                 >
-                  {/* Day header */}
+                  {/* Day header — datum izmjene */}
                   <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      {fmtDan(datum)}
+                      Izmijenjeno — {fmtDan(datum)}
                     </span>
                     <span className="text-xs text-gray-400 dark:text-gray-500">
                       {unosi.length} {unosi.length % 10 === 1 && unosi.length % 100 !== 11 ? "unos" : "unosa"}
@@ -522,6 +521,11 @@ export default function PostavkePage() {
                           {/* Korisnik */}
                           <span className="font-mono text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[60px]">
                             {u.korisnik?.ime ?? u.inzinjerId.slice(0, 6)}
+                          </span>
+
+                          {/* Datum rada */}
+                          <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {u.datum.slice(8, 10)}.{u.datum.slice(5, 7)}.
                           </span>
 
                           {/* Vrsta badge */}
