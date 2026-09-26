@@ -53,7 +53,7 @@ export default function Home() {
 
   const displayRezime = isWorker ? myRezime : rezime;
   const statsLabel = isWorker ? "Moj učinak" : "Svi projektanti";
-  const linkovi = nav.all.filter((l) => l.href !== "/" && l.href !== nav.cta.href);
+  const linkovi = nav.all.filter((l) => l.href !== "/");
 
   return (
     <div className="space-y-8">
@@ -64,19 +64,6 @@ export default function Home() {
         </p>
       </header>
 
-      <Link href={nav.cta.href}
-        className="group flex items-center gap-4 rounded-2xl bg-green-800 hover:bg-green-900 text-white p-5 shadow-sm transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-green-600/40">
-        <span className="w-12 h-12 flex-shrink-0 rounded-xl bg-white/15 flex items-center justify-center">
-          <Icon name={nav.cta.icon} className="w-6 h-6" />
-        </span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-lg font-semibold leading-tight">
-            {session.role === "admin" ? "Unos učinka za danas" : "Upiši današnji rad"}
-          </span>
-          <span className="block text-sm text-white/70 mt-0.5">{nav.cta.desc}</span>
-        </span>
-        <Icon name="arrow" className="w-5 h-5 text-white/70 transition-transform group-hover:translate-x-1" />
-      </Link>
 
       <section aria-labelledby="rezime-naslov">
         <SectionTitle id="rezime-naslov" title={statsLabel} meta={mesec} />
@@ -154,9 +141,12 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
     <Link href={`/odjel/?id=${encodeURIComponent(odjel.odjelId)}`}
       className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2 hover:border-green-600/60 hover:shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
       aria-label={`Pregled odjela ${odjel.gj} / ${odjel.broj}`}>
-      <div className="flex items-center gap-1 font-semibold text-sm text-gray-800 dark:text-gray-100 leading-tight">
-        <span className="truncate">{odjel.gj} / {odjel.broj}</span>
-        <Icon name="arrow" className="ml-auto w-3.5 h-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
+      <div className="flex items-start gap-1 min-w-0">
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-snug">{odjel.gj}</div>
+          <div className="font-semibold text-sm text-gray-800 dark:text-gray-100 leading-snug">Odj. {odjel.broj}</div>
+        </div>
+        <Icon name="arrow" className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
       </div>
       <div className="flex flex-wrap gap-1">
         {odjel.vrste.map((v) => {
