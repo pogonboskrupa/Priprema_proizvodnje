@@ -118,6 +118,34 @@ export default function PomocniRadniciPage() {
   const otvori = (id: string) => { setOdabraniId(id); setView("sihtarica"); };
   const postaviDan = useCallback((radnikId: string, dan: number, v: VrstaPomocnog | null) => postavi(radnikId, { [dan]: v }), [postavi]);
 
+  const popuniSveTerenom = useCallback(() => {
+    const buduci = (kalendar[0]?.datum ?? "") > danas;
+    for (const r of aktivni) {
+      const dani = sihte[r.id] ?? {};
+      const izmjene: Record<number, VrstaPomocnog> = {};
+      for (const d of kalendar) {
+        if (d.radni && !dani[String(d.dan)] && (buduci || d.datum <= danas)) {
+          izmjene[d.dan] = "TEREN";
+        }
+      }
+      if (Object.keys(izmjene).length > 0) postavi(r.id, izmjene);
+    }
+    toast("Svi prazni radni dani popunjeni — Teren");
+  }, [aktivni, kalendar, sihte, danas, postavi, toast]);
+
+  // Ukupno praznih radnih dana svih radnika (za tekući/prošli: do danas; za budući: svi)
+  const prazniSvi = useMemo(() => {
+    const buduci = (kalendar[0]?.datum ?? "") > danas;
+    let n = 0;
+    for (const r of aktivni) {
+      const dani = sihte[r.id] ?? {};
+      for (const d of kalendar) {
+        if (d.radni && !dani[String(d.dan)] && (buduci || d.datum <= danas)) n++;
+      }
+    }
+    return n;
+  }, [aktivni, sihte, kalendar, danas]);
+
   async function exportExcel() {
     const { exportXlsx } = await import("@/lib/export");
     const rows = aktivni.map((r) => {
@@ -208,10 +236,20 @@ export default function PomocniRadniciPage() {
           <CetkaTraka value={cetka} onChange={setCetka} />
           <p className="text-xs text-gray-400 dark:text-gray-500 hidden md:block">Klikni ili prevuci preko dana. Ponovni klik briše.</p>
           {view === "pregled" && (
-            <button type="button" onClick={exportExcel}
-              className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-              <Icon name="download" className="w-4 h-4" /> Excel
-            </button>
+            <>
+              {prazniSvi > 0 && (
+                <button type="button" onClick={popuniSveTerenom} disabled={sihteLoading}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50">
+                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${POMOCNI.TEREN.dot}`} aria-hidden />
+                  Popuni sve terenom
+                  <span className="rounded-full bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 text-[10px] tabular-nums">{prazniSvi}</span>
+                </button>
+              )}
+              <button type="button" onClick={exportExcel}
+                className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <Icon name="download" className="w-4 h-4" /> Excel
+              </button>
+            </>
           )}
         </div>
       )}
