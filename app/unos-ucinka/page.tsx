@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
 import { zabranaUpisa, zabranaIzmjene } from "@/lib/sihtarica";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
-import { NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
+import { NEISPRAVAN_BROJ, NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
 
@@ -71,7 +71,8 @@ function RosterNewRow({
   const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
   const parsed = pendingToPayload(pending);
   const isReady = parsed.ok;
-  const numberError = !parsed.ok && parsed.error === "Neispravan broj.";
+  // šta još fali, tek kad je vrsta odabrana — prazan red ne treba upozorenje
+  const nedostaje = !parsed.ok && pending.vrsta ? parsed.error : "";
 
   return (
     <div className="px-3 py-3 space-y-2">
@@ -94,8 +95,10 @@ function RosterNewRow({
             {saving ? "..." : "Sačuvaj"}
           </button>
         )}
-        {numberError && (
-          <span className="shrink-0 text-xs text-red-600 dark:text-red-400">Neispravan broj</span>
+        {nedostaje && (
+          <span className={`shrink-0 text-xs ${nedostaje === NEISPRAVAN_BROJ ? "text-red-600 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}`}>
+            {nedostaje}
+          </span>
         )}
       </div>
 
@@ -215,6 +218,9 @@ export default function UnosUcinkaPage() {
   const [extraRows, setExtraRows] = useState<ReadonlySet<string>>(new Set());
 
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
+  // snimanje offline čeka i do 10 s; za to vrijeme korisnik može preći na drugi dan
+  const datumRef = useRef(datum);
+  useEffect(() => { datumRef.current = datum; }, [datum]);
 
   useEffect(() => {
     if (!authLoading && !session) { router.replace("/login/"); return; }
@@ -314,6 +320,11 @@ export default function UnosUcinkaPage() {
     setAllUnosi((prev) => [created, ...prev]);
   }
 
+  async function osvjeziDan(d: string) {
+    const fresh = await getUnosiZaDan(d);
+    if (d === datumRef.current) setUnosi(fresh);
+  }
+
   function showMsg(m: string) {
     setMsg(m);
     setTimeout(() => setMsg(""), 4000);
@@ -327,8 +338,7 @@ export default function UnosUcinkaPage() {
     setSavingRow(korisnikId);
     try {
       await createFromPending(korisnikId, p);
-      const fresh = await getUnosiZaDan(datum);
-      setUnosi(fresh);
+      await osvjeziDan(datum);
       toggleExtra(korisnikId, false);
       setPendingRows((prev) => {
         const next = { ...prev };
@@ -360,8 +370,7 @@ export default function UnosUcinkaPage() {
     setBatchSaving(true);
     try {
       await Promise.all(ready.map((k) => createFromPending(k.id, pendingRows[k.id])));
-      const fresh = await getUnosiZaDan(datum);
-      setUnosi(fresh);
+      await osvjeziDan(datum);
       setExtraRows(new Set());
       // Reset saved rows to auto-populate
       setPendingRows((prev) => {
@@ -378,7 +387,7 @@ export default function UnosUcinkaPage() {
         + (odbijeni.length ? ` · ${odbijeni.length} nije sačuvano: ${displayKorisnik(odbijeni[0])} — ${zabranaZa(odbijeni[0].id, pendingRows[odbijeni[0].id])}` : ""));
     } catch {
       showMsg("Greška: dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.");
-      setUnosi(await getUnosiZaDan(datum).catch(() => unosi));
+      await osvjeziDan(datum).catch(() => {});
     } finally {
       setBatchSaving(false);
     }
@@ -413,8 +422,7 @@ export default function UnosUcinkaPage() {
         updatedByRole: session!.role,
       });
       setEditId(null);
-      const fresh = await getUnosiZaDan(datum);
-      setUnosi(fresh);
+      await osvjeziDan(datum);
     } catch {
       setEditError("Greška pri snimanju. Pokušaj ponovo.");
     } finally {

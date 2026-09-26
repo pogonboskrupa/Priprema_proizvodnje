@@ -140,7 +140,7 @@ export default function UnosPage() {
     try {
       const base = {
         vrsta: form.vrsta,
-        inzinjerId: form.inzinjerId,
+        inzinjerId: inzId,
         odjelId: form.odjelId,
         brojStabala: brojStabala ?? undefined,
         hektari: hektari ?? undefined,
@@ -506,7 +506,7 @@ export default function UnosPage() {
             </div>
             {filterOdjel && filteredUnosi.length > 0 && (
               <div className="px-5 py-2 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900 flex gap-4 text-xs text-blue-700 dark:text-blue-300">
-                <span>Odjel {odjeli.find((o) => o.id === filterOdjel)?.broj}:</span>
+                <span>Odjel {(() => { const o = odjeli.find((x) => x.id === filterOdjel); return o ? `${o.gj} / ${o.broj}` : ""; })()}:</span>
                 {filterSummary.ha > 0 && (
                   <span>
                     <b>{filterSummary.ha.toFixed(2)}</b> ha
@@ -572,8 +572,8 @@ export default function UnosPage() {
                           </div>
                         </td>
                       )}
-                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">
-                        {u.odjel?.broj}
+                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                        {u.odjel ? `${u.odjel.gj} / ${u.odjel.broj}` : ""}
                       </td>
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-1.5 flex-wrap">

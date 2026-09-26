@@ -53,14 +53,21 @@ export function Evidencija({ radnici, projektanti, sihte, kalendar, danas, onRef
       .sort((a, b) => (a.id ? 0 : 1) - (b.id ? 0 : 1) || a.naziv.localeCompare(b.naziv));
   })();
 
+  // greška osvježavanja nije greška upisa — inače bi ponovni pokušaj dodao radnika dvaput
   async function run(fn: () => Promise<unknown>, ok: string) {
     setBusy(true);
     try {
       await fn();
+    } catch {
+      toast("Promjena nije sačuvana. Provjeri internet i pokušaj ponovo.", true);
+      setBusy(false);
+      return;
+    }
+    try {
       await onRefresh();
       toast(ok);
     } catch {
-      toast("Promjena nije sačuvana. Provjeri internet i pokušaj ponovo.", true);
+      toast(`${ok}. Lista nije osvježena — osvježi stranicu.`, true);
     } finally {
       setBusy(false);
     }

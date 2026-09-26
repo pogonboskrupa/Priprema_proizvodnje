@@ -21,6 +21,8 @@ export interface UnosEditPayload {
   napomena: string | null;
 }
 
+export const NEISPRAVAN_BROJ = "Neispravan broj.";
+
 // Firestore odbija `undefined` vrijednosti, zato se sve prazno šalje kao null
 export function editFormToPayload(f: UnosEditForm): { ok: true; data: UnosEditPayload } | { ok: false; error: string } {
   const needsOdjel = !NO_ODJEL_VRSTE.has(f.vrsta);
@@ -30,8 +32,11 @@ export function editFormToPayload(f: UnosEditForm): { ok: true; data: UnosEditPa
   const hektari = f.vrsta === "DOZNAKA" ? parseDecimal(f.hektari) : null;
   const kilometri = f.vrsta === "VLAKA" ? parseDecimal(f.kilometri) : null;
   if ([brojStabala, hektari, kilometri].some((n) => Number.isNaN(n))) {
-    return { ok: false, error: "Neispravan broj." };
+    return { ok: false, error: NEISPRAVAN_BROJ };
   }
+  // doznaka bez ha/stabala ili vlaka bez km tiho kvari statistiku — isto pravilo kao Unos rada
+  if (f.vrsta === "DOZNAKA" && (brojStabala === null || hektari === null)) return { ok: false, error: "Upiši broj stabala i hektare." };
+  if (f.vrsta === "VLAKA" && kilometri === null) return { ok: false, error: "Upiši kilometre." };
 
   return {
     ok: true,
