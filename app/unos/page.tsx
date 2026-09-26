@@ -15,6 +15,10 @@ import { isOffline } from "@/lib/firebase";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { praznik, jeRadniDan } from "@/lib/praznici";
 import { zabranaUpisa } from "@/lib/sihtarica";
+import { useZakljucavanje } from "@/hooks/useZakljucavanje";
+import { porukaGreske } from "@/lib/zakljucavanje";
+import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
+import { Icon } from "@/components/Icon";
 
 const today = () => localDateStr();
 
@@ -58,6 +62,9 @@ export default function UnosPage() {
   const [msg, setMsg] = useState("");
   const [multiDay, setMultiDay] = useState(false);
   const [datumDo, setDatumDo] = useState("");
+  const { zakljucan, minDatum } = useZakljucavanje();
+  const minUnos = minDatum && minDatum > EVIDENCIJA_OD_DATUM ? minDatum : EVIDENCIJA_OD_DATUM;
+  const datumZakljucan = zakljucan(form.datum);
 
   const dayOfWeek = getDayOfWeek(form.datum);
   const isSunday = dayOfWeek === 0;
@@ -164,8 +171,8 @@ export default function UnosPage() {
       setMultiDay(false);
       setDatumDo("");
       load();
-    } catch {
-      setMsg("Greška pri unosu.");
+    } catch (e) {
+      setMsg(`Greška: ${porukaGreske(e, "unos nije sačuvan.")}`);
     }
     setLoading(false);
     setTimeout(() => setMsg(""), 3000);
@@ -178,8 +185,8 @@ export default function UnosPage() {
         setConfirmState(null);
         try {
           await deleteUnos(id);
-        } catch {
-          setMsg("Greška pri brisanju unosa.");
+        } catch (e) {
+          setMsg(`Greška: ${porukaGreske(e, "brisanje nije uspjelo.")}`);
         }
         load();
       },
@@ -248,7 +255,7 @@ export default function UnosPage() {
                 type="date"
                 className={inputCls}
                 value={form.datum}
-                min={EVIDENCIJA_OD_DATUM}
+                min={minUnos}
                 max={today()}
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
@@ -258,6 +265,7 @@ export default function UnosPage() {
                   ⛔ Nedjelja je neradni dan — unos nije moguć.
                 </div>
               )}
+              {datumZakljucan && <div className="mt-1.5"><ZakljucanoNapomena /></div>}
               {isSaturday && (
                 <div className="mt-1.5 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ℹ️ Subota je inače neradni dan — unos je moguć ako je bila radna subota.
@@ -443,7 +451,7 @@ export default function UnosPage() {
 
             <button
               type="submit"
-              disabled={loading || isSunday}
+              disabled={loading || isSunday || datumZakljucan}
               className="w-full bg-green-700 text-white py-2.5 rounded-lg font-medium hover:bg-green-800 disabled:opacity-50 transition-colors"
             >
               {loading
@@ -615,12 +623,18 @@ export default function UnosPage() {
                         )}
                       </td>
                       <td className="px-4 py-2">
-                        <button
-                          onClick={() => handleDelete(u.id)}
-                          className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
-                        >
-                          Obriši
-                        </button>
+                        {zakljucan(u.datum) ? (
+                          <span title="Mjesec je zaključan" className="text-gray-400 dark:text-gray-500">
+                            <Icon name="lock" className="w-3.5 h-3.5" strokeWidth={2} />
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(u.id)}
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-xs"
+                          >
+                            Obriši
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

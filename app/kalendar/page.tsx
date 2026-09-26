@@ -13,6 +13,9 @@ import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { zabranaIzmjene } from "@/lib/sihtarica";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
+import { useZakljucavanje } from "@/hooks/useZakljucavanje";
+import { porukaGreske } from "@/lib/zakljucavanje";
+import { Icon } from "@/components/Icon";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const pak = (st: number) => (st / 30).toFixed(1);
@@ -247,6 +250,7 @@ export default function KalendarPage() {
   const router = useRouter();
   const isWorker = session?.role === "worker";
   const canEdit = !!(session?.role === "admin" || session?.operater);
+  const { zakljucan } = useZakljucavanje();
 
   const now = new Date();
   const todayStr = localDateStr(now);
@@ -373,8 +377,8 @@ export default function KalendarPage() {
       });
       setEditId(null);
       await reload();
-    } catch {
-      setEditError("Greška pri snimanju. Pokušaj ponovo.");
+    } catch (e) {
+      setEditError(porukaGreske(e, "Greška pri snimanju. Pokušaj ponovo."));
     } finally {
       setEditSaving(false);
     }
@@ -389,8 +393,8 @@ export default function KalendarPage() {
         try {
           await deleteUnos(u.id);
           setUnosi((prev) => prev.filter((x) => x.id !== u.id));
-        } catch {
-          alert("Greška pri brisanju unosa. Pokušaj ponovo.");
+        } catch (e) {
+          alert(porukaGreske(e, "Greška pri brisanju unosa. Pokušaj ponovo."));
         }
       },
     });
@@ -594,7 +598,12 @@ export default function KalendarPage() {
                       </div>
 
                       {/* Action buttons (admin/operater only) */}
-                      {canEdit && (
+                      {canEdit && zakljucan(u.datum) && (
+                        <span title="Mjesec je zaključan" className="shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
+                          <Icon name="lock" className="w-3.5 h-3.5" strokeWidth={2} />
+                        </span>
+                      )}
+                      {canEdit && !zakljucan(u.datum) && (
                         <div className="flex items-center gap-2 shrink-0 mt-0.5">
                           <button
                             onClick={() => startEdit(u)}

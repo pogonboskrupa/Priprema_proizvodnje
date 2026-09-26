@@ -20,9 +20,11 @@ import {
   arrayRemove,
   setDocById,
   deleteField,
+  onSnapshot,
 } from './firebase';
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog } from './types';
 import { localDateStr, cmpOdjel } from './format';
+import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -257,6 +259,46 @@ export async function setPlanHa(korisnikId: string, year: number, planHa: number
   await update('users', korisnikId, { [`planHaPoGodini.${year}`]: planHa });
 }
 
+// ── Zaključavanje prošlih mjeseci ─────────────────────────────────────────────
+// Jedan dokument postavke/zakljucavanje; 'postavke' prati sync listener, pa je cache svjež.
+
+const ZAKLJ_DOC = 'zakljucavanje';
+
+export async function getZakljucanoDo(): Promise<ZakljucanoDo> {
+  const raw = await getById('postavke', ZAKLJ_DOC).catch(() => null);
+  return (raw?.zakljucanoDo as string | null | undefined) ?? null;
+}
+
+export async function setZakljucanoDo(zakljucanoDo: ZakljucanoDo, korisnikId: string): Promise<void> {
+  await setDocById('postavke', ZAKLJ_DOC, { zakljucanoDo, zakljucaoId: korisnikId });
+}
+
+/** Uživo: promjena na drugom uređaju odmah zaključa/otključa ekran */
+export function pratiZakljucavanje(cb: (z: ZakljucanoDo) => void): () => void {
+  let unsub: (() => void) | null = null;
+  let stopped = false;
+  authReady().then(() => {
+    if (stopped) return;
+    unsub = onSnapshot(doc(db, 'postavke', ZAKLJ_DOC),
+      (s) => cb((s.data()?.zakljucanoDo as string | null | undefined) ?? null),
+      () => { /* bez mreže ostaje zadnje poznato stanje */ });
+  });
+  return () => { stopped = true; unsub?.(); };
+}
+
+// Zadnja linija odbrane: ekrani sakrivaju dugmad, ali svaki upis prolazi ovdje
+async function provjeriOtkljucano(...datumi: string[]) {
+  if (jeAdminSesija()) return;
+  const z = await getZakljucanoDo();
+  const d = datumi.find((x) => jeZakljucan(x, z));
+  if (d) throw new ZakljucanMjesecError(d);
+}
+
+async function datumUnosa(id: string): Promise<string | null> {
+  const u = await getById('unosi', id).catch(() => null);
+  return (u?.datum as string | undefined)?.slice(0, 10) ?? null;
+}
+
 // ── Unosi ─────────────────────────────────────────────────────────────────────
 
 export async function getUnosi(): Promise<UnosRada[]> {
@@ -282,6 +324,7 @@ export async function getUnosi(): Promise<UnosRada[]> {
 }
 
 export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
+  await provjeriOtkljucano(form.datum);
   const datum = Timestamp.fromDate(new Date(form.datum));
   const data: Record<string, unknown> = {
     datum,
@@ -321,6 +364,8 @@ export async function createUnos(form: UnosRadaForm): Promise<UnosRada> {
 }
 
 export async function deleteUnos(id: string): Promise<void> {
+  const d = await datumUnosa(id);
+  if (d) await provjeriOtkljucano(d);
   await remove('unosi', id);
 }
 
@@ -335,6 +380,8 @@ export async function updateUnos(id: string, data: {
   updatedById?: string | null;
   updatedByRole?: string | null;
 }): Promise<void> {
+  const d = await datumUnosa(id);
+  if (d) await provjeriOtkljucano(d);
   await update('unosi', id, data as Record<string, unknown>);
 }
 
@@ -1180,6 +1227,7 @@ export async function getSihteZaMjesec(
 export async function upisiDaneSihte(
   radnikId: string, godina: number, mjesec: number, izmjene: Readonly<Record<string, VrstaPomocnog | null>>
 ): Promise<void> {
+  await provjeriOtkljucano(`${godina}-${String(mjesec).padStart(2, '0')}-01`);
   const dani = Object.fromEntries(Object.entries(izmjene).map(([dan, v]) => [dan, v ?? deleteField()]));
   await setDocById('sihtaPomocnih', `${radnikId}_${godina}_${mjesec}`, { radnikId, godina, mjesec, dani }, { merge: true });
 }

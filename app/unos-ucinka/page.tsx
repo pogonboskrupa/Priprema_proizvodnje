@@ -14,6 +14,9 @@ import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { NEISPRAVAN_BROJ, NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
 import { UnosEditForm, inputSmCls, labelSmCls as labelCls } from "@/components/UnosEditForm";
+import { useZakljucavanje } from "@/hooks/useZakljucavanje";
+import { porukaGreske } from "@/lib/zakljucavanje";
+import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 
 const today = () => localDateStr();
 
@@ -220,6 +223,9 @@ export default function UnosUcinkaPage() {
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
   // snimanje offline čeka i do 10 s; za to vrijeme korisnik može preći na drugi dan
   const datumRef = useRef(datum);
+  const { zakljucan, minDatum } = useZakljucavanje();
+  const minDan = minDatum && minDatum > EVIDENCIJA_OD_DATUM ? minDatum : EVIDENCIJA_OD_DATUM;
+  const danZakljucan = zakljucan(datum);
   useEffect(() => { datumRef.current = datum; }, [datum]);
 
   useEffect(() => {
@@ -349,8 +355,8 @@ export default function UnosUcinkaPage() {
           : emptyPending();
         return next;
       });
-    } catch {
-      showMsg("Greška pri snimanju. Pokušaj ponovo.");
+    } catch (e) {
+      showMsg(`Greška: ${porukaGreske(e, "snimanje nije uspjelo. Pokušaj ponovo.")}`);
     } finally {
       setSavingRow(null);
     }
@@ -385,8 +391,8 @@ export default function UnosUcinkaPage() {
       });
       showMsg(`Sačuvano ${ready.length} unos${ready.length === 1 ? "" : "a"} ✓${isOffline() ? " (offline — poslaće se kad bude signala)" : ""}`
         + (odbijeni.length ? ` · ${odbijeni.length} nije sačuvano: ${displayKorisnik(odbijeni[0])} — ${zabranaZa(odbijeni[0].id, pendingRows[odbijeni[0].id])}` : ""));
-    } catch {
-      showMsg("Greška: dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.");
+    } catch (e) {
+      showMsg(`Greška: ${porukaGreske(e, "dio unosa nije sačuvan. Provjeri listu i pokušaj ponovo.")}`);
       await osvjeziDan(datum).catch(() => {});
     } finally {
       setBatchSaving(false);
@@ -423,8 +429,8 @@ export default function UnosUcinkaPage() {
       });
       setEditId(null);
       await osvjeziDan(datum);
-    } catch {
-      setEditError("Greška pri snimanju. Pokušaj ponovo.");
+    } catch (e) {
+      setEditError(porukaGreske(e, "Greška pri snimanju. Pokušaj ponovo."));
     } finally {
       setEditSaving(false);
     }
@@ -439,8 +445,8 @@ export default function UnosUcinkaPage() {
           await deleteUnos(id);
           setUnosi((prev) => prev.filter((u) => u.id !== id));
           setAllUnosi((prev) => prev.filter((u) => u.id !== id));
-        } catch {
-          showMsg("Greška pri brisanju unosa.");
+        } catch (e) {
+          showMsg(`Greška: ${porukaGreske(e, "brisanje nije uspjelo.")}`);
         }
       },
     });
@@ -454,16 +460,16 @@ export default function UnosUcinkaPage() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setDatum(prevDay(datum))}
-            disabled={datum <= EVIDENCIJA_OD_DATUM}
+            disabled={datum <= minDan}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >‹</button>
           <input
             type="date" value={datum}
-            min={EVIDENCIJA_OD_DATUM}
+            min={minDan}
             max={today()}
             onChange={(e) => {
               const v = e.target.value;
-              if (v && v >= EVIDENCIJA_OD_DATUM && v <= today()) setDatum(v);
+              if (v && v >= minDan && v <= today()) setDatum(v);
             }}
             className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
@@ -473,7 +479,7 @@ export default function UnosUcinkaPage() {
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >›</button>
         </div>
-        {readyCount > 0 && (
+        {readyCount > 0 && !danZakljucan && (
           <button
             onClick={saveAllReady}
             disabled={batchSaving}
@@ -485,6 +491,7 @@ export default function UnosUcinkaPage() {
       </div>
 
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 capitalize">{fmtDateLong(datum)}</p>
+      {danZakljucan && <div className="mb-4"><ZakljucanoNapomena tekst="Ovaj dan je u zaključanom mjesecu — izmjene može napraviti samo admin." /></div>}
 
       {msg && (
         <div className={`mb-4 rounded-lg px-4 py-2.5 text-sm border ${
@@ -505,7 +512,7 @@ export default function UnosUcinkaPage() {
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
           {korisnici.map((k) => {
             const entries = existingMap.get(k.id) ?? [];
-            const newRow = showsNewRow(k.id) && (
+            const newRow = !danZakljucan && showsNewRow(k.id) && (
               <RosterNewRow
                 korisnik={k}
                 pending={getPending(k.id)}
@@ -568,7 +575,7 @@ export default function UnosUcinkaPage() {
                       {u.napomena && (
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">{u.napomena}</span>
                       )}
-                      <div className="ml-auto flex items-center gap-3 shrink-0">
+                      {!danZakljucan && <div className="ml-auto flex items-center gap-3 shrink-0">
                         {isLast && !extraRows.has(k.id) && (
                           <button onClick={() => toggleExtra(k.id, true)} className="text-green-700 dark:text-green-400 hover:underline text-xs" title="Dodaj još jedan unos za ovaj dan">
                             + Još
@@ -580,7 +587,7 @@ export default function UnosUcinkaPage() {
                         <button onClick={() => handleDelete(u.id)} className="text-red-500 dark:text-red-400 hover:underline text-xs">
                           Obriši
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   );
                 })}

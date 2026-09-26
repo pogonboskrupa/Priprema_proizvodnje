@@ -8,6 +8,7 @@ import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, type
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
+import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
 
 const UCINAK: readonly VrstaRada[] = ["DOZNAKA", "VLAKA"];
 
@@ -32,9 +33,11 @@ const formIzUnosa = (u: UnosRada): Form => ({
 });
 
 export function DanEditor({
-  dan, prethodni, odjeli, recentIds, onCreate, onUpdate, onDelete,
+  dan, prethodni, odjeli, recentIds, onCreate, onUpdate, onDelete, mjesecZakljucan = false,
 }: {
   dan: DanSihtarice;
+  /** Admin je zaključao mjesec: samo pregled */
+  mjesecZakljucan?: boolean;
   prethodni: DanSihtarice | null;
   odjeli: Odjel[];
   recentIds: readonly string[];
@@ -111,7 +114,7 @@ export function DanEditor({
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 first-letter:uppercase">{fmtDateLong(dan.datum)}</span>
         {dan.praznik && <span className="text-xs text-rose-700 dark:text-rose-300">Praznik — {dan.praznik}</span>}
         {dan.weekday === 6 && !dan.praznik && <span className="text-xs text-amber-700 dark:text-amber-400">Subota — upiši samo ako je bila radna subota.</span>}
-        {!dan.zakljucan && !edit && dan.unosi.length === 0 && prethodni && (kopijaBrzi.length > 0 || kopijaUcinak) && (
+        {!mjesecZakljucan && !dan.zakljucan && !edit && dan.unosi.length === 0 && prethodni && (kopijaBrzi.length > 0 || kopijaUcinak) && (
           <button type="button" disabled={busy} onClick={kaoPrethodni}
             className="ml-auto text-xs font-medium text-green-700 dark:text-green-400 hover:underline disabled:opacity-50">
             ↺ Kao {DANI_KRATKO[prethodni.weekday].toLowerCase()} {prethodni.dan}.
@@ -151,21 +154,27 @@ export function DanEditor({
                     {u.createdAt && fmtVrijeme(u.createdAt)}
                   </span>
                 )}
-                <button type="button" onClick={() => { setEdit({ id: u.id, form: formIzUnosa(u) }); setError(""); }}
-                  className="text-xs font-medium text-green-700 dark:text-green-400 hover:underline">Uredi</button>
-                <button type="button" onClick={() => onDelete(u)}
-                  className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Obriši</button>
+                {!mjesecZakljucan && (
+                  <>
+                    <button type="button" onClick={() => { setEdit({ id: u.id, form: formIzUnosa(u) }); setError(""); }}
+                      className="text-xs font-medium text-green-700 dark:text-green-400 hover:underline">Uredi</button>
+                    <button type="button" onClick={() => onDelete(u)}
+                      className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline">Obriši</button>
+                  </>
+                )}
               </li>
             );
           })}
         </ul>
       )}
 
-      {dan.zakljucan && !edit && (
+      {mjesecZakljucan && <ZakljucanoNapomena />}
+
+      {!mjesecZakljucan && dan.zakljucan && !edit && (
         <p className="text-xs text-gray-500 dark:text-gray-400">Nedjelja je neradni dan — postojeći unos možeš samo ispraviti ili obrisati.</p>
       )}
 
-      {!edit && !dan.zakljucan && (
+      {!mjesecZakljucan && !edit && !dan.zakljucan && (
         <div className="grid gap-4 md:grid-cols-[auto_1fr]">
           <div>
             <div className={labelSmCls}>Prisustvo — jedan klik upisuje dan</div>

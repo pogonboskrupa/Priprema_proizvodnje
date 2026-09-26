@@ -7,11 +7,12 @@ import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
+import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
-type Tab = "profil" | "korisnici" | "unosi";
+type Tab = "profil" | "korisnici" | "zakljucavanje" | "unosi";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
 
@@ -236,7 +237,7 @@ export default function PostavkePage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "profil", label: "Profil" },
-    ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }] : []),
+    ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }, { id: "zakljucavanje" as Tab, label: "Zaključavanje" }] : []),
     ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
   ];
 
@@ -498,6 +499,8 @@ export default function PostavkePage() {
           )}
         </div>
       )}
+
+      {tab === "zakljucavanje" && isAdmin && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
       {tab === "unosi" && canSeeUnosi && (

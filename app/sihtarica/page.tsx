@@ -22,6 +22,9 @@ import { DanEditor } from "@/components/sihtarica/DanEditor";
 import { GoKartica } from "@/components/sihtarica/GoKartica";
 import { PopuniPeriod } from "@/components/sihtarica/PopuniPeriod";
 import { MjesecTraka } from "@/components/sihtarica/MjesecTraka";
+import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
+import { useZakljucavanje } from "@/hooks/useZakljucavanje";
+import { porukaGreske } from "@/lib/zakljucavanje";
 
 interface Mjesec { year: number; month: number }
 
@@ -55,6 +58,8 @@ export default function SihtaricaPage() {
   const [confirm, setConfirm] = useState<UnosRada | null>(null);
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { zakljucan } = useZakljucavanje();
+  const mjesecZakljucan = zakljucan(`${mjesec.year}-${String(mjesec.month).padStart(2, "0")}-01`);
 
   const selectedId = canPick ? pickedId || korisnici[0]?.id || "" : session?.userId ?? "";
   const viewKey = `${selectedId}|${mjesec.year}-${mjesec.month}`;
@@ -157,8 +162,8 @@ export default function SihtaricaPage() {
       toast(savedMsg());
       await load();
       return true;
-    } catch {
-      toast("Greška pri snimanju. Provjeri internet i pokušaj ponovo.", true);
+    } catch (e) {
+      toast(porukaGreske(e, "Greška pri snimanju. Provjeri internet i pokušaj ponovo."), true);
       return false;
     }
   }
@@ -169,8 +174,8 @@ export default function SihtaricaPage() {
       toast(savedMsg());
       await load();
       return true;
-    } catch {
-      toast("Greška pri snimanju izmjene.", true);
+    } catch (e) {
+      toast(porukaGreske(e, "Greška pri snimanju izmjene."), true);
       return false;
     }
   }
@@ -181,8 +186,8 @@ export default function SihtaricaPage() {
       await deleteUnos(u.id);
       toast("Unos obrisan");
       await load();
-    } catch {
-      toast("Greška pri brisanju.", true);
+    } catch (e) {
+      toast(porukaGreske(e, "Greška pri brisanju."), true);
     }
   }
 
@@ -192,8 +197,8 @@ export default function SihtaricaPage() {
       toast(savedMsg(datumi.length));
       setShowPopuni(false);
       await load();
-    } catch {
-      toast("Dio dana nije upisan. Provjeri internet i pokušaj ponovo.", true);
+    } catch (e) {
+      toast(porukaGreske(e, "Dio dana nije upisan. Provjeri internet i pokušaj ponovo."), true);
       await load();
     }
   }
@@ -274,7 +279,7 @@ export default function SihtaricaPage() {
         </div>
 
         <div className="flex items-center gap-2 print:hidden">
-          <button type="button" className={btnGhost} onClick={() => setShowPopuni((v) => !v)}>Popuni period</button>
+          {!mjesecZakljucan && <button type="button" className={btnGhost} onClick={() => setShowPopuni((v) => !v)}>Popuni period</button>}
           <button type="button" className={btnGhost} onClick={exportExcel}>Excel</button>
           <button type="button" className={btnGhost} onClick={() => window.print()}>Štampaj</button>
         </div>
@@ -415,7 +420,8 @@ export default function SihtaricaPage() {
         </button>
       )}
 
-      {showPopuni && <PopuniPeriod key={viewKey} dani={dani} onSubmit={handlePopuni} onClose={() => setShowPopuni(false)} />}
+      {mjesecZakljucan && <ZakljucanoNapomena />}
+      {showPopuni && !mjesecZakljucan && <PopuniPeriod key={viewKey} dani={dani} onSubmit={handlePopuni} onClose={() => setShowPopuni(false)} />}
 
       {/* Dani */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
@@ -448,6 +454,7 @@ export default function SihtaricaPage() {
                     onCreate={(data) => handleCreate(d.datum, data)}
                     onUpdate={handleUpdate}
                     onDelete={setConfirm}
+                    mjesecZakljucan={mjesecZakljucan}
                   />
                 }
               />

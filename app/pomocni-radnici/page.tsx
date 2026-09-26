@@ -13,6 +13,8 @@ import { CetkaTraka, type Cetka } from "@/components/pomocni/Cetka";
 import { PregledMatrica } from "@/components/pomocni/PregledMatrica";
 import { SihtaKalendar } from "@/components/pomocni/SihtaKalendar";
 import { Evidencija } from "@/components/pomocni/Evidencija";
+import { ZakljucanoNapomena } from "@/components/ZakljucanoNapomena";
+import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 
 type View = "pregled" | "sihtarica" | "evidencija";
 const VIEWS: { id: View; label: string }[] = [
@@ -58,6 +60,8 @@ export default function PomocniRadniciPage() {
 
   const onSaveError = useCallback(() => toast("Upis šihte nije sačuvan. Provjeri internet i pokušaj ponovo.", true), [toast]);
   const { sihte, loading: sihteLoading, error: sihteError, postavi } = useSihtePomocnih(mjesec.year, mjesec.month, onSaveError);
+  const { zakljucan } = useZakljucavanje();
+  const mjesecZakljucan = zakljucan(`${mjesec.year}-${String(mjesec.month).padStart(2, "0")}-01`);
 
   useEffect(() => {
     if (authLoading) return;
@@ -231,13 +235,15 @@ export default function PomocniRadniciPage() {
         </div>
       )}
 
+      {view !== "evidencija" && mjesecZakljucan && <ZakljucanoNapomena />}
+
       {view !== "evidencija" && aktivni.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <CetkaTraka value={cetka} onChange={setCetka} />
           <p className="text-xs text-gray-400 dark:text-gray-500 hidden md:block">Klikni ili prevuci preko dana. Ponovni klik briše.</p>
           {view === "pregled" && (
             <>
-              {prazniSvi > 0 && (
+              {prazniSvi > 0 && !mjesecZakljucan && (
                 <button type="button" onClick={popuniSveTerenom} disabled={sihteLoading}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50">
                   <span className={`w-2 h-2 rounded-full flex-shrink-0 ${POMOCNI.TEREN.dot}`} aria-hidden />
@@ -271,7 +277,7 @@ export default function PomocniRadniciPage() {
           sihte={sihte}
           danas={danas}
           cetka={cetka}
-          disabled={sihteLoading}
+          disabled={sihteLoading || mjesecZakljucan}
           projektantIme={projektantIme}
           onPostavi={postaviDan}
           onOtvori={otvori}
@@ -286,7 +292,7 @@ export default function PomocniRadniciPage() {
           dani={sihte[odabrani.id] ?? {}}
           danas={danas}
           cetka={cetka}
-          disabled={sihteLoading}
+          disabled={sihteLoading || mjesecZakljucan}
           projektant={projektantIme(odabrani.projektantId)}
           onPostavi={(izmjene) => postavi(odabrani.id, izmjene)}
           onOdaberi={setOdabraniId}

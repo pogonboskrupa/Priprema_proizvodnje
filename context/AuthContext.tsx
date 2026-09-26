@@ -3,9 +3,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { getSession, clearSession, saveSession, isRemembered, type Session } from "@/lib/auth";
 import { getKorisnik, updateKorisnik } from "@/lib/db";
 import { configureUnosiScope } from "@/lib/firebase";
+import { postaviAdminSesiju } from "@/lib/zakljucavanje";
 
 // admin i operater rade sa svim unosima; projektant vidi samo svoje
 function applyScope(ses: Session | null) {
+  postaviAdminSesiju(ses?.role === "admin");
   if (ses) configureUnosiScope(ses.userId, ses.role === "admin" || !!ses.operater);
 }
 
