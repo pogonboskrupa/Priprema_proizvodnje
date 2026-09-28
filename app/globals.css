@@ -1,13 +1,33 @@
 @import "tailwindcss";
 
+/* Neutralna skala s blagim zelenim tonom: jači razmak između stepenica nego Tailwind default,
+   da se kartice, zaglavlja tabela i paneli jasno odvajaju od pozadine i jedni od drugih. */
+@theme {
+  --color-gray-50: #f0f4f1;
+  --color-gray-100: #e7ede9;
+  --color-gray-200: #d8e0da;
+  --color-gray-300: #bdc9c0;
+  --color-gray-400: #8d9b91;
+  --color-gray-500: #64716a;
+  --color-gray-600: #4a5750;
+  --color-gray-700: #36423b;
+  --color-gray-800: #232d27;
+  --color-gray-900: #161e19;
+  --color-gray-950: #0a0f0c;
+
+  --shadow-sm: 0 1px 2px 0 rgb(20 45 28 / 0.08), 0 2px 6px -2px rgb(20 45 28 / 0.10);
+  --shadow: 0 1px 3px 0 rgb(20 45 28 / 0.10), 0 4px 10px -4px rgb(20 45 28 / 0.12);
+}
+
 :root {
-  --background: #f2f6f3;
-  --foreground: #182b1e;
+  --background: #dfe7e1;
+  --foreground: #141b16;
   --surface: #ffffff;
-  --border: #d2dfd6;
+  --border: #d8e0da;
   --text-muted: #526b5c;
   --brand: #166534;
   --brand-light: #dcfce7;
+  --card-shadow: 0 1px 2px 0 rgb(20 45 28 / 0.07), 0 3px 8px -3px rgb(20 45 28 / 0.10);
 }
 
 @theme inline {
@@ -19,13 +39,14 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0e1a11;
+    --background: #050806;
     --foreground: #e4ede6;
-    --surface: #172219;
-    --border: #2a3d2e;
+    --surface: #161e19;
+    --border: #36423b;
     --text-muted: #7fa88a;
     --brand: #4ade80;
     --brand-light: #14532d;
+    --card-shadow: 0 0 0 1px rgb(255 255 255 / 0.02), 0 2px 8px -2px rgb(0 0 0 / 0.6);
   }
 }
 
@@ -35,10 +56,17 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
 
-/* Subtle card elevation */
+/* Kartice (bijela površina s okvirom) dobiju elevaciju i kad stranica nije navela sjenu.
+   U components sloju — eksplicitne shadow-* klase (modali, meniji) i dalje pobjeđuju. */
+@layer components {
+  :is(.rounded-xl, .rounded-2xl).border.bg-white:not(input, select, textarea, button) {
+    box-shadow: var(--card-shadow);
+  }
+}
+
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  box-shadow: var(--card-shadow);
 }

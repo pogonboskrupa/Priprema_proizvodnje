@@ -136,7 +136,13 @@ export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: 
     opts.saBrojem ? queryUnosi([]) : Promise.resolve([]),
   ]);
   const unosiPoOdjelu = new Map<string, number>();
-  for (const u of unosiRaw) unosiPoOdjelu.set(u.odjelId as string, (unosiPoOdjelu.get(u.odjelId as string) ?? 0) + 1);
+  const zadnjiPoOdjelu = new Map<string, string>();
+  for (const u of unosiRaw) {
+    const oid = u.odjelId as string;
+    unosiPoOdjelu.set(oid, (unosiPoOdjelu.get(oid) ?? 0) + 1);
+    const d = String(u.datum ?? '').slice(0, 10);
+    if (d > (zadnjiPoOdjelu.get(oid) ?? '')) zadnjiPoOdjelu.set(oid, d);
+  }
 
   return odjeliRaw
     .filter((o) => opts.ukljuciArhivirane || !o.arhiviran)
@@ -147,6 +153,7 @@ export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: 
           inzinjeri: inzinjeriRaw.filter((i) => i.odjelId === o.id).length,
           unosi: unosiPoOdjelu.get(o.id as string) ?? 0,
         },
+        zadnjiRad: zadnjiPoOdjelu.get(o.id as string),
       }),
     }))
     .sort(cmpOdjel);
@@ -579,7 +586,7 @@ export async function getMojiOdjeliData(): Promise<{
   return { odjeli, korisnici: korisnaciRaw as unknown as Korisnik[] };
 }
 
-export type OdjelUcinak = { ha: number; stabala: number; km: number };
+export type OdjelUcinak = { ha: number; stabala: number; km: number; zadnjiRad?: string };
 
 /** Ukupan rad svih projektanata, ali samo u traženim odjelima (ne cijela baza) */
 export async function getUcinakPoOdjelima(odjelIds: readonly string[]): Promise<Record<string, OdjelUcinak>> {
@@ -591,6 +598,8 @@ export async function getUcinakPoOdjelima(odjelIds: readonly string[]): Promise<
   for (const u of results.flat()) {
     const odjelId = u.odjelId as string;
     if (!stats[odjelId]) stats[odjelId] = { ha: 0, stabala: 0, km: 0 };
+    const d = String(u.datum ?? '').slice(0, 10);
+    if (d > (stats[odjelId].zadnjiRad ?? '')) stats[odjelId].zadnjiRad = d;
     if (u.vrsta === 'DOZNAKA') {
       stats[odjelId].ha += Number(u.hektari) || 0;
       stats[odjelId].stabala += Number(u.brojStabala) || 0;
@@ -866,6 +875,8 @@ export interface OdjelMjesecRezime {
   vrste: string[];
   /** Broj različitih datuma s unosom u odjelu */
   dani: number;
+  /** Zadnji datum (YYYY-MM-DD) s unosom u odjelu u periodu */
+  zadnjiRad: string;
 }
 
 export async function getRezimePoOdjelima(od: Date, do_: Date, ids?: readonly string[]): Promise<OdjelMjesecRezime[]> {
@@ -903,9 +914,11 @@ export async function getRezimePoOdjelima(od: Date, do_: Date, ids?: readonly st
         km: a.km,
         vrste: [...a.vrste],
         dani: a.dani.size,
+        zadnjiRad: [...a.dani].reduce((m, d) => (d > m ? d : m), ''),
       };
     })
-    .sort(cmpOdjel);
+    // zadnje rađeni odjeli prvi
+    .sort((a, b) => b.zadnjiRad.localeCompare(a.zadnjiRad) || cmpOdjel(a, b));
 }
 
 // ── Statistika ────────────────────────────────────────────────────────────────

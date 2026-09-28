@@ -5,16 +5,40 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import type { Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
-import { parseDecimal, cmpOdjel } from "@/lib/format";
+import { parseDecimal, cmpOdjel, fmtDate, fmtDateShort, localDateStr } from "@/lib/format";
 
 type BulkRow = { broj: string; povrsina: string };
 
-type StatusFilter = "svi" | "neodradjeni" | "odradjeni" | "bezDoznake" | "bezVlaka";
+type StatusFilter = "svi" | "aktivni" | "neodradjeni" | "odradjeni" | "bezDoznake" | "bezVlaka";
 
 const jeOdradjen = (o: Odjel) => !!o.doznaceno && !!o.vlakeProjektovane;
 
+const AKTIVAN_DANA = 30;
+
+function daniOd(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  const [ty, tm, td] = localDateStr().split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(y, m - 1, d)) / 86_400_000);
+}
+
+const jeAktivan = (o: Odjel) => !!o.zadnjiRad && daniOd(o.zadnjiRad) <= AKTIVAN_DANA;
+
+function zadnjiRadLabel(iso?: string): string {
+  if (!iso) return "–";
+  const n = daniOd(iso);
+  if (n <= 0) return "danas";
+  if (n === 1) return "jučer";
+  if (n < 7) return `prije ${n} d.`;
+  return iso.slice(0, 4) === localDateStr().slice(0, 4) ? fmtDateShort(iso) : fmtDate(iso);
+}
+
+/** Zadnje rađeni prvi; odjeli bez unosa na kraj, po broju */
+const cmpPoAktivnosti = (a: Odjel, b: Odjel) =>
+  (b.zadnjiRad ?? "").localeCompare(a.zadnjiRad ?? "") || cmpOdjel(a, b);
+
 const FILTERI: { id: StatusFilter; label: string; test: (o: Odjel) => boolean }[] = [
   { id: "svi", label: "Svi", test: () => true },
+  { id: "aktivni", label: `Aktivni (${AKTIVAN_DANA} d.)`, test: jeAktivan },
   { id: "neodradjeni", label: "Neodrađeni", test: (o) => !jeOdradjen(o) },
   { id: "odradjeni", label: "Odrađeni", test: jeOdradjen },
   { id: "bezDoznake", label: "Bez doznake", test: (o) => !o.doznaceno },
@@ -484,7 +508,10 @@ export default function OdjeliPage() {
             if (!gjMap.has(o.gj)) gjMap.set(o.gj, []);
             gjMap.get(o.gj)!.push(o);
           }
-          const sorted = Array.from(gjMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+          // GJ s najsvježijim radom prva; unutar GJ zadnje rađeni odjeli prvi
+          const sorted = Array.from(gjMap.entries())
+            .map(([gj, items]) => [gj, [...items].sort(cmpPoAktivnosti)] as const)
+            .sort(([ga, a], [gb, b]) => (b[0].zadnjiRad ?? "").localeCompare(a[0].zadnjiRad ?? "") || ga.localeCompare(gb, "bs", { numeric: true }));
           return (
             <div className="space-y-4">
               {sorted.map(([gj, items]) => {
@@ -504,6 +531,7 @@ export default function OdjeliPage() {
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Površina (ha)</th>
                           <th className="text-center px-2 py-2 text-green-700 dark:text-green-400 font-medium text-xs">Doznaka</th>
                           <th className="text-center px-2 py-2 text-amber-600 dark:text-amber-400 font-medium text-xs">Vlake</th>
+                          <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Zadnji rad</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Proj.</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Unosi</th>
                           <th className="px-3 py-2 w-20"></th>
@@ -513,6 +541,9 @@ export default function OdjeliPage() {
                         {items.map((o) => (
                           <tr key={o.id} className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${editId === o.id ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}>
                             <td className="px-3 py-2.5 font-mono font-semibold text-gray-900 dark:text-gray-100">
+                              {editId !== o.id && jeAktivan(o) && (
+                                <span title="Rađeno u zadnjih 30 dana" className="inline-block w-2 h-2 mr-2 rounded-full bg-green-500 align-middle" />
+                              )}
                               {editId === o.id ? (
                                 <input
                                   type="text"
@@ -551,6 +582,9 @@ export default function OdjeliPage() {
                                 inactiveClass="bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 border-gray-300 dark:border-gray-600"
                                 onClick={() => toggleStatus(o, "vlakeProjektovane")}
                               />
+                            </td>
+                            <td className={`px-3 py-2.5 text-right text-xs tabular-nums whitespace-nowrap ${jeAktivan(o) ? "font-semibold text-green-700 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
+                              {zadnjiRadLabel(o.zadnjiRad)}
                             </td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.inzinjeri ?? 0}</td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.unosi ?? 0}</td>

@@ -51,6 +51,8 @@ export interface Odjel {
   createdAt: string;
   updatedAt: string;
   _count?: { inzinjeri: number; unosi: number };
+  /** Datum (YYYY-MM-DD) zadnjeg unosa u odjelu; puni se samo uz getOdjeli({ saBrojem }) */
+  zadnjiRad?: string;
 }
 
 export interface Inzinjer {

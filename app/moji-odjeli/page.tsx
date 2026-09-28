@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getMojiOdjeliData, getUcinakPoOdjelima, getKorisnik, getKorisnici, updateKorisnik, preuzmiRjesenje, otpustiRjesenje } from "@/lib/db";
 import type { Korisnik, Odjel } from "@/lib/types";
 import { odjelZaGodinu } from "@/lib/plan-sjece";
+import { fmtDateShort } from "@/lib/format";
 
 const tekucaGodina = new Date().getFullYear();
 
@@ -14,6 +15,7 @@ interface OdjelStats {
   ha: number;
   stabala: number;
   km: number;
+  zadnjiRad?: string;
 }
 
 export default function MojiOdjeliPage() {
@@ -155,7 +157,10 @@ export default function MojiOdjeliPage() {
 
   const myOdjeliIds = me?.odjeliIds ?? [];
   const myRjesenjaIds = me?.odjeliRjesenjaIds ?? [];
-  const myOdjeli = allOdjeli.filter((o) => myOdjeliIds.includes(o.id));
+  // zadnje rađeni odjeli prvi; allOdjeli je već po GJ/broju pa stabilni sort čuva taj redoslijed za ostale
+  const myOdjeli = allOdjeli
+    .filter((o) => myOdjeliIds.includes(o.id))
+    .sort((a, b) => (statsPerOdjel[b.id]?.zadnjiRad ?? "").localeCompare(statsPerOdjel[a.id]?.zadnjiRad ?? ""));
   const availableToAdd = allOdjeli.filter((o) => !myOdjeliIds.includes(o.id));
 
   return (
@@ -238,6 +243,11 @@ export default function MojiOdjeliPage() {
                       {povrsina > 0 && (
                         <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
                           {povrsina} ha
+                        </span>
+                      )}
+                      {stats.zadnjiRad && (
+                        <span className="ml-2 text-xs text-green-700 dark:text-green-400">
+                          zadnji rad {fmtDateShort(stats.zadnjiRad)}
                         </span>
                       )}
                     </div>
