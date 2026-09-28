@@ -11,6 +11,17 @@ import { fmtDate, fmtDateLong, monthYearLabel } from "@/lib/format";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 
+const PROJEKTANT_BOJE = [
+  "bg-indigo-400 dark:bg-indigo-500",
+  "bg-rose-400 dark:bg-rose-500",
+  "bg-sky-400 dark:bg-sky-500",
+  "bg-violet-400 dark:bg-violet-500",
+  "bg-teal-400 dark:bg-teal-500",
+  "bg-orange-400 dark:bg-orange-500",
+  "bg-fuchsia-400 dark:bg-fuchsia-500",
+  "bg-amber-500 dark:bg-amber-400",
+] as const;
+
 export default function OdjelPage() {
   return (
     <Suspense fallback={<div className="py-16 text-center text-sm text-gray-400">Učitavam odjel…</div>}>
@@ -53,6 +64,10 @@ function OdjelPregled() {
   }, [data, godina]);
   const povrsina = Number(data?.odjel?.povrsina) || 0;
   const st = useMemo(() => statistikaOdjela(unosi, povrsina), [unosi, povrsina]);
+  const projektantBoja = useMemo(() => {
+    const ids = [...new Set(unosi.map((u) => u.inzinjerId).filter(Boolean))];
+    return new Map(ids.map((id, i) => [id, i % PROJEKTANT_BOJE.length]));
+  }, [unosi]);
 
   if (authLoading || !session) return null;
   if (!id) return <Poruka tekst="Odjel nije odabran." />;
@@ -243,11 +258,15 @@ function OdjelPregled() {
               {prikazaniDnevnik.map((u) => {
                 const vs = vrstaStyle(u.vrsta);
                 const unio = unioDrugi(u);
+                const bojIdx = projektantBoja.get(u.inzinjerId) ?? 0;
                 return (
                   <li key={u.id} className="px-4 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     <span className="w-28 flex-shrink-0 tabular-nums text-gray-500 dark:text-gray-400">{danIDatum(u.datum)}</span>
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-md border-l-[3px] ${vs.borderL} ${vs.badge}`}>{vs.label}</span>
-                    <span className="font-medium text-gray-800 dark:text-gray-100">{u.korisnik ? (u.korisnik.fullName || u.korisnik.ime) : "Nepoznat projektant"}</span>
+                    <span className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${PROJEKTANT_BOJE[bojIdx]}`} />
+                      {u.korisnik ? (u.korisnik.fullName || u.korisnik.ime) : "Nepoznat projektant"}
+                    </span>
                     <span className="ml-auto tabular-nums text-gray-700 dark:text-gray-200">{ucinakLabel(u) || "–"}</span>
                     {(u.napomena || unio) && (
                       <span className="basis-full sm:basis-auto text-xs text-gray-400 dark:text-gray-500 sm:order-last sm:w-full sm:pl-[7.75rem]">
