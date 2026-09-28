@@ -1,112 +1,154 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getMjesecniRezime, getMjesecniRezimeMoj, getInzinjeriByKorisnikId, getMjesecniRezimePoOdjelima, type OdjelMjesecRezime, type MjesecniRezime } from "@/lib/db";
+import {
+  getRezimeZaPeriod, getRezimePoOdjelima, getInzinjeriByKorisnikId, getGodisnjePlanPoProjektantu,
+  getUnosiZaDan, getKorisnici, tekuciMjesec,
+  type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed,
+} from "@/lib/db";
+import type { Korisnik, UnosRada } from "@/lib/types";
 import { mesecLabel, fmtDateLong, localDateStr } from "@/lib/format";
-import { fmtBroj } from "@/lib/sihtarica";
+import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
+import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
 import { Icon } from "@/components/Icon";
+import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { vrsta } from "@/lib/vrste";
-
-type Rezime = MjesecniRezime;
 
 export default function Home() {
   const { session, loading } = useAuth();
   const router = useRouter();
-  const [rezime, setRezime] = useState<Rezime | null>(null);
-  const [myRezime, setMyRezime] = useState<Rezime | null>(null);
+  const [rezime, setRezime] = useState<MjesecniRezime | null>(null);
+  const [prosli, setProsli] = useState<MjesecniRezime | null>(null);
   const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
+  const [plan, setPlan] = useState<PlanProjektantRed[] | null>(null);
+  const [danas, setDanas] = useState<UnosRada[] | null>(null);
+  const [projektanti, setProjektanti] = useState<Korisnik[]>([]);
+  const [greska, setGreska] = useState(false);
   const isWorker = session?.role === "worker";
   const [refreshTick, setRefreshTick] = useState(0);
   useUnosiRefresh(() => setRefreshTick((t) => t + 1));
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   useEffect(() => {
     if (!session) return;
+    let cancelled = false;
+    const now = new Date();
+    const mj = tekuciMjesec(now);
+    const pr = prosliMjesecDoDanas(now);
+    const pad = () => { if (!cancelled) setGreska(true); };
+    const kad = <T,>(set: (v: T) => void) => (v: T) => { if (!cancelled) set(v); };
+
+    // unosi.inzinjerId = korisnik.id; legacy unosi mogu imati inzinjer.id
+    const idsP: Promise<string[] | undefined> = isWorker
+      ? getInzinjeriByKorisnikId(session.userId).catch(() => []).then((inz) => [session.userId, ...inz.map((i) => i.id)])
+      : Promise.resolve(undefined);
+
+    idsP.then((ids) => {
+      if (cancelled) return;
+      setGreska(false);
+      getRezimeZaPeriod(mj.od, mj.do_, ids).then(kad(setRezime)).catch(pad);
+      getRezimeZaPeriod(pr.od, pr.do_, ids).then(kad(setProsli)).catch(pad);
+      getRezimePoOdjelima(mj.od, mj.do_, ids).then(kad(setOdjeliRezime)).catch(pad);
+      getGodisnjePlanPoProjektantu(now.getFullYear()).then(kad(setPlan)).catch(pad);
+      getUnosiZaDan(localDateStr(now))
+        .then((u) => kad(setDanas)(ids ? u.filter((x) => ids.includes(x.inzinjerId)) : u))
+        .catch(pad);
+    });
     if (!isWorker) {
-      getMjesecniRezime().then(setRezime).catch(() => {});
-      getMjesecniRezimePoOdjelima().then(setOdjeliRezime).catch(() => {});
-    } else {
-      // unosi.inzinjerId = korisnik.id; legacy unosi mogu imati inzinjer.id
-      getInzinjeriByKorisnikId(session.userId)
-        .catch(() => [])
-        .then((inz) => {
-          const ids = [session.userId, ...inz.map((i) => i.id)];
-          getMjesecniRezimeMoj(ids).then(setMyRezime).catch(() => {});
-          getMjesecniRezimePoOdjelima(ids).then(setOdjeliRezime).catch(() => {});
-        });
+      getKorisnici().then((k) => kad(setProjektanti)(k.filter((x) => x.role === "worker"))).catch(pad);
     }
+    return () => { cancelled = true; };
   }, [session, isWorker, refreshTick]);
 
   if (loading || !session) return null;
 
-  const danas = new Date();
-  const mesec = mesecLabel(danas);
+  const danasD = new Date();
+  const mesec = mesecLabel(danasD);
   const nav = navFor(session);
   const uloga = session.role === "admin" ? "Administrator" : session.operater ? "Projektant · operater" : "Projektant";
-
-  const displayRezime = isWorker ? myRezime : rezime;
-  const statsLabel = isWorker ? "Moj učinak" : "Svi projektanti";
   const linkovi = nav.all.filter((l) => l.href !== "/");
+  const { doDana } = prosliMjesecDoDanas(danasD);
+  const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
 
   return (
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Početna</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          <span className="capitalize">{fmtDateLong(localDateStr(danas))}</span> · {uloga}
+          <span className="capitalize">{fmtDateLong(localDateStr(danasD))}</span> · {uloga}
         </p>
       </header>
 
+      {greska && (
+        <div role="status" className="rounded-lg px-4 py-2.5 text-sm border bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
+          Dio podataka nije učitan — provjeri internet. Stranica se osvježava sama kad veza proradi.
+        </div>
+      )}
+
+      {isWorker
+        ? <MojDanas unosi={danas} />
+        : <DanasTim unosi={danas} projektanti={projektanti} />}
 
       <section aria-labelledby="rezime-naslov">
-        <SectionTitle id="rezime-naslov" title={statsLabel} meta={mesec} />
-        {displayRezime ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800">
-            <Stat label="Doznaka" value={fmtBroj(displayRezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400" />
-            <Stat label="Stabala" value={fmtBroj(displayRezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400" />
-            <Stat label="Vlake" value={fmtBroj(displayRezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400" />
-            <Stat label="Radni dani" value={String(displayRezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50" />
-            <Stat label="Odsustva" value={String(displayRezime.godisnji + displayRezime.bolovanje)} unit="dana"
-              tone="text-sky-700 dark:text-sky-400" note={`GO ${displayRezime.godisnji} · bol. ${displayRezime.bolovanje}`} />
-          </div>
+        <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
+        {rezime ? (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800">
+              <Stat label="Doznaka" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
+                delta={prosli && <Delta cur={rezime.ha} prev={prosli.ha} />} />
+              <Stat label="Stabala" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
+                delta={prosli && <Delta cur={rezime.stabala} prev={prosli.stabala} dec={0} />} />
+              <Stat label="Vlake" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
+                delta={prosli && <Delta cur={rezime.km} prev={prosli.km} />} />
+              <Stat label="Radni dani" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
+                delta={prosli && <Delta cur={rezime.radniDani} prev={prosli.radniDani} dec={0} />} />
+              <Stat label="Odsustva" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
+                tone="text-sky-700 dark:text-sky-400" note={`GO ${rezime.godisnji} · bol. ${rezime.bolovanje}`}
+                className="col-span-2 lg:col-span-1" />
+            </div>
+            {prosli && (
+              <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+                Strelice: razlika u odnosu na 1.–{doDana}. prošlog mjeseca (isti dio mjeseca).
+              </p>
+            )}
+          </>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" aria-hidden>
-            {Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[92px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
+            {Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[112px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
           </div>
         )}
       </section>
+
+      {plan && (isWorker
+        ? <MojPlan red={mojPlan} godina={danasD.getFullYear()} />
+        : <PlanTima redovi={plan} godina={danasD.getFullYear()} />)}
 
       {odjeliRezime.length > 0 && (
         <section aria-labelledby="odjeli-naslov">
           <SectionTitle id="odjeli-naslov" title={isWorker ? "Moji odjeli" : "Aktivnost po odjelima"} meta={mesec} />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {odjeliRezime.map((o) => (
-              <OdjelCard key={o.odjelId} odjel={o} />
-            ))}
+            {odjeliRezime.map((o) => <OdjelCard key={o.odjelId} odjel={o} />)}
           </div>
         </section>
       )}
 
       <section aria-labelledby="stranice-naslov">
-        <SectionTitle id="stranice-naslov" title="Sve stranice" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <SectionTitle id="stranice-naslov" title="Brzi pristup" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {linkovi.map((l) => (
-            <Link key={l.href} href={l.href}
-              className="group flex items-start gap-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 hover:border-green-600/60 hover:shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
-              <span className="w-10 h-10 flex-shrink-0 rounded-xl bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center group-hover:bg-green-100 dark:group-hover:bg-green-900/60 transition-colors">
-                <Icon name={l.icon} className="w-5 h-5" />
+            <Link key={l.href} href={l.href} title={l.desc}
+              className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 hover:border-green-600/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
+              <span className="w-8 h-8 flex-shrink-0 rounded-lg bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center">
+                <Icon name={l.icon} className="w-4 h-4" />
               </span>
-              <span className="min-w-0">
-                <span className="block font-semibold text-gray-800 dark:text-gray-100">{l.label}</span>
-                <span className="block text-sm text-gray-500 dark:text-gray-400 mt-0.5">{l.desc}</span>
-              </span>
+              <span className="min-w-0 text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{l.label}</span>
             </Link>
           ))}
         </div>
@@ -115,24 +157,196 @@ export default function Home() {
   );
 }
 
-function SectionTitle({ id, title, meta }: { id: string; title: string; meta?: string }) {
+function SectionTitle({ id, title, meta, action }: { id: string; title: string; meta?: string; action?: ReactNode }) {
   return (
-    <h2 id={id} className="mb-3 flex items-baseline gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-      {title}
-      {meta && <span className="text-xs font-normal text-gray-400 dark:text-gray-500 capitalize">{meta}</span>}
-    </h2>
+    <div className="mb-3 flex items-baseline gap-2">
+      <h2 id={id} className="flex items-baseline gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+        {title}
+        {meta && <span className="text-xs font-normal text-gray-400 dark:text-gray-500 first-letter:uppercase">{meta}</span>}
+      </h2>
+      {action && <span className="ml-auto">{action}</span>}
+    </div>
   );
 }
 
-function Stat({ label, value, unit, tone, note }: { label: string; value: string; unit: string; tone: string; note?: string }) {
+function DetaljnoLink({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <div className="bg-white dark:bg-gray-900 p-4">
+    <Link href={href} className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400 hover:underline">
+      {children}<Icon name="arrow" className="w-3 h-3" />
+    </Link>
+  );
+}
+
+function Stat({ label, value, unit, tone, note, delta, className = "" }: {
+  label: string; value: string; unit: string; tone: string; note?: string; delta?: ReactNode; className?: string;
+}) {
+  return (
+    <div className={`bg-white dark:bg-gray-900 p-4 ${className}`}>
       <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
       <div className={`mt-1 text-2xl font-bold tabular-nums ${tone}`}>
         {value}<span className="ml-1 text-sm font-medium text-gray-400 dark:text-gray-500">{unit}</span>
       </div>
       {note && <div className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{note}</div>}
+      {delta && <div className="mt-0.5 text-[11px] font-medium tabular-nums">{delta}</div>}
     </div>
+  );
+}
+
+function VrstaBadge({ u }: { u: UnosRada }) {
+  const s = vrsta(u.vrsta);
+  const odjel = u.odjel ? `${u.odjel.gj}/${u.odjel.broj}` : "";
+  const ucinak = ucinakLabel(u);
+  return (
+    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium ${s.badge}`}>
+      <span className="font-bold">{s.abbr}</span>
+      {[odjel, ucinak].filter(Boolean).join(" · ")}
+    </span>
+  );
+}
+
+function jeVikend(d: Date) {
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+function DanasTim({ unosi, projektanti }: { unosi: UnosRada[] | null; projektanti: Korisnik[] }) {
+  if (!unosi || projektanti.length === 0) return null;
+  const poProjektantu = new Map<string, UnosRada[]>();
+  for (const u of unosi) poProjektantu.set(u.inzinjerId, [...(poProjektantu.get(u.inzinjerId) ?? []), u]);
+  const vikend = jeVikend(new Date());
+  const unijeli = projektanti.filter((k) => poProjektantu.has(k.id)).length;
+  // radnim danom nepopunjeni idu prvi — to je ono što admin treba vidjeti
+  const redovi = [...projektanti].sort((a, b) =>
+    vikend ? 0 : Number(poProjektantu.has(a.id)) - Number(poProjektantu.has(b.id)));
+
+  return (
+    <section aria-labelledby="danas-naslov">
+      <SectionTitle id="danas-naslov" title="Danas"
+        meta={`${unijeli} od ${projektanti.length} projektanata unijelo${vikend ? " · vikend" : ""}`}
+        action={<DetaljnoLink href="/unos-ucinka">Unos učinka</DetaljnoLink>} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {redovi.map((k) => {
+          const moji = poProjektantu.get(k.id) ?? [];
+          const fali = moji.length === 0;
+          return (
+            <div key={k.id} className={`rounded-xl border px-3 py-2.5 flex flex-col gap-1.5 ${
+              fali && !vikend
+                ? "border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
+                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+            }`}>
+              <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</div>
+              {fali ? (
+                <div className={`text-xs ${vikend ? "text-gray-400 dark:text-gray-500" : "text-amber-700 dark:text-amber-400"}`}>Nema unosa</div>
+              ) : (
+                <div className="flex flex-wrap gap-1">{moji.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function MojDanas({ unosi }: { unosi: UnosRada[] | null }) {
+  if (!unosi) return null;
+  return (
+    <section aria-labelledby="danas-naslov">
+      <SectionTitle id="danas-naslov" title="Danas" />
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        {unosi.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400">Za danas još nema unosa.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">{unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden"
+      role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+      <div className="h-full rounded-full bg-green-600 dark:bg-green-500" style={{ width: `${Math.min(pct, 100)}%` }} />
+    </div>
+  );
+}
+
+function postotak(odradjeno: number, plan: number) {
+  return plan > 0 ? (odradjeno / plan) * 100 : 0;
+}
+
+function MojPlan({ red, godina }: { red?: PlanProjektantRed; godina: number }) {
+  if (!red) return null;
+  const pct = postotak(red.odradjeno, red.planHa);
+  const preostalo = Math.max(red.planHa - red.odradjeno, 0);
+  return (
+    <section aria-labelledby="plan-naslov">
+      <SectionTitle id="plan-naslov" title="Moj plan doznake" meta={String(godina)} />
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+        {red.planHa > 0 ? (
+          <>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-2xl font-bold tabular-nums text-green-700 dark:text-green-400">{fmtBroj(red.odradjeno)}</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">od {fmtBroj(red.planHa, 1)} ha</span>
+              <span className="ml-auto text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>
+            </div>
+            <ProgressBar pct={pct} />
+            <p className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+              {preostalo > 0 ? `Preostalo ${fmtBroj(preostalo)} ha` : "Plan ispunjen"}
+              {red.odradjenoKm > 0 && ` · vlake ${fmtBroj(red.odradjenoKm)} km`}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Plan za {godina}. nije postavljen · odrađeno <span className="font-semibold tabular-nums text-gray-700 dark:text-gray-200">{fmtBroj(red.odradjeno)} ha</span>
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PlanTima({ redovi, godina }: { redovi: PlanProjektantRed[]; godina: number }) {
+  const aktivni = redovi.filter((r) => r.planHa > 0 || r.odradjeno > 0);
+  if (aktivni.length === 0) return null;
+  const plan = aktivni.reduce((s, r) => s + r.planHa, 0);
+  const odradjeno = aktivni.reduce((s, r) => s + r.odradjeno, 0);
+  const pct = postotak(odradjeno, plan);
+
+  return (
+    <section aria-labelledby="plan-naslov">
+      <SectionTitle id="plan-naslov" title="Plan doznake" meta={String(godina)}
+        action={<DetaljnoLink href="/realizacija">Realizacija</DetaljnoLink>} />
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+        <div className="p-4 space-y-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-2xl font-bold tabular-nums text-green-700 dark:text-green-400">{fmtBroj(odradjeno)}</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+              {plan > 0 ? `od ${fmtBroj(plan, 1)} ha` : "ha · plan nije postavljen"}
+            </span>
+            {plan > 0 && <span className="ml-auto text-sm font-semibold tabular-nums text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>}
+          </div>
+          {plan > 0 && <ProgressBar pct={pct} />}
+        </div>
+        <ul className="p-4 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
+          {aktivni.map((r) => {
+            const p = postotak(r.odradjeno, r.planHa);
+            return (
+              <li key={r.korisnikId} className="space-y-1">
+                <div className="flex items-baseline gap-2 text-sm">
+                  <span className="font-medium text-gray-800 dark:text-gray-100 truncate">{r.ime}</span>
+                  <span className="ml-auto text-xs tabular-nums text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {fmtBroj(r.odradjeno)}{r.planHa > 0 ? ` / ${fmtBroj(r.planHa, 1)} ha · ${Math.round(p)}%` : " ha · bez plana"}
+                  </span>
+                </div>
+                {r.planHa > 0 && <ProgressBar pct={p} />}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
   );
 }
 
@@ -151,18 +365,15 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
       <div className="flex flex-wrap gap-1">
         {odjel.vrste.map((v) => {
           const s = vrsta(v);
-          return (
-            <span key={v} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.badge}`}>{s.abbr}</span>
-          );
+          return <span key={v} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${s.badge}`}>{s.abbr}</span>;
         })}
       </div>
-      {(odjel.ha > 0 || odjel.stabala > 0 || odjel.km > 0) && (
-        <div className="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5 tabular-nums">
-          {odjel.ha > 0 && <div>{odjel.ha.toFixed(2)} ha</div>}
-          {odjel.stabala > 0 && <div>{odjel.stabala} st</div>}
-          {odjel.km > 0 && <div>{odjel.km.toFixed(2)} km</div>}
-        </div>
-      )}
+      <div className="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5 tabular-nums">
+        {odjel.ha > 0 && <div>{fmtBroj(odjel.ha)} ha</div>}
+        {odjel.stabala > 0 && <div>{fmtBroj(odjel.stabala, 0)} st</div>}
+        {odjel.km > 0 && <div>{fmtBroj(odjel.km)} km</div>}
+        <div className="text-gray-400 dark:text-gray-500">{odjel.dani} {odjel.dani === 1 ? "dan" : "dana"} rada</div>
+      </div>
     </Link>
   );
 }

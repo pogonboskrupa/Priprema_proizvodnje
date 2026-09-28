@@ -443,22 +443,22 @@ function rezimeIzUnosa(unosi: Record<string, unknown>[]): MjesecniRezime {
   return r;
 }
 
-function tekuciMjesecRaspon() {
-  const now = new Date();
-  const od = new Date(now.getFullYear(), now.getMonth(), 1);
-  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+function rasponDatuma(od: Date, do_: Date) {
   return [where('datum', '>=', Timestamp.fromDate(od)), where('datum', '<=', Timestamp.fromDate(do_))];
 }
 
-export async function getMjesecniRezime(): Promise<MjesecniRezime> {
-  return rezimeIzUnosa(await queryUnosi(tekuciMjesecRaspon()));
+export function tekuciMjesec(now = new Date()): { od: Date; do_: Date } {
+  return {
+    od: new Date(now.getFullYear(), now.getMonth(), 1),
+    do_: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+  };
 }
 
-// ids: korisnik.id + legacy inzinjer.id-evi (stariji unosi su vezani za inzinjeri kolekciju)
-export async function getMjesecniRezimeMoj(ids: readonly string[]): Promise<MjesecniRezime> {
-  const idSet = new Set(ids);
-  const unosi = await queryUnosi(tekuciMjesecRaspon());
-  return rezimeIzUnosa(unosi.filter((u) => idSet.has(u.inzinjerId as string)));
+// ids: korisnik.id + legacy inzinjer.id-evi; bez ids — svi unosi u opsegu sesije
+export async function getRezimeZaPeriod(od: Date, do_: Date, ids?: readonly string[]): Promise<MjesecniRezime> {
+  const unosi = await queryUnosi(rasponDatuma(od, do_));
+  const idSet = ids && new Set(ids);
+  return rezimeIzUnosa(idSet ? unosi.filter((u) => idSet.has(u.inzinjerId as string)) : unosi);
 }
 
 export async function getUnosiZaMjesec(year: number, month: number): Promise<UnosRada[]> {
@@ -635,7 +635,7 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
 
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
-function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Date): {
+export function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Date): {
   od: Date;
   do_: Date;
 } {
@@ -830,34 +830,29 @@ export interface OdjelMjesecRezime {
   stabala: number;
   km: number;
   vrste: string[];
+  /** Broj različitih datuma s unosom u odjelu */
+  dani: number;
 }
 
-export async function getMjesecniRezimePoOdjelima(ids?: readonly string[]): Promise<OdjelMjesecRezime[]> {
+export async function getRezimePoOdjelima(od: Date, do_: Date, ids?: readonly string[]): Promise<OdjelMjesecRezime[]> {
   const idSet = ids ? new Set(ids) : null;
-  const now = new Date();
-  const od = new Date(now.getFullYear(), now.getMonth(), 1);
-  const do_ = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  do_.setHours(23, 59, 59, 999);
-
   const [unosiRaw, odjeliRaw] = await Promise.all([
-    queryUnosi( [
-      where('datum', '>=', Timestamp.fromDate(od)),
-      where('datum', '<=', Timestamp.fromDate(do_)),
-    ]),
+    queryUnosi(rasponDatuma(od, do_)),
     getAll('odjeli'),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
-  const acc: Record<string, { ha: number; stabala: number; km: number; vrste: Set<string> }> = {};
+  const acc: Record<string, { ha: number; stabala: number; km: number; vrste: Set<string>; dani: Set<string> }> = {};
 
   for (const u of unosiRaw) {
     if (idSet && !idSet.has(u.inzinjerId as string)) continue;
     const vrsta = u.vrsta as string;
     const odjelId = u.odjelId as string;
     if (!odjelId) continue;
-    if (!acc[odjelId]) acc[odjelId] = { ha: 0, stabala: 0, km: 0, vrste: new Set() };
+    if (!acc[odjelId]) acc[odjelId] = { ha: 0, stabala: 0, km: 0, vrste: new Set(), dani: new Set() };
     const a = acc[odjelId];
     a.vrste.add(vrsta);
+    a.dani.add((u.datum as string).slice(0, 10));
     if (vrsta === 'DOZNAKA') { a.ha += Number(u.hektari) || 0; a.stabala += Number(u.brojStabala) || 0; }
     else if (vrsta === 'VLAKA') a.km += Number(u.kilometri) || 0;
   }
@@ -873,6 +868,7 @@ export async function getMjesecniRezimePoOdjelima(ids?: readonly string[]): Prom
         stabala: a.stabala,
         km: a.km,
         vrste: [...a.vrste],
+        dani: a.dani.size,
       };
     })
     .sort(cmpOdjel);

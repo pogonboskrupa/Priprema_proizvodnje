@@ -1,18 +1,23 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
-import { getIzvjestaj, getSedmicnaTabela, getDetaljanPregledPoOdjelima, type DnevnaAktivnost, type DetaljanOdjelRed } from "@/lib/db";
+import {
+  getIzvjestaj, getSedmicnaTabela, getDetaljanPregledPoOdjelima, getRezimeZaPeriod, getRezimePoOdjelima, getDateRange,
+  type DnevnaAktivnost, type DetaljanOdjelRed, type MjesecniRezime, type OdjelMjesecRezime,
+} from "@/lib/db";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, localDateStr } from "@/lib/format";
+import { fmtBroj } from "@/lib/sihtarica";
 import { godineEvidencije, mjeseciEvidencije, EVIDENCIJA_OD_DATUM } from "@/lib/godine";
-import { localDateStr } from "@/lib/format";
+import { prethodniRef, NAZIV_PRETHODNOG, type Period } from "@/lib/usporedba";
+import { Delta } from "@/components/Delta";
+import { Icon, type IconName } from "@/components/Icon";
 
 const pak = (st: number) => (st / 30).toFixed(1);
 
-type Period = "sedmicno" | "mjesecno" | "godisnje";
 type Tip = "odjel" | "inzinjer";
 
 type OdjelRow = {
@@ -54,6 +59,9 @@ type TabelaData = {
   do_: string;
 };
 
+/** Rezime prethodnog perioda; null kad je prethodni period prije početka evidencije */
+type Usporedba = { rezime: MjesecniRezime; naziv: string } | null;
+
 function weekRefDate(weekOffset: number): Date {
   const d = new Date();
   d.setDate(d.getDate() + weekOffset * 7);
@@ -74,6 +82,34 @@ function mondayOf(d: Date): Date {
   return m;
 }
 
+function refDateFor(p: Period, monthVal: string, yearVal: number, weekOff: number): Date {
+  if (p === "godisnje") return new Date(yearVal, 6, 1);
+  if (p === "sedmicno") return weekRefDate(weekOff);
+  const [y, m] = monthVal.split("-").map(Number);
+  return new Date(y, m - 1, 15); // sredina mjeseca → getDateRange daje cijeli mjesec
+}
+
+const PERIODI: { id: Period; label: string }[] = [
+  { id: "sedmicno", label: "Sedmično" },
+  { id: "mjesecno", label: "Mjesečno" },
+  { id: "godisnje", label: "Godišnje" },
+];
+
+const GRUPE: { id: Tip; label: string; icon: IconName }[] = [
+  { id: "odjel", label: "Po odjelu", icon: "map" },
+  { id: "inzinjer", label: "Po projektantu", icon: "users" },
+];
+
+const selectCls = "h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer";
+
+function segCls(aktivan: boolean) {
+  return `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+    aktivan
+      ? "bg-white dark:bg-gray-900 text-green-800 dark:text-green-300 shadow-sm"
+      : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+  }`;
+}
+
 export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -86,7 +122,7 @@ export default function IzvjestajiPage() {
   const odjeliGenRef = useRef(0);
   const [period, setPeriod] = useState<Period>("mjesecno");
   const [tip, setTip] = useState<Tip>("odjel");
-  // Computed inside state initializer to avoid SSR/client timezone mismatch
+  // u initializeru: izbjegava SSR/klijent razliku u vremenskoj zoni
   const [monthOptions] = useState(mjeseciEvidencije);
   const [selectedMonth, setSelectedMonth] = useState(() => mjeseciEvidencije()[0].value);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -94,12 +130,14 @@ export default function IzvjestajiPage() {
   const [err, setErr] = useState("");
   const [data, setData] = useState<IzvjestajData | null>(null);
   const [tabelaData, setTabelaData] = useState<TabelaData | null>(null);
+  const [usporedba, setUsporedba] = useState<Usporedba>(null);
+  const [mojiOdjeli, setMojiOdjeli] = useState<OdjelMjesecRezime[]>([]);
   const [loading, setLoading] = useState(false);
   const genRef = useRef(0);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   useEffect(() => {
     if (!session) return;
@@ -128,27 +166,29 @@ export default function IzvjestajiPage() {
     if (mainTab === "odjeli" && session) loadOdjeli();
   }, [mainTab, odjeliYear, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function refDateFor(p: Period, monthVal: string, yearVal: number, weekOff: number): Date | undefined {
-    if (p === "godisnje") return new Date(yearVal, 6, 1);
-    if (p === "sedmicno") return weekRefDate(weekOff);
-    if (p !== "mjesecno") return undefined;
-    const [y, m] = monthVal.split("-").map(Number);
-    return new Date(y, m - 1, 15); // mid-month → getDateRange calculates correct range
-  }
-
   async function load(p: Period = period, t: Tip = tip, monthVal: string = selectedMonth, yearVal: number = selectedYear, weekOff: number = weekOffset) {
     const gen = ++genRef.current;
     setLoading(true);
     setErr("");
+    const ref = refDateFor(p, monthVal, yearVal, weekOff);
+    const opseg = getDateRange(p, ref);
+    const prethodni = getDateRange(p, prethodniRef(p, ref));
+    // operater vidi sve unose, a lični izvještaj mora biti samo njegov
+    const ids = session?.role === "worker" ? [session.userId] : undefined;
     try {
-      const fetches: [Promise<unknown>, Promise<TabelaData | null>] = [
-        getIzvjestaj(p, t, refDateFor(p, monthVal, yearVal, weekOff)),
-        p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela(weekRefDate(weekOff)) : Promise.resolve(null),
-      ];
-      const [json, tabela] = await Promise.all(fetches);
+      const [json, tabela, prev, moji] = await Promise.all([
+        getIzvjestaj(p, t, ref),
+        p === "sedmicno" && t === "inzinjer" ? getSedmicnaTabela(ref) : Promise.resolve(null),
+        localDateStr(prethodni.do_) >= EVIDENCIJA_OD_DATUM
+          ? getRezimeZaPeriod(prethodni.od, prethodni.do_, ids)
+          : Promise.resolve(null),
+        ids ? getRezimePoOdjelima(opseg.od, opseg.do_, ids) : Promise.resolve([]),
+      ]);
       if (gen !== genRef.current) return;
       setData(json as IzvjestajData);
       setTabelaData(tabela as TabelaData | null);
+      setUsporedba(prev ? { rezime: prev, naziv: NAZIV_PRETHODNOG[p] } : null);
+      setMojiOdjeli(moji);
     } catch {
       if (gen === genRef.current) setErr("Greška pri učitavanju izvještaja — prikazani su prethodni podaci. Provjeri internet i pokušaj ponovo.");
     } finally {
@@ -179,42 +219,30 @@ export default function IzvjestajiPage() {
     load(period, tip, selectedMonth, selectedYear, next);
   }
 
-  // ‹ se gasi na sedmici u kojoj počinje evidencija
-  const naPrvojSedmici = localDateStr(mondayOf(weekRefDate(weekOffset))) <= EVIDENCIJA_OD_DATUM;
-
   function handleYear(val: number) {
     setSelectedYear(val);
     load(period, tip, selectedMonth, val);
   }
 
+  // ‹ se gasi na sedmici u kojoj počinje evidencija
+  const naPrvojSedmici = localDateStr(mondayOf(weekRefDate(weekOffset))) <= EVIDENCIJA_OD_DATUM;
   const yearOptions = godineEvidencije();
-
-  const formatDate = (d: string) => fmtDate(d);
+  const danas = localDateStr();
+  const uToku = !!data?.do_ && data.od <= danas && danas <= data.do_;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Izvještaji</h1>
+      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+        {isWorker ? "Moji izvještaji" : "Izvještaji"}
+      </h1>
 
-      {/* Glavni tabovi */}
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="inline-flex gap-1 p-1 mb-6 rounded-lg bg-gray-100 dark:bg-gray-800" role="tablist">
         {([
-          ["statistike", "📊", "Statistike", "Pregled aktivnosti po periodima"],
-          ["odjeli",     "🗺️", "Detaljan pregled po odjelima", "Svi odjeli razvrstani po GJ"],
-        ] as const).map(([id, icon, label, sub]) => (
-          <button
-            key={id}
-            onClick={() => setMainTab(id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
-              mainTab === id
-                ? "bg-green-700 border-green-700 text-white shadow-md"
-                : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50 dark:hover:bg-green-950/40"
-            }`}
-          >
-            <span className="text-xl leading-none">{icon}</span>
-            <span>
-              <span className="block text-sm font-semibold leading-tight">{label}</span>
-              <span className={`block text-xs mt-0.5 ${mainTab === id ? "text-green-100" : "text-gray-400 dark:text-gray-500"}`}>{sub}</span>
-            </span>
+          ["statistike", "chart", "Učinak"],
+          ["odjeli", "map", "Pregled odjela"],
+        ] as const).map(([id, icon, label]) => (
+          <button key={id} role="tab" aria-selected={mainTab === id} onClick={() => setMainTab(id)} className={segCls(mainTab === id)}>
+            <Icon name={icon} className="w-4 h-4" />{label}
           </button>
         ))}
       </div>
@@ -230,157 +258,180 @@ export default function IzvjestajiPage() {
         />
       )}
 
-      {mainTab === "statistike" && (<><div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
-        {/* Period */}
-        <div>
-          <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Period</span>
-          <div className="flex gap-1.5">
-            {(["sedmicno", "mjesecno", "godisnje"] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => handlePeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  period === p
-                    ? "bg-green-700 text-white shadow-sm"
-                    : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
-                }`}
-              >
-                {p === "sedmicno" ? "Sedmično" : p === "mjesecno" ? "Mjesečno" : "Godišnje"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Month picker — only for "miesecno" */}
-        {period === "sedmicno" && (
-          <div>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Sedmica</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleWeek(-1)}
-                disabled={naPrvojSedmici || loading}
-                aria-label="Prethodna sedmica"
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
-              >‹</button>
-              <span className="text-sm text-gray-700 dark:text-gray-200 px-2 min-w-[92px] text-center">
-                {sedmicaLabel(weekOffset)}
-              </span>
-              <button
-                onClick={() => handleWeek(1)}
-                disabled={weekOffset === 0 || loading}
-                aria-label="Sljedeća sedmica"
-                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
-              >›</button>
+      {mainTab === "statistike" && (
+        <>
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
+            <div>
+              <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Period</span>
+              <div className="inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+                {PERIODI.map(({ id, label }) => (
+                  <button key={id} onClick={() => handlePeriod(id)} aria-pressed={period === id} className={segCls(period === id)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
 
-        {period === "mjesecno" && (
-          <div>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Mjesec</span>
-            <select
-              value={selectedMonth}
-              onChange={(e) => handleMonth(e.target.value)}
-              className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
-            >
-              {monthOptions.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
+            {period === "sedmicno" && (
+              <div>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Sedmica</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleWeek(-1)}
+                    disabled={naPrvojSedmici || loading}
+                    aria-label="Prethodna sedmica"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                  >‹</button>
+                  <span className="text-sm text-gray-700 dark:text-gray-200 px-2 min-w-[92px] text-center">
+                    {sedmicaLabel(weekOffset)}
+                  </span>
+                  <button
+                    onClick={() => handleWeek(1)}
+                    disabled={weekOffset === 0 || loading}
+                    aria-label="Sljedeća sedmica"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
+                  >›</button>
+                </div>
+              </div>
+            )}
 
-        {period === "godisnje" && (
-          <div>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Godina</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => handleYear(Number(e.target.value))}
-              className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-        )}
+            {period === "mjesecno" && (
+              <label>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Mjesec</span>
+                <select value={selectedMonth} onChange={(e) => handleMonth(e.target.value)} className={`${selectCls} capitalize`}>
+                  {monthOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </label>
+            )}
 
-        {/* Grouping — admin only */}
-        {!isWorker && (
-          <div>
-            <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Grupiranje</span>
-            <div className="flex gap-1.5">
-              {(["odjel", "inzinjer"] as Tip[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => handleTip(t)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    tip === t
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200"
-                  }`}
-                >
-                  {t === "odjel" ? "🗺️ Po odjelu" : "👷 Po projektantu"}
-                </button>
-              ))}
+            {period === "godisnje" && (
+              <label>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Godina</span>
+                <select value={selectedYear} onChange={(e) => handleYear(Number(e.target.value))} className={selectCls}>
+                  {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </label>
+            )}
+
+            {!isWorker && (
+              <div>
+                <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Grupiranje</span>
+                <div className="inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
+                  {GRUPE.map(({ id, label, icon }) => (
+                    <button key={id} onClick={() => handleTip(id)} aria-pressed={tip === id} className={segCls(tip === id)}>
+                      <Icon name={icon} className="w-4 h-4" />{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data && (
+              <div className="ml-auto text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+                <div>{fmtDate(data.od)} – {data.do_ ? fmtDate(data.do_) : ""}</div>
+                {loading
+                  ? <div className="text-green-700 dark:text-green-400">Osvježavam…</div>
+                  : uToku && <div>period u toku</div>}
+              </div>
+            )}
+          </div>
+
+          {err && (
+            <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+              {err}
             </div>
-          </div>
-        )}
+          )}
 
-        {data && (
-          <div className="ml-auto">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {formatDate(data.od)} – {data.do_ ? formatDate(data.do_) : ""}
-            </span>
-          </div>
-        )}
-      </div>
+          {loading && !data && <SkeletonIzvjestaj />}
 
-      {err && (
-        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
-          {err}
-        </div>
+          {data && (
+            // stari podaci ostaju vidljivi dok stižu novi — nema treperenja praznog ekrana
+            <div aria-busy={loading} className={`transition-opacity ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+              {data.tip === "odjel" && (
+                <OdjelIzvjestaj rows={data.data as OdjelRow[]} period={data.period} usporedba={usporedba} />
+              )}
+              {data.tip === "inzinjer" && (isWorker ? (
+                <MojIzvjestaj
+                  row={(data.data as InzinjerRow[]).find((r) => r.inzinjer.id === session.userId)}
+                  period={data.period}
+                  usporedba={usporedba}
+                  odjeli={mojiOdjeli}
+                />
+              ) : (
+                <InzinjerIzvjestaj rows={data.data as InzinjerRow[]} period={data.period} usporedba={usporedba} />
+              ))}
+              {tabelaData && (
+                <SedmicnaTabela data={tabelaData} filterRadnikId={isWorker ? session.userId : null} />
+              )}
+            </div>
+          )}
+        </>
       )}
-
-      {loading && <div className="text-center py-16 text-gray-500 dark:text-gray-400">Učitavam...</div>}
-
-      {!loading && data?.tip === "odjel" && (
-        <OdjelIzvjestaj rows={data.data as OdjelRow[]} period={data.period} />
-      )}
-
-      {!loading && data?.tip === "inzinjer" && (
-        <InzinjerIzvjestaj
-          rows={data.data as InzinjerRow[]}
-          period={data.period}
-          filterInzinjerId={isWorker ? session.userId : null}
-        />
-      )}
-
-      {!loading && tabelaData && (
-        <SedmicnaTabela
-          data={tabelaData}
-          filterRadnikId={isWorker ? session.userId : null}
-        />
-      )}
-    </>)}
     </div>
   );
 }
 
-function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) {
-  if (rows.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
-        <p className="text-2xl mb-2">📭</p>
-        <p className="font-medium">Nema aktivnosti u odabranom periodu</p>
+function SkeletonIzvjestaj() {
+  return (
+    <div className="space-y-4" aria-hidden>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }, (_, i) => <div key={i} className="h-[92px] rounded-xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
       </div>
-    );
-  }
+      <div className="h-64 rounded-xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />
+    </div>
+  );
+}
+
+function Prazno({ tekst = "Nema aktivnosti u odabranom periodu" }: { tekst?: string }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center text-gray-500 dark:text-gray-400">
+      <Icon name="chart" className="w-6 h-6 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+      <p className="font-medium">{tekst}</p>
+    </div>
+  );
+}
+
+function NapomenaUsporedbe({ usporedba }: { usporedba: Usporedba }) {
+  if (!usporedba) return null;
+  return <p className="-mt-2 text-[11px] text-gray-400 dark:text-gray-500">Strelice: razlika u odnosu na {usporedba.naziv}.</p>;
+}
+
+function stabalaLabel(st: number): ReactNode {
+  if (st <= 0) return "0";
+  return <>{fmtBroj(st, 0)} st <span className="text-sm font-medium opacity-70">· {pak(st)} pak.</span></>;
+}
+
+const thCls = "px-4 py-3 text-gray-600 dark:text-gray-300 font-medium";
+const tfCls = "px-4 py-3 font-semibold text-gray-900 dark:text-gray-100 tabular-nums";
+
+function TabelaKartica({ naslov, meta, onExport, children }: { naslov: string; meta?: string; onExport: () => void; children: ReactNode }) {
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex flex-wrap gap-2 justify-between items-center">
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200">{naslov}</h2>
+        <div className="flex items-center gap-3">
+          {meta && <span className="text-xs text-gray-500 dark:text-gray-400">{meta}</span>}
+          <button onClick={onExport} className="inline-flex items-center gap-1.5 bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
+            <Icon name="download" className="w-3.5 h-3.5" />Export XLSX
+          </button>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function OdjelIzvjestaj({ rows, period, usporedba }: { rows: OdjelRow[]; period: Period; usporedba: Usporedba }) {
+  if (rows.length === 0) return <Prazno />;
 
   const ukupnoHa = rows.reduce((s, r) => s + r.ukupnoHektara, 0);
   const ukupnoSt = rows.reduce((s, r) => s + r.ukupnoStabala, 0);
   const ukupnoKm = rows.reduce((s, r) => s + r.ukupnoKm, 0);
   const ukupnoPovrsina = rows.reduce((s, r) => s + r.odjel.povrsina, 0);
+  const ukupnoKum = rows.reduce((s, r) => s + r.kumulativnoHektara, 0);
+  const ukupnoPreostalo = rows.reduce((s, r) => s + Math.max(r.preostalo, 0), 0);
+  const ukupnoPct = ukupnoPovrsina > 0 ? Math.round((ukupnoKum / ukupnoPovrsina) * 100) : 0;
+  const u = usporedba?.rezime;
 
   function handleExport() {
     const data = rows.map((r) => ({
@@ -400,118 +451,112 @@ function OdjelIzvjestaj({ rows, period }: { rows: OdjelRow[]; period: Period }) 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
-        <StatCard label="Ukupna površina" value={`${ukupnoPovrsina.toFixed(2)} ha`} color="blue" />
-        <StatCard label="Doznačenih stabala" value={ukupnoSt > 0 ? `${ukupnoSt} st · ${pak(ukupnoSt)} pak.` : "0"} color="emerald" />
-        <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
+        <StatCard label="Obrađeno u periodu" value={`${fmtBroj(ukupnoHa)} ha`} color="green"
+          sub={u && <Delta cur={ukupnoHa} prev={u.ha} />} />
+        <StatCard label="Površina odjela" value={`${fmtBroj(ukupnoPovrsina)} ha`} color="blue"
+          sub={`${rows.length} ${rows.length === 1 ? "odjel" : "odjela"} sa aktivnošću`} />
+        <StatCard label="Doznačenih stabala" value={stabalaLabel(ukupnoSt)} color="emerald"
+          sub={u && <Delta cur={ukupnoSt} prev={u.stabala} dec={0} />} />
+        <StatCard label="Vlake projektovano" value={`${fmtBroj(ukupnoKm)} km`} color="amber"
+          sub={u && <Delta cur={ukupnoKm} prev={u.km} />} />
       </div>
+      <NapomenaUsporedbe usporedba={usporedba} />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200">Pregled po odjelima</h2>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500 dark:text-gray-400">{rows.length} odjela sa aktivnošću</span>
-            <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
-              Export XLSX
-            </button>
-          </div>
-        </div>
+      <TabelaKartica naslov="Pregled po odjelima" meta={`${rows.length} odjela`} onExport={handleExport}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 dark:border-gray-700">
               <tr className="text-left">
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Površina (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">U periodu (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right" title="Sva doznaka u odjelu do kraja odabranog perioda">Ukupno (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Preostalo (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Stabala</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Vlake (km)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Napredak</th>
+                <th className={thCls}>Odjel</th>
+                <th className={`${thCls} text-right`}>Površina (ha)</th>
+                <th className={`${thCls} text-right`}>U periodu (ha)</th>
+                <th className={`${thCls} text-right`} title="Sva doznaka u odjelu do kraja odabranog perioda">Ukupno (ha)</th>
+                <th className={`${thCls} text-right`}>Preostalo (ha)</th>
+                <th className={`${thCls} text-right`}>Stabala</th>
+                <th className={`${thCls} text-right`}>Vlake (km)</th>
+                <th className={thCls}>Napredak</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, idx) => (
-                <tr key={idx} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-gray-900 dark:text-gray-100">{r.odjel.broj}</span>
-                    <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs">{r.odjel.gj}</span>
+              {rows.map((r) => (
+                <tr key={String(r.odjel.id)} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 tabular-nums">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">{r.odjel.gj} /</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100 ml-1">{r.odjel.broj}</span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{r.odjel.povrsina.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
-                    {r.ukupnoHektara.toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200 tabular-nums">
-                    {r.kumulativnoHektara.toFixed(2)}
-                  </td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{fmtBroj(r.odjel.povrsina)}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">{r.ukupnoHektara > 0 ? fmtBroj(r.ukupnoHektara) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-200">{fmtBroj(r.kumulativnoHektara)}</td>
                   <td className={`px-4 py-3 text-right font-medium ${r.preostalo <= 0 ? "text-green-600 dark:text-green-400" : "text-gray-700 dark:text-gray-200"}`}>
-                    {r.preostalo <= 0 ? "✓ Završeno" : r.preostalo.toFixed(2)}
+                    {r.preostalo <= 0 ? "✓ Završeno" : fmtBroj(r.preostalo)}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200 whitespace-nowrap">
                     {r.ukupnoStabala > 0 ? (
-                      <><span>{r.ukupnoStabala}</span><span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
+                      <>{fmtBroj(r.ukupnoStabala, 0)}<span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
                     ) : "–"}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 min-w-[80px]">
-                        <div
-                          className={`h-1.5 rounded-full ${r.postotak >= 100 ? "bg-green-500" : r.postotak >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
-                          style={{ width: `${Math.min(r.postotak, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">{r.postotak}%</span>
-                    </div>
-                  </td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? fmtBroj(r.ukupnoKm) : "–"}</td>
+                  <td className="px-4 py-3"><Napredak pct={r.postotak} /></td>
                 </tr>
               ))}
             </tbody>
+            <tfoot className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+              <tr>
+                <td className={tfCls}>Ukupno</td>
+                <td className={`${tfCls} text-right`}>{fmtBroj(ukupnoPovrsina)}</td>
+                <td className={`${tfCls} text-right text-green-700 dark:text-green-400`}>{fmtBroj(ukupnoHa)}</td>
+                <td className={`${tfCls} text-right`}>{fmtBroj(ukupnoKum)}</td>
+                <td className={`${tfCls} text-right`}>{fmtBroj(ukupnoPreostalo)}</td>
+                <td className={`${tfCls} text-right`}>{ukupnoSt > 0 ? fmtBroj(ukupnoSt, 0) : "–"}</td>
+                <td className={`${tfCls} text-right`}>{ukupnoKm > 0 ? fmtBroj(ukupnoKm) : "–"}</td>
+                <td className="px-4 py-3"><Napredak pct={ukupnoPct} /></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
-      </div>
+      </TabelaKartica>
     </div>
   );
 }
 
-function InzinjerIzvjestaj({
-  rows,
-  period,
-  filterInzinjerId,
-}: {
-  rows: InzinjerRow[];
-  period: Period;
-  filterInzinjerId?: string | null;
-}) {
-  const visibleRows = filterInzinjerId
-    ? rows.filter((r) => r.inzinjer.id === filterInzinjerId)
-    : rows;
-
-  const aktivni = visibleRows.filter((r) => r.ukupnoHektara > 0 || r.ukupnoKm > 0 || r.ukupnoStabala > 0);
-  const ukupnoHa = visibleRows.reduce((s, r) => s + r.ukupnoHektara, 0);
-  const ukupnoSt = visibleRows.reduce((s, r) => s + r.ukupnoStabala, 0);
-  const ukupnoKm = visibleRows.reduce((s, r) => s + r.ukupnoKm, 0);
-  const ukupnoOdsustvo = visibleRows.reduce((s, r) => s + (r.danaGodisnji ?? 0) + (r.danaBolovanje ?? 0), 0);
-  const ukupnoRadniDani = visibleRows.reduce((s, r) => s + (r.danaRadnih ?? (r.danaTeren ?? 0) + (r.danaKancelarija ?? 0)), 0);
-
-  const isPersonal = !!filterInzinjerId;
-
-  if (!isPersonal && aktivni.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
-        <p className="text-2xl mb-2">📭</p>
-        <p className="font-medium">Nema aktivnosti u odabranom periodu</p>
+function Napredak({ pct }: { pct: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 min-w-[80px]">
+        <div
+          className={`h-1.5 rounded-full ${pct >= 100 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-blue-500"}`}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
       </div>
-    );
-  }
+      <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right tabular-nums">{pct}%</span>
+    </div>
+  );
+}
+
+function radniDani(r: InzinjerRow) {
+  return r.danaRadnih ?? (r.danaTeren ?? 0) + (r.danaKancelarija ?? 0);
+}
+
+function InzinjerIzvjestaj({ rows, period, usporedba }: { rows: InzinjerRow[]; period: Period; usporedba: Usporedba }) {
+  const aktivni = rows.filter((r) => r.brojUnosa > 0);
+  if (aktivni.length === 0) return <Prazno />;
+
+  const zbir = (f: (r: InzinjerRow) => number) => rows.reduce((s, r) => s + f(r), 0);
+  const ukupnoHa = zbir((r) => r.ukupnoHektara);
+  const ukupnoSt = zbir((r) => r.ukupnoStabala);
+  const ukupnoKm = zbir((r) => r.ukupnoKm);
+  const ukupnoOdsustvo = zbir((r) => (r.danaGodisnji ?? 0) + (r.danaBolovanje ?? 0));
+  const ukupnoRadniDani = zbir(radniDani);
+  const u = usporedba?.rezime;
 
   function handleExport() {
-    const data = visibleRows.map((r) => ({
+    const data = rows.map((r) => ({
       Projektant: `${r.inzinjer.prezime} ${r.inzinjer.ime}`.trim(),
       Odjeli: r.inzinjer.odjeli.join(', '),
       "Hektara (ha)": r.ukupnoHektara,
       Stabala: r.ukupnoStabala,
       "Vlake (km)": r.ukupnoKm,
+      "Radni dani": radniDani(r),
       Teren: r.danaTeren ?? 0,
       "God. odmor": r.danaGodisnji ?? 0,
       Kancelarija: r.danaKancelarija ?? 0,
@@ -524,84 +569,156 @@ function InzinjerIzvjestaj({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <StatCard label="Ukupno obrađeno" value={`${ukupnoHa.toFixed(2)} ha`} color="green" />
-        <StatCard label="Doznačenih stabala" value={ukupnoSt > 0 ? `${ukupnoSt} st · ${pak(ukupnoSt)} pak.` : "0"} color="emerald" />
-        <StatCard label="Vlake projektovano" value={`${ukupnoKm.toFixed(2)} km`} color="amber" />
-        <StatCard label="Radni dani" value={ukupnoRadniDani.toString()} color="orange" />
-        <StatCard label="Dana odsustva" value={ukupnoOdsustvo.toString()} color="blue" />
+        <StatCard label="Obrađeno" value={`${fmtBroj(ukupnoHa)} ha`} color="green"
+          sub={u && <Delta cur={ukupnoHa} prev={u.ha} />} />
+        <StatCard label="Doznačenih stabala" value={stabalaLabel(ukupnoSt)} color="emerald"
+          sub={u && <Delta cur={ukupnoSt} prev={u.stabala} dec={0} />} />
+        <StatCard label="Vlake projektovano" value={`${fmtBroj(ukupnoKm)} km`} color="amber"
+          sub={u && <Delta cur={ukupnoKm} prev={u.km} />} />
+        <StatCard label="Radni dani" value={String(ukupnoRadniDani)} color="orange"
+          sub={u && <Delta cur={ukupnoRadniDani} prev={u.radniDani} dec={0} />} />
+        <StatCard label="Dana odsustva" value={String(ukupnoOdsustvo)} color="blue" />
       </div>
+      <NapomenaUsporedbe usporedba={usporedba} />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-200">
-            {isPersonal ? "Moji podaci" : "Pregled po projektantima"}
-          </h2>
-          <div className="flex items-center gap-3">
-            {!isPersonal && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">{aktivni.length} projektanata sa aktivnošću</span>
-            )}
-            <button onClick={handleExport} className="bg-green-700 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-green-800">
-              Export XLSX
-            </button>
-          </div>
-        </div>
+      <TabelaKartica naslov="Pregled po projektantima" meta={`${aktivni.length} od ${rows.length} sa aktivnošću`} onExport={handleExport}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 dark:border-gray-700">
               <tr className="text-left">
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Projektant</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Odjel</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Hektara (ha)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Stabala</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Vlake (km)</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Teren</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">God.</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Kanc.</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Bol.</th>
-                <th className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium text-right">Unosa</th>
+                <th className={thCls}>Projektant</th>
+                <th className={thCls}>Odjeli</th>
+                <th className={`${thCls} text-right`}>Hektara (ha)</th>
+                <th className={`${thCls} text-right`}>Stabala</th>
+                <th className={`${thCls} text-right`}>Vlake (km)</th>
+                <th className={`${thCls} text-right`} title="Dani na poslu: teren, kancelarija, doznaka ili vlaka">Rad. dani</th>
+                <th className={`${thCls} text-right`}>Teren</th>
+                <th className={`${thCls} text-right`}>God.</th>
+                <th className={`${thCls} text-right`}>Kanc.</th>
+                <th className={`${thCls} text-right`}>Bol.</th>
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((r, idx) => (
-                <tr
-                  key={idx}
-                  className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${r.brojUnosa === 0 ? "opacity-40" : ""}`}
-                >
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+              {rows.map((r) => (
+                <tr key={String(r.inzinjer.id)}
+                  className={`border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 tabular-nums ${r.brojUnosa === 0 ? "opacity-40" : ""}`}>
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 whitespace-nowrap">
                     {r.inzinjer.prezime} {r.inzinjer.ime}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {r.inzinjer.odjeli.length > 0
                         ? r.inzinjer.odjeli.map((b) => (
-                            <span key={b} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full">
-                              {b}
-                            </span>
+                            <span key={b} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs px-2 py-0.5 rounded-full whitespace-nowrap">{b}</span>
                           ))
-                        : <span className="text-gray-400 text-xs">–</span>
-                      }
+                        : <span className="text-gray-400 text-xs">–</span>}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">
-                    {r.ukupnoHektara > 0 ? r.ukupnoHektara.toFixed(2) : "–"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">
+                  <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">{r.ukupnoHektara > 0 ? fmtBroj(r.ukupnoHektara) : "–"}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200 whitespace-nowrap">
                     {r.ukupnoStabala > 0 ? (
-                      <><span>{r.ukupnoStabala}</span><span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
+                      <>{fmtBroj(r.ukupnoStabala, 0)}<span className="text-xs text-gray-400 dark:text-gray-500 ml-1">({pak(r.ukupnoStabala)} pak.)</span></>
                     ) : "–"}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? r.ukupnoKm.toFixed(2) : "–"}</td>
-                  <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">{(r.danaTeren ?? 0) > 0 ? r.danaTeren : "–"}</td>
-                  <td className="px-4 py-3 text-right text-sky-600 dark:text-sky-400">{(r.danaGodisnji ?? 0) > 0 ? r.danaGodisnji : "–"}</td>
-                  <td className="px-4 py-3 text-right text-violet-600 dark:text-violet-400">{(r.danaKancelarija ?? 0) > 0 ? r.danaKancelarija : "–"}</td>
-                  <td className="px-4 py-3 text-right text-red-500 dark:text-red-400">{(r.danaBolovanje ?? 0) > 0 ? r.danaBolovanje : "–"}</td>
-                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{r.brojUnosa}</td>
+                  <td className="px-4 py-3 text-right text-gray-800 dark:text-gray-200">{r.ukupnoKm > 0 ? fmtBroj(r.ukupnoKm) : "–"}</td>
+                  <td className="px-4 py-3 text-right font-medium text-gray-800 dark:text-gray-100">{radniDani(r) || "–"}</td>
+                  <td className="px-4 py-3 text-right text-orange-600 dark:text-orange-400">{r.danaTeren || "–"}</td>
+                  <td className="px-4 py-3 text-right text-sky-600 dark:text-sky-400">{r.danaGodisnji || "–"}</td>
+                  <td className="px-4 py-3 text-right text-violet-600 dark:text-violet-400">{r.danaKancelarija || "–"}</td>
+                  <td className="px-4 py-3 text-right text-red-500 dark:text-red-400">{r.danaBolovanje || "–"}</td>
                 </tr>
               ))}
             </tbody>
+            <tfoot className="border-t-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+              <tr>
+                <td className={tfCls} colSpan={2}>Ukupno</td>
+                <td className={`${tfCls} text-right text-green-700 dark:text-green-400`}>{fmtBroj(ukupnoHa)}</td>
+                <td className={`${tfCls} text-right`}>{ukupnoSt > 0 ? fmtBroj(ukupnoSt, 0) : "–"}</td>
+                <td className={`${tfCls} text-right`}>{ukupnoKm > 0 ? fmtBroj(ukupnoKm) : "–"}</td>
+                <td className={`${tfCls} text-right`}>{ukupnoRadniDani}</td>
+                <td className={`${tfCls} text-right`}>{zbir((r) => r.danaTeren ?? 0)}</td>
+                <td className={`${tfCls} text-right`}>{zbir((r) => r.danaGodisnji ?? 0)}</td>
+                <td className={`${tfCls} text-right`}>{zbir((r) => r.danaKancelarija ?? 0)}</td>
+                <td className={`${tfCls} text-right`}>{zbir((r) => r.danaBolovanje ?? 0)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
+      </TabelaKartica>
+    </div>
+  );
+}
+
+function MojIzvjestaj({ row, period, usporedba, odjeli }: {
+  row?: InzinjerRow; period: Period; usporedba: Usporedba; odjeli: OdjelMjesecRezime[];
+}) {
+  if (!row || row.brojUnosa === 0) return <Prazno tekst="U odabranom periodu nemaš unosa" />;
+  const u = usporedba?.rezime;
+  const radni = radniDani(row);
+  const dani: { vrsta: string; label: string; n: number }[] = [
+    { vrsta: "TEREN", label: "Teren", n: row.danaTeren ?? 0 },
+    { vrsta: "KANCELARIJA", label: "Kancelarija", n: row.danaKancelarija ?? 0 },
+    { vrsta: "GODISNJI", label: "Godišnji", n: row.danaGodisnji ?? 0 },
+    { vrsta: "BOLOVANJE", label: "Bolovanje", n: row.danaBolovanje ?? 0 },
+  ];
+
+  function handleExport() {
+    exportXlsx(odjeli.map((o) => ({
+      GJ: o.gj,
+      Odjel: o.broj,
+      "Dana rada": o.dani,
+      "Hektara (ha)": o.ha,
+      Stabala: o.stabala,
+      "Vlake (km)": o.km,
+    })), `moj-izvjestaj-${period}`);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Obrađeno" value={`${fmtBroj(row.ukupnoHektara)} ha`} color="green"
+          sub={u && <Delta cur={row.ukupnoHektara} prev={u.ha} />} />
+        <StatCard label="Doznačenih stabala" value={stabalaLabel(row.ukupnoStabala)} color="emerald"
+          sub={u && <Delta cur={row.ukupnoStabala} prev={u.stabala} dec={0} />} />
+        <StatCard label="Vlake" value={`${fmtBroj(row.ukupnoKm)} km`} color="amber"
+          sub={u && <Delta cur={row.ukupnoKm} prev={u.km} />} />
+        <StatCard label="Radni dani" value={String(radni)} color="orange"
+          sub={u && <Delta cur={radni} prev={u.radniDani} dec={0} />} />
       </div>
+      <NapomenaUsporedbe usporedba={usporedba} />
+
+      <div className="flex flex-wrap gap-2" aria-label="Dani po vrsti">
+        {dani.map((d) => (
+          <span key={d.vrsta} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium ${
+            d.n > 0 ? vrstaStyle(d.vrsta).badge : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500"
+          }`}>
+            {d.label}<span className="font-bold tabular-nums">{d.n}</span>
+          </span>
+        ))}
+      </div>
+
+      <TabelaKartica naslov="Po odjelima" meta={odjeli.length ? `${odjeli.length} ${odjeli.length === 1 ? "odjel" : "odjela"}` : undefined} onExport={handleExport}>
+        {odjeli.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-gray-500 dark:text-gray-400">U ovom periodu nema rada vezanog za odjele.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            {odjeli.map((o) => (
+              <li key={o.odjelId} className="px-5 py-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 tabular-nums">
+                <span className="min-w-[7rem]">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{o.gj} /</span>
+                  <span className="ml-1 font-semibold text-gray-900 dark:text-gray-100">{o.broj}</span>
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{o.dani} {o.dani === 1 ? "dan" : "dana"}</span>
+                <span className="ml-auto flex flex-wrap gap-x-4 text-sm">
+                  {o.ha > 0 && <span className="font-semibold text-green-700 dark:text-green-400">{fmtBroj(o.ha)} ha</span>}
+                  {o.stabala > 0 && <span className="text-gray-700 dark:text-gray-200">{fmtBroj(o.stabala, 0)} st</span>}
+                  {o.km > 0 && <span className="text-amber-700 dark:text-amber-400">{fmtBroj(o.km)} km</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </TabelaKartica>
     </div>
   );
 }
@@ -888,10 +1005,12 @@ function StatCard({
   label,
   value,
   color,
+  sub,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   color: "green" | "blue" | "emerald" | "amber" | "orange";
+  sub?: ReactNode;
 }) {
   const colors = {
     green:   { card: "bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-800",   label: "text-green-800 dark:text-green-200",   value: "text-green-900 dark:text-green-100" },
@@ -904,7 +1023,8 @@ function StatCard({
   return (
     <div className={`rounded-xl border p-4 ${c.card}`}>
       <div className={`text-xs font-semibold mb-1 ${c.label}`}>{label}</div>
-      <div className={`text-2xl font-bold ${c.value}`}>{value}</div>
+      <div className={`text-2xl font-bold tabular-nums ${c.value}`}>{value}</div>
+      {sub && <div className={`mt-1 text-[11px] font-medium ${c.label}`}>{sub}</div>}
     </div>
   );
 }

@@ -4,6 +4,6 @@ import { useRouter } from "next/navigation";
 
 export default function PlanProjektantRedirect() {
   const router = useRouter();
-  useEffect(() => { router.replace("/realizacija"); }, []);
+  useEffect(() => { router.replace("/realizacija"); }, [router]);
   return null;
 }

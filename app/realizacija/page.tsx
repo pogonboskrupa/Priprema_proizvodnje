@@ -37,13 +37,12 @@ export default function RealizacijaPage() {
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
     if (!loading && session?.role !== "admin") router.replace("/");
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   if (loading || !session) return null;
 
   return (
     <div>
-      {/* Tab header */}
       <div className="flex items-center gap-1 mb-6 border-b border-gray-200 dark:border-gray-800">
         {(["realizacija", "plan"] as Tab[]).map((t) => (
           <button
@@ -61,7 +60,7 @@ export default function RealizacijaPage() {
       </div>
 
       {tab === "realizacija" ? (
-        <RealizacijaTab session={session} />
+        <RealizacijaTab />
       ) : (
         <PlanProjektantTab session={session} />
       )}
@@ -71,7 +70,7 @@ export default function RealizacijaPage() {
 
 // ─── Realizacija tab ────────────────────────────────────────────────────────
 
-function RealizacijaTab({ session }: { session: { role: string } }) {
+function RealizacijaTab() {
   const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [periodi, setperiodi] = useState<Record<string, OdjelPeriodRada>>({});
@@ -246,15 +245,13 @@ function PlanProjektantTab({ session }: { session: { role: string; userId: strin
 
   const [year, setYear] = useState(new Date().getFullYear());
   const [rows, setRows] = useState<PlanProjektantRed[]>([]);
-  const [fetching, setFetching] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [editId, setEditId] = useState<string | null>(null);
   const [editPlan, setEditPlan] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
   useUnosiRefresh(() => setRefreshTick((t) => t + 1));
-
-  useEffect(() => { setFetching(true); setErr(""); }, [year]);
 
   useEffect(() => {
     if (!session) return;
@@ -294,7 +291,7 @@ function PlanProjektantTab({ session }: { session: { role: string; userId: strin
         <select
           className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          onChange={(e) => { setYear(Number(e.target.value)); setFetching(true); setErr(""); }}
         >
           {years.map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
