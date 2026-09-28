@@ -151,37 +151,32 @@ function RosterNewRow({
         </div>
       </div>
 
-      {/* Metric inputs (DOZNAKA / VLAKA only) */}
-      {pending.vrsta === "DOZNAKA" && (
+      {pending.vrsta && (
         <div className="flex gap-2 flex-wrap pl-0.5">
-          <div className="w-24">
-            <label className={labelCls}>Stabala</label>
-            <input type="text" inputMode="numeric" className={inputSmCls}
-              value={pending.brojStabala} placeholder="0"
-              onChange={(e) => onUpdate({ brojStabala: e.target.value })} />
-          </div>
-          <div className="w-28">
-            <label className={labelCls}>Hektari (ha)</label>
-            <input type="text" inputMode="decimal" className={inputSmCls}
-              value={pending.hektari} placeholder="0.00"
-              onChange={(e) => onUpdate({ hektari: e.target.value })} />
-          </div>
-          <div className="flex-1 min-w-[130px]">
-            <label className={labelCls}>Napomena</label>
-            <input type="text" maxLength={200} className={inputSmCls}
-              value={pending.napomena} placeholder="(opcionalno)"
-              onChange={(e) => onUpdate({ napomena: e.target.value })} />
-          </div>
-        </div>
-      )}
-      {pending.vrsta === "VLAKA" && (
-        <div className="flex gap-2 flex-wrap pl-0.5">
-          <div className="w-28">
-            <label className={labelCls}>Kilometri (km)</label>
-            <input type="text" inputMode="decimal" className={inputSmCls}
-              value={pending.kilometri} placeholder="0.00"
-              onChange={(e) => onUpdate({ kilometri: e.target.value })} />
-          </div>
+          {pending.vrsta === "DOZNAKA" && (
+            <>
+              <div className="w-24">
+                <label className={labelCls}>Stabala</label>
+                <input type="text" inputMode="numeric" className={inputSmCls}
+                  value={pending.brojStabala} placeholder="0"
+                  onChange={(e) => onUpdate({ brojStabala: e.target.value })} />
+              </div>
+              <div className="w-28">
+                <label className={labelCls}>Hektari (ha)</label>
+                <input type="text" inputMode="decimal" className={inputSmCls}
+                  value={pending.hektari} placeholder="0.00"
+                  onChange={(e) => onUpdate({ hektari: e.target.value })} />
+              </div>
+            </>
+          )}
+          {pending.vrsta === "VLAKA" && (
+            <div className="w-28">
+              <label className={labelCls}>Kilometri (km)</label>
+              <input type="text" inputMode="decimal" className={inputSmCls}
+                value={pending.kilometri} placeholder="0.00"
+                onChange={(e) => onUpdate({ kilometri: e.target.value })} />
+            </div>
+          )}
           <div className="flex-1 min-w-[130px]">
             <label className={labelCls}>Napomena</label>
             <input type="text" maxLength={200} className={inputSmCls}

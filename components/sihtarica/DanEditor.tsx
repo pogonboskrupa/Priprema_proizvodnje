@@ -239,7 +239,7 @@ export function DanEditor({
                 </div>
               )}
               <div className="flex-1 min-w-[8rem]">
-                <label className={labelSmCls} htmlFor={`nap-${dan.datum}`}>Napomena</label>
+                <label className={labelSmCls} htmlFor={`nap-${dan.datum}`}>Napomena (ide i uz prisustvo)</label>
                 <input id={`nap-${dan.datum}`} type="text" maxLength={200} className={inputSmCls}
                   value={form.napomena} onChange={(e) => setForm({ ...form, napomena: e.target.value })} />
               </div>

@@ -9,6 +9,18 @@ import { parseDecimal, cmpOdjel } from "@/lib/format";
 
 type BulkRow = { broj: string; povrsina: string };
 
+type StatusFilter = "svi" | "neodradjeni" | "odradjeni" | "bezDoznake" | "bezVlaka";
+
+const jeOdradjen = (o: Odjel) => !!o.doznaceno && !!o.vlakeProjektovane;
+
+const FILTERI: { id: StatusFilter; label: string; test: (o: Odjel) => boolean }[] = [
+  { id: "svi", label: "Svi", test: () => true },
+  { id: "neodradjeni", label: "Neodrađeni", test: (o) => !jeOdradjen(o) },
+  { id: "odradjeni", label: "Odrađeni", test: jeOdradjen },
+  { id: "bezDoznake", label: "Bez doznake", test: (o) => !o.doznaceno },
+  { id: "bezVlaka", label: "Bez vlake", test: (o) => !o.vlakeProjektovane },
+];
+
 function StatusToggle({
   active, spinning, activeClass, inactiveClass, onClick,
 }: {
@@ -48,6 +60,7 @@ export default function OdjeliPage() {
   const router = useRouter();
   const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
   const [showArhiva, setShowArhiva] = useState(false);
+  const [filter, setFilter] = useState<StatusFilter>("svi");
 
   // Pojedinačni unos / edit
   const [form, setForm] = useState({ gj: "", broj: "", povrsina: "" });
@@ -85,6 +98,7 @@ export default function OdjeliPage() {
 
   const odjeli = sviOdjeli.filter((o) => !o.arhiviran);
   const arhivirani = sviOdjeli.filter((o) => o.arhiviran);
+  const prikazani = odjeli.filter(FILTERI.find((f) => f.id === filter)!.test);
 
   // isti odjel dva puta bi raspolovio unose i izvještaje; arhiva se računa (može se vratiti)
   const kljuc = (gj: string, broj: string) => `${gj.trim().toUpperCase()}|${broj.trim().toUpperCase()}`;
@@ -433,15 +447,40 @@ export default function OdjeliPage() {
         );
       })()}
 
+      {odjeli.length > 0 && (
+        <div role="group" aria-label="Prikaži odjele" className="inline-flex flex-wrap gap-1 p-1 mb-4 rounded-lg bg-gray-100 dark:bg-gray-800">
+          {FILTERI.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              aria-pressed={filter === f.id}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === f.id
+                  ? "bg-white dark:bg-gray-900 text-green-800 dark:text-green-300 shadow-sm"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              }`}
+            >
+              {f.label}
+              <span className="text-xs tabular-nums opacity-60">{odjeli.filter(f.test).length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Tabela grupirana po GJ ──────────────────────────────────────── */}
       {odjeli.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-8 text-center text-gray-600 dark:text-gray-400 text-sm">
           Nema odjela. Dodajte prvi odjel.
         </div>
+      ) : prikazani.length === 0 ? (
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+          Nema odjela u ovom prikazu.
+          {" "}<button onClick={() => setFilter("svi")} className="text-green-700 dark:text-green-400 hover:underline font-medium">Prikaži sve</button>
+        </div>
       ) : (
         (() => {
           const gjMap = new Map<string, Odjel[]>();
-          for (const o of odjeli) {
+          for (const o of prikazani) {
             if (!gjMap.has(o.gj)) gjMap.set(o.gj, []);
             gjMap.get(o.gj)!.push(o);
           }
