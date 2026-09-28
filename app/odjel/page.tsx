@@ -186,6 +186,27 @@ function OdjelPregled() {
                     );
                   })}
                 </tbody>
+                {st.projektanti.length > 1 && (() => {
+                  const ukDozDana = st.projektanti.reduce((s, p) => s + p.doznaka.dana, 0);
+                  const ukStabala = st.projektanti.reduce((s, p) => s + p.doznaka.stabala, 0);
+                  const ukHa = st.projektanti.reduce((s, p) => s + p.doznaka.ha, 0);
+                  const ukVlDana = st.projektanti.reduce((s, p) => s + p.vlaka.dana, 0);
+                  const ukKm = st.projektanti.reduce((s, p) => s + p.vlaka.km, 0);
+                  return (
+                    <tfoot className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      <tr>
+                        <td className="px-4 py-2.5">Ukupno</td>
+                        <td className="px-3 py-2.5 text-right">{ukDozDana || "–"}</td>
+                        <td className="px-3 py-2.5 text-right">{ukStabala ? fmtBroj(ukStabala, 0) : "–"}</td>
+                        <td className="px-3 py-2.5 text-right">{ukHa ? fmtBroj(ukHa) : "–"}</td>
+                        <td className="px-3 py-2.5" />
+                        <td className="px-3 py-2.5 text-right">{ukVlDana || "–"}</td>
+                        <td className="px-3 py-2.5 text-right">{ukKm ? fmtBroj(ukKm) : "–"}</td>
+                        <td className="px-4 py-2.5" />
+                      </tr>
+                    </tfoot>
+                  );
+                })()}
               </table>
             </div>
           </Sekcija>
