@@ -414,6 +414,40 @@ export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
   }));
 }
 
+export interface ZadnjiDan {
+  datum: string; // "YYYY-MM-DD"
+  unosi: UnosRada[];
+}
+
+/**
+ * Za svakog projektanta: zadnji dan (do danas) za koji ima unos i svi unosi tog dana.
+ * Budući datumi (npr. unaprijed upisan godišnji) se ne računaju.
+ */
+export async function getZadnjiDanPoProjektantu(ids?: readonly string[], danaUnazad = 60): Promise<Record<string, ZadnjiDan>> {
+  const now = new Date();
+  const od = new Date(now.getFullYear(), now.getMonth(), now.getDate() - danaUnazad);
+  const do_ = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const idSet = ids ? new Set(ids) : null;
+
+  const [unosiRaw, odjeliRaw] = await Promise.all([
+    queryUnosi(rasponDatuma(od, do_)),
+    getAll('odjeli'),
+  ]);
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
+
+  const out: Record<string, ZadnjiDan> = {};
+  for (const u of unosiRaw) {
+    const id = u.inzinjerId as string;
+    if (idSet && !idSet.has(id)) continue;
+    const dan = (u.datum as string).slice(0, 10);
+    const unos = { ...(u as unknown as UnosRada), odjel: odMap[u.odjelId as string] as unknown as Odjel };
+    const cur = out[id];
+    if (!cur || dan > cur.datum) out[id] = { datum: dan, unosi: [unos] };
+    else if (dan === cur.datum) cur.unosi.push(unos);
+  }
+  return out;
+}
+
 // ── Rezime (početna stranica) ─────────────────────────────────────────────────
 
 export interface MjesecniRezime {

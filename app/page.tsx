@@ -5,11 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getRezimeZaPeriod, getRezimePoOdjelima, getInzinjeriByKorisnikId, getGodisnjePlanPoProjektantu,
-  getUnosiZaDan, getKorisnici, tekuciMjesec,
-  type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed,
+  getZadnjiDanPoProjektantu, getKorisnici, tekuciMjesec,
+  type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed, type ZadnjiDan,
 } from "@/lib/db";
 import type { Korisnik, UnosRada } from "@/lib/types";
-import { mesecLabel, fmtDateLong, localDateStr } from "@/lib/format";
+import { mesecLabel, fmtDateLong, fmtDateShort, localDateStr } from "@/lib/format";
 import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
 import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
@@ -25,7 +25,7 @@ export default function Home() {
   const [prosli, setProsli] = useState<MjesecniRezime | null>(null);
   const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
   const [plan, setPlan] = useState<PlanProjektantRed[] | null>(null);
-  const [danas, setDanas] = useState<UnosRada[] | null>(null);
+  const [zadnji, setZadnji] = useState<Record<string, ZadnjiDan> | null>(null);
   const [projektanti, setProjektanti] = useState<Korisnik[]>([]);
   const [greska, setGreska] = useState(false);
   const isWorker = session?.role === "worker";
@@ -57,9 +57,7 @@ export default function Home() {
       getRezimeZaPeriod(pr.od, pr.do_, ids).then(kad(setProsli)).catch(pad);
       getRezimePoOdjelima(mj.od, mj.do_, ids).then(kad(setOdjeliRezime)).catch(pad);
       getGodisnjePlanPoProjektantu(now.getFullYear()).then(kad(setPlan)).catch(pad);
-      getUnosiZaDan(localDateStr(now))
-        .then((u) => kad(setDanas)(ids ? u.filter((x) => ids.includes(x.inzinjerId)) : u))
-        .catch(pad);
+      getZadnjiDanPoProjektantu(ids).then(kad(setZadnji)).catch(pad);
     });
     if (!isWorker) {
       getKorisnici().then((k) => kad(setProjektanti)(k.filter((x) => x.role === "worker"))).catch(pad);
@@ -93,8 +91,8 @@ export default function Home() {
       )}
 
       {isWorker
-        ? <MojDanas unosi={danas} />
-        : <DanasTim unosi={danas} projektanti={projektanti} />}
+        ? <MojZadnjiDan zadnji={zadnji} />
+        : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} />}
 
       <section aria-labelledby="rezime-naslov">
         <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
@@ -204,59 +202,95 @@ function VrstaBadge({ u }: { u: UnosRada }) {
   );
 }
 
-function jeVikend(d: Date) {
-  return d.getDay() === 0 || d.getDay() === 6;
+const DANI_KRATKO = ["ned", "pon", "uto", "sri", "čet", "pet", "sub"];
+
+function uDatum(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
-function DanasTim({ unosi, projektanti }: { unosi: UnosRada[] | null; projektanti: Korisnik[] }) {
-  if (!unosi || projektanti.length === 0) return null;
-  const poProjektantu = new Map<string, UnosRada[]>();
-  for (const u of unosi) poProjektantu.set(u.inzinjerId, [...(poProjektantu.get(u.inzinjerId) ?? []), u]);
-  const vikend = jeVikend(new Date());
-  const unijeli = projektanti.filter((k) => poProjektantu.has(k.id)).length;
-  // radnim danom nepopunjeni idu prvi — to je ono što admin treba vidjeti
-  const redovi = [...projektanti].sort((a, b) =>
-    vikend ? 0 : Number(poProjektantu.has(a.id)) - Number(poProjektantu.has(b.id)));
+/** "danas" / "jučer" / "pet 25.09." */
+function danLabel(iso: string, danas: Date): string {
+  const dt = uDatum(iso);
+  const pocetak = new Date(danas.getFullYear(), danas.getMonth(), danas.getDate());
+  // round: dan prelaska na ljetno/zimsko vrijeme ima 23 ili 25 sati
+  const razlika = Math.round((pocetak.getTime() - dt.getTime()) / 86_400_000);
+  if (razlika === 0) return "danas";
+  if (razlika === 1) return "jučer";
+  return `${DANI_KRATKO[dt.getDay()]} ${fmtDateShort(iso)}`;
+}
+
+/** Zadnji radni dan (pon–pet) prije `danas` */
+function prethodniRadniDan(danas: Date): string {
+  const d = new Date(danas.getFullYear(), danas.getMonth(), danas.getDate() - 1);
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  return localDateStr(d);
+}
+
+const DANA_UNAZAD = 60;
+
+function ZadnjiDanTim({ zadnji, projektanti }: { zadnji: Record<string, ZadnjiDan> | null; projektanti: Korisnik[] }) {
+  if (!zadnji || projektanti.length === 0) return null;
+  const danas = new Date();
+  const granica = prethodniRadniDan(danas);
+  const kasni = (k: Korisnik) => (zadnji[k.id]?.datum ?? "") < granica;
+  // najstariji zadnji unos prvi — to su oni koje treba provjeriti
+  const redovi = [...projektanti].sort((a, b) => (zadnji[a.id]?.datum ?? "").localeCompare(zadnji[b.id]?.datum ?? ""));
+  const brojKasni = projektanti.filter(kasni).length;
 
   return (
-    <section aria-labelledby="danas-naslov">
-      <SectionTitle id="danas-naslov" title="Danas"
-        meta={`${unijeli} od ${projektanti.length} projektanata unijelo${vikend ? " · vikend" : ""}`}
+    <section aria-labelledby="zadnji-naslov">
+      <SectionTitle id="zadnji-naslov" title="Zadnji uneseni dan"
+        meta={brojKasni > 0 ? `${brojKasni} od ${projektanti.length} kasni s unosom` : "svi ažurni"}
         action={<DetaljnoLink href="/unos-ucinka">Unos učinka</DetaljnoLink>} />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         {redovi.map((k) => {
-          const moji = poProjektantu.get(k.id) ?? [];
-          const fali = moji.length === 0;
+          const z = zadnji[k.id];
+          const zakasnio = kasni(k);
           return (
             <div key={k.id} className={`rounded-xl border px-3 py-2.5 flex flex-col gap-1.5 ${
-              fali && !vikend
+              zakasnio
                 ? "border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
             }`}>
-              <div className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</div>
-              {fali ? (
-                <div className={`text-xs ${vikend ? "text-gray-400 dark:text-gray-500" : "text-amber-700 dark:text-amber-400"}`}>Nema unosa</div>
+              <div className="flex items-baseline gap-2 min-w-0">
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</span>
+                {z && (
+                  <span className={`ml-auto flex-shrink-0 text-xs tabular-nums ${
+                    zakasnio ? "font-semibold text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"
+                  }`}>{danLabel(z.datum, danas)}</span>
+                )}
+              </div>
+              {z ? (
+                <div className="flex flex-wrap gap-1">{z.unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
               ) : (
-                <div className="flex flex-wrap gap-1">{moji.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
+                <div className="text-xs text-amber-700 dark:text-amber-400">Nema unosa u zadnjih {DANA_UNAZAD} dana</div>
               )}
             </div>
           );
         })}
       </div>
+      {brojKasni > 0 && (
+        <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+          Kasni: zadnji unos je stariji od prethodnog radnog dana ({fmtDateShort(granica)}).
+        </p>
+      )}
     </section>
   );
 }
 
-function MojDanas({ unosi }: { unosi: UnosRada[] | null }) {
-  if (!unosi) return null;
+function MojZadnjiDan({ zadnji }: { zadnji: Record<string, ZadnjiDan> | null }) {
+  if (!zadnji) return null;
+  // legacy inzinjer id-evi daju više ključeva — uzima se najnoviji dan
+  const z = Object.values(zadnji).reduce<ZadnjiDan | null>((a, b) => (!a || b.datum > a.datum ? b : a), null);
   return (
-    <section aria-labelledby="danas-naslov">
-      <SectionTitle id="danas-naslov" title="Danas" />
+    <section aria-labelledby="zadnji-naslov">
+      <SectionTitle id="zadnji-naslov" title="Zadnji uneseni dan" meta={z ? danLabel(z.datum, new Date()) : undefined} />
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
-        {unosi.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Za danas još nema unosa.</p>
+        {z ? (
+          <div className="flex flex-wrap gap-1.5">{z.unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
         ) : (
-          <div className="flex flex-wrap gap-1.5">{unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Nema unosa u zadnjih {DANA_UNAZAD} dana.</p>
         )}
       </div>
     </section>
