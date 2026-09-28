@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getRezimeZaPeriod, getRezimePoOdjelima, getInzinjeriByKorisnikId, getGodisnjePlanPoProjektantu,
-  getZadnjiDanPoProjektantu, getKorisnici, tekuciMjesec,
+  getZadnjiDanPoProjektantu, getKorisnici, getKorisnik, tekuciMjesec,
   type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed, type ZadnjiDan,
 } from "@/lib/db";
 import type { Korisnik, UnosRada } from "@/lib/types";
@@ -18,6 +18,11 @@ import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { vrsta } from "@/lib/vrste";
 
+/** GO period year: 1. 7. – 30. 6.; key in goDanaPoUgovoru */
+function goPeriodGodina(now = new Date()): number {
+  return now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
 export default function Home() {
   const { session, loading } = useAuth();
   const router = useRouter();
@@ -27,6 +32,7 @@ export default function Home() {
   const [plan, setPlan] = useState<PlanProjektantRed[] | null>(null);
   const [zadnji, setZadnji] = useState<Record<string, ZadnjiDan> | null>(null);
   const [projektanti, setProjektanti] = useState<Korisnik[]>([]);
+  const [korisnik, setKorisnik] = useState<Korisnik | null>(null);
   const [greska, setGreska] = useState(false);
   const isWorker = session?.role === "worker";
   const [refreshTick, setRefreshTick] = useState(0);
@@ -59,6 +65,7 @@ export default function Home() {
       getGodisnjePlanPoProjektantu(now.getFullYear()).then(kad(setPlan)).catch(pad);
       getZadnjiDanPoProjektantu(ids).then(kad(setZadnji)).catch(pad);
     });
+    getKorisnik(session.userId).then(kad(setKorisnik)).catch(pad);
     if (!isWorker) {
       getKorisnici().then((k) => kad(setProjektanti)(k.filter((x) => x.role === "worker"))).catch(pad);
     }
@@ -89,6 +96,8 @@ export default function Home() {
           Dio podataka nije učitan — provjeri internet. Stranica se osvježava sama kad veza proradi.
         </div>
       )}
+
+      <ObavijestGO korisnik={korisnik} periodGodina={goPeriodGodina(danasD)} isAdmin={!isWorker} projektanti={projektanti} />
 
       {isWorker
         ? <MojZadnjiDan zadnji={zadnji} />
@@ -399,6 +408,61 @@ function UkupnoOdjeliCard({ odjeli }: { odjeli: OdjelMjesecRezime[] }) {
         {ha > 0 && <div>{fmtBroj(ha)} ha</div>}
         {stabala > 0 && <div>{fmtBroj(stabala, 0)} st</div>}
         {km > 0 && <div>{fmtBroj(km)} km</div>}
+      </div>
+    </div>
+  );
+}
+
+function ObavijestGO({ korisnik, periodGodina, isAdmin, projektanti }: {
+  korisnik: Korisnik | null;
+  periodGodina: number;
+  isAdmin: boolean;
+  projektanti: Korisnik[];
+}) {
+  const key = String(periodGodina);
+  const lijepo = `${periodGodina}/${periodGodina + 1}`;
+
+  if (isAdmin) {
+    const bezDana = projektanti.filter((k) => !(k.goDanaPoUgovoru?.[key] ?? 0));
+    if (bezDana.length === 0) return null;
+    return (
+      <div role="status" className="rounded-lg px-4 py-3 text-sm border bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-start gap-3">
+        <span className="mt-0.5 text-base flex-shrink-0">📋</span>
+        <div className="min-w-0">
+          <p className="font-medium">
+            {bezDana.length === 1
+              ? "1 projektant nema upisan broj dana GO po ugovoru"
+              : `${bezDana.length} projektanata nemaju upisan broj dana GO po ugovoru`}{" "}
+            <span className="font-normal text-amber-700 dark:text-amber-300">({lijepo})</span>
+          </p>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+            {bezDana.map((k) => k.fullName || k.ime).join(", ")}
+            {" — "}
+            <Link href="/sihtarica" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">
+              Otvori šihtaricu
+            </Link>{" "}
+            i upiši u polju &quot;Dana po ugovoru&quot;.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!korisnik) return null;
+  const ima = !!(korisnik.goDanaPoUgovoru?.[key] ?? 0);
+  if (ima) return null;
+  return (
+    <div role="status" className="rounded-lg px-4 py-3 text-sm border bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-start gap-3">
+      <span className="mt-0.5 text-base flex-shrink-0">📋</span>
+      <div>
+        <p className="font-medium">Upiši broj dana godišnjeg odmora po ugovoru</p>
+        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+          Za period GO {lijepo} još nisi upisao/la broj dana iz ugovora.{" "}
+          <Link href="/sihtarica" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">
+            Idi na šihtaricu
+          </Link>{" "}
+          i upiši u polju &quot;Dana po ugovoru&quot;.
+        </p>
       </div>
     </div>
   );
