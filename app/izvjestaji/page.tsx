@@ -9,7 +9,7 @@ import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { exportXlsx } from "@/lib/export";
-import { fmtDate, localDateStr } from "@/lib/format";
+import { fmtDate, fmtDateShort, localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 import { godineEvidencije, mjeseciEvidencije, EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { prethodniRef, NAZIV_PRETHODNOG, type Period } from "@/lib/usporedba";
@@ -847,6 +847,54 @@ function fmtDayInTable(mondayIso: string, dow: number): string {
   return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}.`;
 }
 
+type Zbir = { odjela: number; povrsina: number; ha: number; stabala: number; km: number; dozDana: number; vlaDana: number };
+
+function zbirOdjela(rows: DetaljanOdjelRed[]): Zbir {
+  return rows.reduce<Zbir>((z, r) => ({
+    odjela: z.odjela + 1,
+    povrsina: z.povrsina + (r.povrsina ?? 0),
+    ha: z.ha + r.totalHa,
+    stabala: z.stabala + r.totalStabala,
+    km: z.km + r.totalKm,
+    dozDana: z.dozDana + r.doznakaRadnihDana,
+    vlaDana: z.vlaDana + r.vlakaRadnihDana,
+  }), { odjela: 0, povrsina: 0, ha: 0, stabala: 0, km: 0, dozDana: 0, vlaDana: 0 });
+}
+
+/** "01.09. – 24.09." (godina je već izabrana gore) */
+function kratkiPeriod(od: string | null, do_: string | null): string {
+  if (!od) return "–";
+  if (!do_ || od === do_) return fmtDateShort(od);
+  return `${fmtDateShort(od)} – ${fmtDateShort(do_)}`;
+}
+
+const brojIliCrta = (n: number, dec = 2) => (n > 0 ? fmtBroj(n, dec) : "–");
+
+// Odjel kolona ostaje vidljiva dok se tabela skrola vodoravno (mobitel)
+const stickyCls = "sticky left-0 z-10";
+const dthCls = "px-3 py-2 font-medium text-right whitespace-nowrap";
+
+function ZbirRed({ z, naslov, jaki }: { z: Zbir; naslov: string; jaki?: boolean }) {
+  const bg = jaki ? "bg-green-50 dark:bg-green-950" : "bg-gray-50 dark:bg-gray-800/70";
+  const txt = jaki ? "text-green-900 dark:text-green-100" : "text-gray-700 dark:text-gray-200";
+  const td = `px-3 py-2.5 text-right font-semibold ${txt}`;
+  return (
+    <tr className={`${bg} ${jaki ? "border-t-2 border-green-300 dark:border-green-800" : "border-t border-gray-200 dark:border-gray-700"} tabular-nums`}>
+      <td className={`${stickyCls} ${bg} px-4 py-2.5 font-semibold ${txt} whitespace-nowrap`}>{naslov}</td>
+      <td className={td}>{brojIliCrta(z.povrsina)}</td>
+      <td className={td} />
+      <td className={td}>{z.dozDana || "–"}</td>
+      <td className={`${td} ${jaki ? "" : "text-emerald-700 dark:text-emerald-400"}`}>{brojIliCrta(z.ha)}</td>
+      <td className={td}>{brojIliCrta(z.stabala, 0)}</td>
+      <td className={td} />
+      <td className={td}>{z.vlaDana || "–"}</td>
+      <td className={`${td} ${jaki ? "" : "text-amber-700 dark:text-amber-400"}`}>{brojIliCrta(z.km)}</td>
+      <td className={td} />
+      <td className={`${td} border-l border-gray-200 dark:border-gray-700`}>{z.dozDana + z.vlaDana || "–"}</td>
+    </tr>
+  );
+}
+
 function DetaljOdjeli({
   data,
   loading,
@@ -862,139 +910,142 @@ function DetaljOdjeli({
   yearOptions: number[];
   onYear: (y: number) => void;
 }) {
-  // Group by GJ, preserving cmpOdjel sort order from DB
-  const byGj: Map<string, DetaljanOdjelRed[]> = new Map();
-  for (const row of data) {
-    if (!byGj.has(row.gj)) byGj.set(row.gj, []);
-    byGj.get(row.gj)!.push(row);
-  }
+  // redoslijed iz baze (cmpOdjel) ostaje unutar svake GJ
+  const byGj = new Map<string, DetaljanOdjelRed[]>();
+  for (const row of data) byGj.set(row.gj, [...(byGj.get(row.gj) ?? []), row]);
+  const ukupno = zbirOdjela(data);
 
-  function fmtPeriod(od: string | null, do_: string | null): string {
-    if (!od) return "–";
-    if (!do_ || od === do_) return fmtDate(od);
-    return `${fmtDate(od)} – ${fmtDate(do_)}`;
+  function handleExport() {
+    exportXlsx(data.map((r) => ({
+      GJ: r.gj,
+      Odjel: r.broj,
+      "Površina (ha)": r.povrsina ?? "",
+      "Doznaka od": r.doznakaOd ? fmtDate(r.doznakaOd) : "",
+      "Doznaka do": r.doznakaDo ? fmtDate(r.doznakaDo) : "",
+      "Doznaka dana": r.doznakaRadnihDana,
+      "Doznaka (ha)": r.totalHa,
+      Stabala: r.totalStabala,
+      "Vlaka od": r.vlakaOd ? fmtDate(r.vlakaOd) : "",
+      "Vlaka do": r.vlakaDo ? fmtDate(r.vlakaDo) : "",
+      "Vlaka dana": r.vlakaRadnihDana,
+      "Vlake (km)": r.totalKm,
+      Projektanti: r.projektanti.map((p) => p.ime).join(", "),
+      "Ukupno dana": r.doznakaRadnihDana + r.vlakaRadnihDana,
+    })), `pregled-odjela-${year}`);
   }
 
   return (
-    <div>
-      {/* Year selector */}
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
-        <div>
+    <div className="space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 flex flex-wrap gap-4 items-end">
+        <label>
           <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Godina</span>
-          <select
-            value={year}
-            onChange={(e) => onYear(Number(e.target.value))}
-            className="h-9 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 text-sm px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer"
-          >
+          <select value={year} onChange={(e) => onYear(Number(e.target.value))} className={selectCls}>
             {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
-        </div>
-        {!loading && data.length > 0 && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 self-end pb-1">
-            {data.length} odjela · {byGj.size} GJ
-          </span>
+        </label>
+        {loading && data.length > 0 && (
+          <span className="ml-auto text-xs text-green-700 dark:text-green-400 pb-1">Osvježavam…</span>
         )}
       </div>
 
       {err && (
-        <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
+        <div className="rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
           {err}
         </div>
       )}
 
-      {loading && <div className="text-center py-16 text-gray-500 dark:text-gray-400">Učitavam...</div>}
+      {loading && data.length === 0 && <SkeletonIzvjestaj />}
 
-      {!loading && !err && data.length === 0 && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-10 text-center text-gray-400 dark:text-gray-500">
-          <p className="text-2xl mb-2">📭</p>
-          <p className="font-medium">Nema unesenih odjela za {year}. godinu</p>
-        </div>
-      )}
+      {!loading && !err && data.length === 0 && <Prazno tekst={`Nema rada po odjelima u ${year}. godini`} />}
 
-      {!loading && byGj.size > 0 && (
-        <div className="space-y-6">
-          {[...byGj.entries()].map(([gj, rows]) => {
-            const gjHa = rows.reduce((s, r) => s + r.totalHa, 0);
-            const gjSt = rows.reduce((s, r) => s + r.totalStabala, 0);
-            const gjKm = rows.reduce((s, r) => s + r.totalKm, 0);
-            return (
-              <div key={gj} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                {/* GJ header */}
-                <div className="px-5 py-3 bg-green-50 dark:bg-green-950 border-b border-green-200 dark:border-green-800 flex flex-wrap gap-4 items-center">
-                  <h2 className="font-bold text-green-900 dark:text-green-100 text-base flex-1">{gj}</h2>
-                  <div className="flex gap-4 text-xs text-green-800 dark:text-green-200">
-                    <span><span className="font-semibold">{rows.length}</span> odjela</span>
-                    {gjHa > 0 && <span><span className="font-semibold">{gjHa.toFixed(2)}</span> ha</span>}
-                    {gjSt > 0 && <span><span className="font-semibold">{gjSt}</span> st. <span className="opacity-70">({pak(gjSt)} pak.)</span></span>}
-                    {gjKm > 0 && <span><span className="font-semibold">{gjKm.toFixed(2)}</span> km vlaka</span>}
-                  </div>
-                </div>
+      {data.length > 0 && (
+        <div aria-busy={loading} className={`space-y-4 transition-opacity ${loading ? "opacity-50 pointer-events-none" : ""}`}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatCard label="Odjela sa radom" value={String(ukupno.odjela)} color="blue"
+              sub={`${byGj.size} ${byGj.size === 1 ? "gospodarska jedinica" : "gospodarskih jedinica"}`} />
+            <StatCard label="Doznaka" value={`${fmtBroj(ukupno.ha)} ha`} color="green"
+              sub={`${ukupno.dozDana} dana doznake`} />
+            <StatCard label="Doznačenih stabala" value={stabalaLabel(ukupno.stabala)} color="emerald" />
+            <StatCard label="Vlake" value={`${fmtBroj(ukupno.km)} km`} color="amber"
+              sub={`${ukupno.vlaDana} dana vlake`} />
+          </div>
 
-                {/* Odjel rows */}
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {rows.map((r) => (
-                    <div key={r.odjelId} className="px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      {/* Odjel header row */}
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 items-baseline mb-2">
-                        <span className="font-bold text-gray-900 dark:text-gray-100 text-base">{r.broj}</span>
-                        {r.povrsina != null && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {r.povrsina.toFixed(2)} ha površina
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Doznaka + Vlaka info */}
-                      <div className="flex flex-wrap gap-4 mb-2">
-                        {r.doznakaOd && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <span className="inline-block bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200 text-xs font-semibold px-2 py-0.5 rounded mt-0.5">DOZ</span>
-                            <div>
-                              <div className="text-gray-700 dark:text-gray-200">{fmtPeriod(r.doznakaOd, r.doznakaDo)}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-0.5">
-                                <span>{r.doznakaRadnihDana} rad. dana</span>
-                                {r.totalHa > 0 && <span>· {r.totalHa.toFixed(2)} ha</span>}
-                                {r.totalStabala > 0 && <span>· {r.totalStabala} stabala <span className="opacity-70">({pak(r.totalStabala)} pak.)</span></span>}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        {r.vlakaOd && (
-                          <div className="flex items-start gap-2 text-sm">
-                            <span className="inline-block bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 text-xs font-semibold px-2 py-0.5 rounded mt-0.5">VLA</span>
-                            <div>
-                              <div className="text-gray-700 dark:text-gray-200">{fmtPeriod(r.vlakaOd, r.vlakaDo)}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 flex gap-2 mt-0.5">
-                                <span>{r.vlakaRadnihDana} rad. dana</span>
-                                {r.totalKm > 0 && <span>· {r.totalKm.toFixed(2)} km</span>}
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Projektanti */}
-                      {r.projektanti.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {r.projektanti.map((p) => (
-                            <span key={p.radnikId} className="inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full">
-                              <span className="font-medium">{p.ime}</span>
-                              {p.ha > 0 && <span className="text-gray-500 dark:text-gray-400">{p.ha.toFixed(1)} ha</span>}
-                              {p.stabala > 0 && <span className="text-gray-500 dark:text-gray-400">{p.stabala} st. ({pak(p.stabala)} pak.)</span>}
-                              {p.km > 0 && <span className="text-gray-500 dark:text-gray-400">{p.km.toFixed(1)} km</span>}
-                              <span className="text-gray-400 dark:text-gray-500">
-                                {[p.dozDana > 0 ? `${p.dozDana}d doz` : null, p.vlaDana > 0 ? `${p.vlaDana}d vla` : null].filter(Boolean).join(", ")}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          <TabelaKartica naslov={`Pregled odjela ${year}`} meta={`${ukupno.odjela} odjela`} onExport={handleExport}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[980px]">
+                <thead className="text-xs text-gray-600 dark:text-gray-300">
+                  <tr className="bg-gray-50 dark:bg-gray-800">
+                    <th rowSpan={2} className={`${stickyCls} bg-gray-50 dark:bg-gray-800 px-4 py-2 font-medium text-left align-bottom`}>Odjel</th>
+                    <th rowSpan={2} className={`${dthCls} align-bottom`}>Površina<br />(ha)</th>
+                    <th colSpan={4} className="px-3 pt-2 pb-1 font-semibold text-center text-emerald-800 dark:text-emerald-300 border-b-2 border-emerald-300 dark:border-emerald-700">Doznaka</th>
+                    <th colSpan={3} className="px-3 pt-2 pb-1 font-semibold text-center text-amber-800 dark:text-amber-300 border-b-2 border-amber-300 dark:border-amber-700">Vlaka</th>
+                    <th rowSpan={2} className="px-3 py-2 font-medium text-left align-bottom">Projektanti</th>
+                    <th rowSpan={2} className={`${dthCls} align-bottom border-l border-gray-200 dark:border-gray-700`} title="Dani doznake + dani vlake u odjelu">Ukupno<br />dana</th>
+                  </tr>
+                  <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-3 py-2 font-medium text-left">Period</th>
+                    <th className={dthCls}>Dana</th>
+                    <th className={dthCls}>ha</th>
+                    <th className={dthCls}>Stabala</th>
+                    <th className="px-3 py-2 font-medium text-left">Period</th>
+                    <th className={dthCls}>Dana</th>
+                    <th className={dthCls}>km</th>
+                  </tr>
+                </thead>
+                {[...byGj.entries()].map(([gj, rows]) => (
+                  <tbody key={gj}>
+                    <tr className="bg-white dark:bg-gray-900">
+                      <td colSpan={11} className="px-4 pt-4 pb-1.5">
+                        <span className={`${stickyCls} inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-green-800 dark:text-green-300`}>
+                          <Icon name="map" className="w-3.5 h-3.5" />{gj}
+                        </span>
+                      </td>
+                    </tr>
+                    {rows.map((r) => (
+                      <tr key={r.odjelId} className="group border-t border-gray-100 dark:border-gray-800 align-top tabular-nums">
+                        <td className={`${stickyCls} bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 px-4 py-2.5 font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap`}>
+                          {r.broj}
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-500 dark:text-gray-400 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{r.povrsina != null ? fmtBroj(r.povrsina) : "–"}</td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-200 whitespace-nowrap group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{kratkiPeriod(r.doznakaOd, r.doznakaDo)}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-700 dark:text-gray-200 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{r.doznakaRadnihDana || "–"}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-emerald-700 dark:text-emerald-400 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{brojIliCrta(r.totalHa)}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-800 dark:text-gray-200 whitespace-nowrap group-hover:bg-gray-50 dark:group-hover:bg-gray-800">
+                          {r.totalStabala > 0 ? <>{fmtBroj(r.totalStabala, 0)}<span className="ml-1 text-xs text-gray-400 dark:text-gray-500">({pak(r.totalStabala)} pak.)</span></> : "–"}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-700 dark:text-gray-200 whitespace-nowrap group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{kratkiPeriod(r.vlakaOd, r.vlakaDo)}</td>
+                        <td className="px-3 py-2.5 text-right text-gray-700 dark:text-gray-200 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{r.vlakaRadnihDana || "–"}</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">{brojIliCrta(r.totalKm)}</td>
+                        <td className="px-3 py-2 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">
+                          <ul className="space-y-0.5">
+                            {r.projektanti.map((p) => (
+                              <li key={p.radnikId} className="text-xs whitespace-nowrap">
+                                <span className="font-medium text-gray-800 dark:text-gray-100">{p.ime}</span>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  {[
+                                    p.ha > 0 ? `${fmtBroj(p.ha)} ha` : null,
+                                    p.km > 0 ? `${fmtBroj(p.km)} km` : null,
+                                    `${p.dozDana + p.vlaDana} d`,
+                                  ].filter(Boolean).map((t) => ` · ${t}`).join("")}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-gray-100 border-l border-gray-200 dark:border-gray-700 group-hover:bg-gray-50 dark:group-hover:bg-gray-800">
+                          {r.doznakaRadnihDana + r.vlakaRadnihDana}
+                        </td>
+                      </tr>
+                    ))}
+                    {byGj.size > 1 && <ZbirRed z={zbirOdjela(rows)} naslov="Ukupno GJ" />}
+                  </tbody>
+                ))}
+                <tfoot>
+                  <ZbirRed z={ukupno} naslov="Ukupno" jaki />
+                </tfoot>
+              </table>
+            </div>
+          </TabelaKartica>
         </div>
       )}
     </div>

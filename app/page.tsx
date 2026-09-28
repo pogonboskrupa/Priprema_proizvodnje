@@ -133,6 +133,7 @@ export default function Home() {
           <SectionTitle id="odjeli-naslov" title={isWorker ? "Moji odjeli" : "Aktivnost po odjelima"} meta={mesec} />
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {odjeliRezime.map((o) => <OdjelCard key={o.odjelId} odjel={o} />)}
+            <UkupnoOdjeliCard odjeli={odjeliRezime} />
           </div>
         </section>
       )}
@@ -381,6 +382,25 @@ function PlanTima({ redovi, godina }: { redovi: PlanProjektantRed[]; godina: num
         </ul>
       </div>
     </section>
+  );
+}
+
+function UkupnoOdjeliCard({ odjeli }: { odjeli: OdjelMjesecRezime[] }) {
+  const ha = odjeli.reduce((s, o) => s + o.ha, 0);
+  const stabala = odjeli.reduce((s, o) => s + o.stabala, 0);
+  const km = odjeli.reduce((s, o) => s + o.km, 0);
+  return (
+    <div className="rounded-2xl border border-green-300 dark:border-green-800 bg-green-50 dark:bg-green-950/60 p-3 flex flex-col gap-2">
+      <div>
+        <div className="text-[10px] text-green-700 dark:text-green-400 leading-snug">{odjeli.length} {odjeli.length === 1 ? "odjel" : "odjela"}</div>
+        <div className="font-bold text-sm text-green-900 dark:text-green-100 leading-snug">Ukupno</div>
+      </div>
+      <div className="text-[11px] space-y-0.5 tabular-nums font-semibold text-green-900 dark:text-green-100">
+        {ha > 0 && <div>{fmtBroj(ha)} ha</div>}
+        {stabala > 0 && <div>{fmtBroj(stabala, 0)} st</div>}
+        {km > 0 && <div>{fmtBroj(km)} km</div>}
+      </div>
+    </div>
   );
 }
 
