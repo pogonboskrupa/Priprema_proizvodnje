@@ -19,8 +19,7 @@ const I = {
   sihtarica: { href: "/sihtarica", label: "Šihtarica", desc: "Dani u mjesecu i godišnji odmor", icon: "sheet" },
   odjeli: { href: "/odjeli", label: "Odjeli", desc: "Odjeli i površine", icon: "map" },
   plan: { href: "/plan", label: "Plan sječe", desc: "Plan i realizacija po odjelima", icon: "tree" },
-  planProjektant: { href: "/plan-projektant", label: "Plan/projektant", desc: "Godišnji cilj ha po projektantu", icon: "target" },
-  realizacija: { href: "/realizacija", label: "Realizacija", desc: "Napredak realizacije plana", icon: "trend" },
+  realizacija: { href: "/realizacija", label: "Realizacija", desc: "Napredak realizacije plana i plan po projektantima", icon: "trend" },
   elaborat: { href: "/elaborat", label: "Elaborat", desc: "Drvna masa i prirast po odsjecima", icon: "book" },
   statistika: { href: "/statistika", label: "Statistika", desc: "Prisutnost, učinak, usporedba", icon: "pie" },
   mojiOdjeli: { href: "/moji-odjeli", label: "Moji odjeli", desc: "Moji odjeli i rješenja", icon: "map" },
@@ -40,7 +39,7 @@ export interface RoleNav {
 export function navFor(ses: Pick<Session, "role" | "operater"> | null): RoleNav {
   if (ses?.role === "admin") {
     return {
-      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.planProjektant, I.realizacija, I.elaborat, I.statistika, I.pomocniRadnici, I.postavke],
+      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.statistika, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
       cta: I.unosUcinka,
     };
