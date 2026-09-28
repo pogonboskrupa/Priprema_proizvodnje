@@ -39,7 +39,7 @@ export interface RoleNav {
 export function navFor(ses: Pick<Session, "role" | "operater"> | null): RoleNav {
   if (ses?.role === "admin") {
     return {
-      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.statistika, I.pomocniRadnici, I.postavke],
+      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
       cta: I.unosUcinka,
     };
