@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
-import { getUnosiZaMjesec, getKorisnici, getOdjeli, updateUnos, deleteUnos } from "@/lib/db";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
+import { getUnosiZaMjesec, getKorisnici, getOdjeli, getPomocniRadnici, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { UnosRada, Korisnik, Odjel } from "@/lib/types";
+import type { UnosRada, Korisnik, Odjel, PomocniRadnik, VrstaPomocnog } from "@/lib/types";
 import { monthYearLabel, fmtDateLong, localDateStr } from "@/lib/format";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
@@ -16,6 +16,12 @@ import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
 import { Icon } from "@/components/Icon";
+import { useSihtePomocnih } from "@/hooks/useSihtePomocnih";
+import { POMOCNI, VRSTE_POMOCNI, daniUMjesecu, rezimeSihte, punoIme } from "@/lib/pomocni";
+import { CetkaTraka, type Cetka } from "@/components/pomocni/Cetka";
+import { PregledMatrica } from "@/components/pomocni/PregledMatrica";
+import { SihtaKalendar } from "@/components/pomocni/SihtaKalendar";
+import { Evidencija } from "@/components/pomocni/Evidencija";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const pak = (st: number) => (st / 30).toFixed(1);
@@ -245,12 +251,45 @@ const emptyEditForm = (): EditForm => ({
   vrsta: "DOZNAKA", odjelId: "", brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
+type EvidencijaTab = "projektanti" | "pomocni";
+type PomocniView = "pregled" | "sihtarica" | "evidencija";
+const POMOCNI_VIEWS: { id: PomocniView; label: string }[] = [
+  { id: "pregled", label: "Pregled" },
+  { id: "sihtarica", label: "Šihtarica" },
+  { id: "evidencija", label: "Radnici" },
+];
+const TIPKE_CETKA: Record<string, Cetka> = { t: "TEREN", k: "KANCELARIJA", g: "GODISNJI", b: "BOLOVANJE", o: "OSTALO", Delete: "BRISI", Backspace: "BRISI" };
+
 export default function KalendarPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
-  const canEdit = !!(session?.role === "admin" || session?.operater);
+  const isAdmin = session?.role === "admin";
+  const isSihter = !!session?.sihter;
+  const canSeeAll = isAdmin || isSihter;
+  const canEdit = !!(isAdmin || session?.operater);
   const { zakljucan } = useZakljucavanje();
+
+  // ── Evidencija tab (šihter only) ─────────────────────────────────────────
+  const [evTab, setEvTab] = useState<EvidencijaTab>("projektanti");
+
+  // ── Pomoćni radnici state ────────────────────────────────────────────────
+  const [pmView, setPmView] = useState<PomocniView>("pregled");
+  const [pmMjesec, setPmMjesec] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1 }; });
+  const [cetka, setCetka] = useState<Cetka>("TEREN");
+  const [odabraniPmId, setOdabraniPmId] = useState("");
+  const [radnici, setRadnici] = useState<PomocniRadnik[]>([]);
+  const [pmMsg, setPmMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const pmMsgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pmToast = useCallback((text: string, error = false) => {
+    setPmMsg({ text, error });
+    if (pmMsgTimer.current) clearTimeout(pmMsgTimer.current);
+    pmMsgTimer.current = setTimeout(() => setPmMsg(null), error ? 5000 : 2500);
+  }, []);
+  const onPmSaveError = useCallback(() => pmToast("Upis šihte nije sačuvan. Provjeri internet.", true), [pmToast]);
+  const { sihte, loading: sihteLoading, error: sihteError, postavi: postaviSihtu } = useSihtePomocnih(pmMjesec.year, pmMjesec.month, onPmSaveError);
+  const { zakljucan: zakljucanPm } = useZakljucavanje();
+  const pmMjesecZakljucan = zakljucanPm(`${pmMjesec.year}-${String(pmMjesec.month).padStart(2, "0")}-01`);
 
   const now = new Date();
   const todayStr = localDateStr(now);
@@ -293,14 +332,32 @@ export default function KalendarPage() {
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
   }, [session, isWorker, canEdit]);
 
-  const isAdmin = session?.role === "admin";
+  // Učitaj pomoćne radnike za šihtera
+  useEffect(() => {
+    if (!isSihter) return;
+    getPomocniRadnici().then(setRadnici).catch(() => {});
+  }, [isSihter]);
+
+  // Tipke za četku (samo na pomoćnim radnicima)
+  useEffect(() => {
+    if (evTab !== "pomocni" || pmView === "evidencija") return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.ctrlKey || e.metaKey || e.altKey || el.closest("input, select, textarea")) return;
+      const c = TIPKE_CETKA[e.key] ?? TIPKE_CETKA[e.key.toLowerCase()];
+      if (c) { e.preventDefault(); setCetka(c); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [evTab, pmView]);
+
   const userId = session?.userId;
 
   const visibleUnosi = useMemo(() => {
-    if (isWorker) return unosi.filter((u) => u.inzinjerId === userId);
+    if (isWorker && !isSihter) return unosi.filter((u) => u.inzinjerId === userId);
     if (selectedWorkerId) return unosi.filter((u) => u.inzinjerId === selectedWorkerId);
     return unosi;
-  }, [unosi, isWorker, selectedWorkerId, userId]);
+  }, [unosi, isWorker, isSihter, selectedWorkerId, userId]);
 
   const byDay = useMemo(() => {
     const map: Record<string, UnosRada[]> = {};
@@ -319,9 +376,9 @@ export default function KalendarPage() {
     [workers, unosi]
   );
   const allWorkersData = useMemo(() => {
-    if (!isAdmin || selectedWorkerId || shownWorkers.length === 0) return null;
+    if (!canSeeAll || selectedWorkerId || shownWorkers.length === 0) return null;
     return computeAllWorkersRecap(unosi, shownWorkers);
-  }, [isAdmin, selectedWorkerId, shownWorkers, unosi]);
+  }, [canSeeAll, selectedWorkerId, shownWorkers, unosi]);
 
   useUnosiRefresh(() => { if (session) reload().catch(() => {}); });
 
@@ -407,11 +464,131 @@ export default function KalendarPage() {
   const selectedEntries = selectedDay ? (byDay[selectedDay] ?? []) : [];
   const showWorkerName  = !isWorker && !selectedWorkerId;
 
+  // ── Pomoćni radnici computed ────────────────────────────────────────────
+  const aktivniPm = useMemo(() => radnici.filter((r) => r.aktivan), [radnici]);
+  const projMapPm = useMemo(() => new Map(workers.map((k) => [k.id, k.fullName || k.ime])), [workers]);
+  const projektantImePm = useCallback((id: string | null | undefined) => (id ? projMapPm.get(id) ?? null : null), [projMapPm]);
+  const projektantiPm = useMemo(() => workers.filter((k) => !k.arhiviran), [workers]);
+  const kalendarPm = useMemo(() => daniUMjesecu(pmMjesec.year, pmMjesec.month), [pmMjesec]);
+  const odabraniPm = aktivniPm.find((r) => r.id === odabraniPmId) ?? aktivniPm[0];
+  const postaviDanPm = useCallback((radnikId: string, dan: number, v: VrstaPomocnog | null) => postaviSihtu(radnikId, { [dan]: v }), [postaviSihtu]);
+  const naPrvomPm = jePrviMjesecEvidencije(pmMjesec.year, pmMjesec.month);
+  const maxMjesecPm = (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 2 }; })();
+  const naZadnjemPm = pmMjesec.year > maxMjesecPm.year || (pmMjesec.year === maxMjesecPm.year && pmMjesec.month >= maxMjesecPm.month);
+  const pomjeriPm = (delta: number) => {
+    setPmMjesec((m) => { const d = new Date(m.year, m.month - 1 + delta, 1); return { year: d.getFullYear(), month: d.getMonth() + 1 }; });
+  };
+
   return (
     <div>
+      {/* ── Naslov i tab switcher za šihtera ────────────────────────────────── */}
+      {isSihter && (
+        <div className="flex items-center gap-3 mb-5">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Evidencija rada</h1>
+          <div role="tablist" className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 gap-1">
+            {(["projektanti", "pomocni"] as EvidencijaTab[]).map((t) => (
+              <button key={t} type="button" role="tab" aria-selected={evTab === t} onClick={() => setEvTab(t)}
+                className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 ${
+                  evTab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}>
+                {t === "projektanti" ? "Projektanti" : "Pomoćni radnici"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Tab: Pomoćni radnici (šihter only) ──────────────────────────────── */}
+      {isSihter && evTab === "pomocni" && (
+        <div className="space-y-5">
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+            <div className="mr-auto min-w-0 flex items-center gap-1">
+              <button type="button"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent text-lg"
+                disabled={naPrvomPm} onClick={() => pomjeriPm(-1)} aria-label="Prethodni mjesec">‹</button>
+              <span className="min-w-[10.5rem] text-center text-xl font-bold capitalize tabular-nums text-gray-800 dark:text-gray-100">
+                {monthYearLabel(pmMjesec.year, pmMjesec.month)}
+              </span>
+              <button type="button"
+                className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent text-lg"
+                disabled={naZadnjemPm} onClick={() => pomjeriPm(1)} aria-label="Sljedeći mjesec">›</button>
+            </div>
+            <div role="tablist" className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 gap-1">
+              {POMOCNI_VIEWS.map((v) => (
+                <button key={v.id} type="button" role="tab" aria-selected={pmView === v.id} onClick={() => setPmView(v.id)}
+                  className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 ${
+                    pmView === v.id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}>
+                  {v.label}
+                  {v.id === "evidencija" && <span className="ml-1.5 text-xs tabular-nums text-gray-400">{aktivniPm.length}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {sihteError && (
+            <div role="alert" className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-2.5 text-sm text-red-800 dark:text-red-200">
+              Šihte za ovaj mjesec nisu učitane. Provjeri internet.
+            </div>
+          )}
+
+          {pmView !== "evidencija" && aktivniPm.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <CetkaTraka value={cetka} onChange={setCetka} />
+              <p className="text-xs text-gray-400 dark:text-gray-500 hidden md:block">Klikni ili prevuci preko dana. Ponovni klik briše.</p>
+            </div>
+          )}
+
+          {pmView !== "evidencija" && aktivniPm.length === 0 && (
+            <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-14 text-center">
+              <Icon name="hardhat" className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600" />
+              <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-300">Nema aktivnih pomoćnih radnika</p>
+              <button type="button" onClick={() => setPmView("evidencija")} className="mt-3 text-sm font-medium text-green-700 dark:text-green-400 hover:underline">Dodaj radnika →</button>
+            </div>
+          )}
+
+          {pmView === "pregled" && aktivniPm.length > 0 && (
+            <PregledMatrica
+              radnici={aktivniPm} kalendar={kalendarPm} sihte={sihte} danas={localDateStr()}
+              cetka={cetka} disabled={sihteLoading || pmMjesecZakljucan}
+              projektantIme={projektantImePm} onPostavi={postaviDanPm}
+              onOtvori={(id) => { setOdabraniPmId(id); setPmView("sihtarica"); }}
+            />
+          )}
+          {pmView === "sihtarica" && odabraniPm && (
+            <SihtaKalendar
+              radnik={odabraniPm} radnici={aktivniPm} kalendar={kalendarPm}
+              dani={sihte[odabraniPm.id] ?? {}} danas={localDateStr()}
+              cetka={cetka} disabled={sihteLoading || pmMjesecZakljucan}
+              projektant={projektantImePm(odabraniPm.projektantId)}
+              onPostavi={(izmjene) => postaviSihtu(odabraniPm.id, izmjene)}
+              onOdaberi={setOdabraniPmId}
+            />
+          )}
+          {pmView === "evidencija" && (
+            <Evidencija
+              radnici={radnici} projektanti={projektantiPm} sihte={sihte}
+              kalendar={kalendarPm} danas={localDateStr()}
+              onRefresh={async () => { const r = await getPomocniRadnici(); setRadnici(r); }}
+              onOtvori={(id) => { setOdabraniPmId(id); setPmView("sihtarica"); }}
+              toast={pmToast}
+            />
+          )}
+
+          {pmMsg && (
+            <div role="status" className={`fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-lg px-4 py-2.5 text-sm font-medium shadow-lg ${
+              pmMsg.error ? "bg-red-600 text-white" : "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+            }`}>{pmMsg.text}</div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Projektanti (ili jedini tab za non-šihter) ──────────────────── */}
+      {(!isSihter || evTab === "projektanti") && (
+      <div>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>
+        {!isSihter && <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>}
 
         {!isWorker && shownWorkers.length > 0 && (
           <select
@@ -670,7 +847,7 @@ export default function KalendarPage() {
 
       {/* ── Monthly recap ────────────────────────────────────────────────────── */}
       {!loading && (
-        isAdmin && !selectedWorkerId && allWorkersData
+        canSeeAll && !selectedWorkerId && allWorkersData
           ? <AdminAllWorkersRecap data={allWorkersData} monthLabel={monthLabel} />
           : visibleUnosi.length > 0
           ? <SingleWorkerRecap recap={singleRecap} monthLabel={monthLabel} />
@@ -693,6 +870,8 @@ export default function KalendarPage() {
           onOk={confirmState.onOk}
           onCancel={() => setConfirmState(null)}
         />
+      )}
+      </div>
       )}
     </div>
   );

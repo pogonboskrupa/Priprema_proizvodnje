@@ -16,6 +16,7 @@ const I = {
   unosUcinka: { href: "/unos-ucinka", label: "Unos učinka", short: "Učinak", desc: "Dnevni unos za sve projektante", icon: "users" },
   izvjestaji: { href: "/izvjestaji", label: "Izvještaji", desc: "Sedmično, mjesečno i godišnje", icon: "chart" },
   kalendar: { href: "/kalendar", label: "Kalendar", desc: "Aktivnosti po danima", icon: "calendar" },
+  evidencijaRada: { href: "/kalendar", label: "Evidencija rada", short: "Evidencija", desc: "Kalendar i pomoćni radnici", icon: "calendar" },
   sihtarica: { href: "/sihtarica", label: "Šihtarica", desc: "Dani u mjesecu i godišnji odmor", icon: "sheet" },
   odjeli: { href: "/odjeli", label: "Odjeli", desc: "Odjeli i površine", icon: "map" },
   plan: { href: "/plan", label: "Plan sječe", desc: "Plan i realizacija po odjelima", icon: "tree" },
@@ -36,12 +37,20 @@ export interface RoleNav {
   cta: NavItem;
 }
 
-export function navFor(ses: Pick<Session, "role" | "operater"> | null): RoleNav {
+export function navFor(ses: Pick<Session, "role" | "operater" | "sihter"> | null): RoleNav {
   if (ses?.role === "admin") {
     return {
       all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
       cta: I.unosUcinka,
+    };
+  }
+  if (ses?.sihter) {
+    const base = [I.pocetna, I.unos, ...(ses.operater ? [I.unosUcinka] : []), I.izvjestaji, I.evidencijaRada, I.sihtarica, I.elaborat, I.mojiOdjeli, I.postavke];
+    return {
+      all: base,
+      primary: [I.pocetna, I.unos, I.evidencijaRada, I.sihtarica],
+      cta: I.unos,
     };
   }
   const base = [I.pocetna, I.unos, ...(ses?.operater ? [I.unosUcinka] : []), I.izvjestaji, I.kalendar, I.sihtarica, I.elaborat, I.mojiOdjeli, ...(ses?.operater ? [I.pomocniRadnici] : []), I.postavke];

@@ -12,6 +12,7 @@ export interface Korisnik {
   pin: string;
   role: UserRole;
   operater?: boolean;
+  sihter?: boolean;
   avatar: string;
   odjeliIds: string[];
   odjeliRjesenjaIds?: string[];

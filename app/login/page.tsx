@@ -52,7 +52,7 @@ export default function LoginPage() {
         // best-effort write — continue login regardless
       }
       saveSession(
-        { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, avatar: found.avatar },
+        { userId: found.id, ime: found.ime, fullName: found.fullName, role: found.role, operater: found.operater ?? false, sihter: found.sihter ?? false, avatar: found.avatar },
         remember
       );
       refresh();

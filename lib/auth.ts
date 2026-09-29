@@ -8,6 +8,7 @@ export interface Session {
   fullName: string;
   role: UserRole;
   operater?: boolean;
+  sihter?: boolean;
   avatar: string;
 }
 

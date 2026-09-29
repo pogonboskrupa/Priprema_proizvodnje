@@ -36,7 +36,7 @@ function pomjeri(m: Mjesec, delta: number): Mjesec {
 export default function PomocniRadniciPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const canAccess = !!session && (session.role === "admin" || !!session.operater);
+  const canAccess = !!session && (session.role === "admin" || !!session.operater || !!session.sihter);
 
   const tekuci = useMemo<Mjesec>(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1 }; }, []);
   const [view, setView] = useState<View>("pregled");
