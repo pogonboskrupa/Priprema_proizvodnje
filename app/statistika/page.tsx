@@ -11,13 +11,14 @@ import type { Korisnik, VrstaRada } from "@/lib/types";
 import { VRSTA, heatClass } from "@/lib/vrste";
 import { godineEvidencije } from "@/lib/godine";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
+import { podijeli } from "@/lib/odjel-pregled";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
 
 type Tab = "prisutnost" | "ucanak" | "usporedba" | "odjeli";
 type PVrsta = "teren" | "kancelarija" | "godisnji" | "bolovanje";
-type SortKey = "ha" | "stabala" | "km";
+type SortKey = "ha" | "stabala" | "km" | "haDan" | "kmDan";
 type OdjeliSort = "gj" | "ha" | "stabala" | "km";
 
 const cfgFor = (v: VrstaRada) => ({ label: VRSTA[v].label, color: VRSTA[v].text, bg: (n: number) => heatClass(v, n) });
@@ -84,6 +85,52 @@ function PeriodBar({ mjesec, onMjesec }: { mjesec: number; onMjesec: (m: number)
 function fmtHa(n: number) { return n > 0 ? n.toFixed(2) : "—"; }
 function fmtKm(n: number) { return n > 0 ? n.toFixed(2) : "—"; }
 function fmtSt(n: number) { return n > 0 ? n.toLocaleString("bs-BA") : "—"; }
+function fmtProsjek(n: number, dec = 2) { return n > 0 ? n.toFixed(dec) : "—"; }
+
+interface UcinakZbir { ha: number; stabala: number; km: number; dozDana: number; vlDana: number }
+
+/** Prosjeci po projektant-danu (dan doznake odnosno dan vlake jednog projektanta) */
+function prosjeci(r: UcinakZbir) {
+  return {
+    haDan: podijeli(r.ha, r.dozDana),
+    stDan: podijeli(r.stabala, r.dozDana),
+    stHa: podijeli(r.stabala, r.ha),
+    kmDan: podijeli(r.km, r.vlDana),
+  };
+}
+
+function zbir(rows: readonly UcinakZbir[]): UcinakZbir {
+  return rows.reduce<UcinakZbir>(
+    (s, r) => ({ ha: s.ha + r.ha, stabala: s.stabala + r.stabala, km: s.km + r.km, dozDana: s.dozDana + r.dozDana, vlDana: s.vlDana + r.vlDana }),
+    { ha: 0, stabala: 0, km: 0, dozDana: 0, vlDana: 0 },
+  );
+}
+
+function ProsjeciTraka({ z, naslov }: { z: UcinakZbir; naslov: string }) {
+  const p = prosjeci(z);
+  const kartice = [
+    { label: "ha po danu doznake", value: fmtProsjek(p.haDan), note: `${z.dozDana} dana doznake`, tone: "text-emerald-700 dark:text-emerald-300" },
+    { label: "stabala po danu doznake", value: fmtProsjek(p.stDan, 0), note: `${fmtSt(z.stabala)} stabala`, tone: "text-green-700 dark:text-green-300" },
+    { label: "stabala po ha", value: fmtProsjek(p.stHa, 0), note: `${fmtHa(z.ha)} ha`, tone: "text-green-700 dark:text-green-300" },
+    { label: "km po danu vlake", value: fmtProsjek(p.kmDan), note: `${z.vlDana} dana vlake`, tone: "text-amber-700 dark:text-amber-300" },
+  ];
+  return (
+    <section aria-label={naslov} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+      <h2 className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+        {naslov} <span className="normal-case tracking-normal font-normal text-gray-400 dark:text-gray-500">· po radnom danu projektanta</span>
+      </h2>
+      <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-200 dark:divide-gray-700">
+        {kartice.map((k) => (
+          <div key={k.label} className="px-4 py-3">
+            <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{k.label}</div>
+            <div className={`mt-0.5 text-2xl font-bold tabular-nums ${k.tone}`}>{k.value}</div>
+            <div className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{k.note}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function StatistikaPage() {
   const { session, loading } = useAuth();
@@ -210,6 +257,7 @@ export default function StatistikaPage() {
           {ucinakData.length === 0 && !busy && (
             <p className="text-sm text-gray-400 py-4">Nema podataka za {year}. godinu.</p>
           )}
+          {ucinakData.length > 0 && <ProsjeciTraka z={zbir(ucinakData)} naslov={`Prosjek ${year}.`} />}
           {ucinakData.length > 0 && <UcinakTabela data={ucinakData} year={year} />}
         </div>
       )}
@@ -220,7 +268,7 @@ export default function StatistikaPage() {
           <PeriodBar mjesec={upoMjesec} onMjesec={setUpoMjesec} />
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sortiraj po</span>
-            {([["ha", "Hektarima"], ["stabala", "Stablima"], ["km", "Km vlaka"]] as [SortKey, string][]).map(([k, lbl]) => (
+            {([["ha", "Hektarima"], ["stabala", "Stablima"], ["km", "Km vlaka"], ["haDan", "ha / dan"], ["kmDan", "km / dan"]] as [SortKey, string][]).map(([k, lbl]) => (
               <button key={k} onClick={() => setSortKey(k)}
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
                   sortKey === k
@@ -234,6 +282,7 @@ export default function StatistikaPage() {
           {uporedbaData.length === 0 && !busy && (
             <p className="text-sm text-gray-400 py-4">Nema podataka za odabrani period.</p>
           )}
+          {uporedbaData.length > 0 && <ProsjeciTraka z={zbir(uporedbaData)} naslov="Prosjek tima" />}
           {uporedbaData.length > 0 && (
             <UporedbaTabela data={uporedbaData} sortKey={sortKey} year={year} mjesec={upoMjesec} />
           )}
@@ -246,6 +295,9 @@ export default function StatistikaPage() {
           <PeriodBar mjesec={odjeliMjesec} onMjesec={setOdjeliMjesec} />
           {odjeliData.length === 0 && !busy && (
             <p className="text-sm text-gray-400 py-4">Nema podataka za odabrani period.</p>
+          )}
+          {odjeliData.length > 0 && (
+            <ProsjeciTraka z={zbir(odjeliData.map((o) => ({ ha: o.totalHa, stabala: o.totalStabala, km: o.totalKm, dozDana: o.dozDana, vlDana: o.vlDana })))} naslov="Prosjek svih odjela" />
           )}
           {odjeliData.length > 0 && (
             <OdjeliTabela data={odjeliData} year={year} mjesec={odjeliMjesec} sort={odjeliSort} onSort={setOdjeliSort} />
@@ -266,7 +318,7 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
   );
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
@@ -323,9 +375,10 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
   const totalKm = data.reduce((s, m) => s + m.km, 0);
   const maxHa = Math.max(...data.map((m) => m.ha), 1);
   const maxKm = Math.max(...data.map((m) => m.km), 1);
+  const god = prosjeci(zbir(data));
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
@@ -333,12 +386,16 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
             <th className="px-4 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[90px]">Ha</th>
             <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[90px]">Stabala</th>
             <th className="px-4 py-3 text-right font-semibold text-amber-700 dark:text-amber-400 min-w-[90px]">Km vlaka</th>
+            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>
+            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / ha</th>
+            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>
             <th className="px-4 py-3 min-w-[140px]" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
           {data.map((m) => {
             const hasData = m.ha > 0 || m.stabala > 0 || m.km > 0;
+            const pr = prosjeci(m);
             return (
               <tr key={m.mjesec} className={`transition-colors ${m.mjesec === currentMonth ? "bg-green-50/60 dark:bg-green-950/20" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"}`}>
                 <td className={`px-4 py-3 font-medium ${m.mjesec === currentMonth ? "text-green-700 dark:text-green-400 font-bold" : "text-gray-700 dark:text-gray-300"}`}>
@@ -353,6 +410,9 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
                 <td className={`px-4 py-3 text-right tabular-nums font-mono text-sm ${m.km > 0 ? "text-amber-700 dark:text-amber-300 font-semibold" : "text-gray-300 dark:text-gray-700"}`}>
                   {fmtKm(m.km)}
                 </td>
+                <ProsjekTd v={fmtProsjek(pr.haDan)} />
+                <ProsjekTd v={fmtProsjek(pr.stHa, 0)} />
+                <ProsjekTd v={fmtProsjek(pr.kmDan)} />
                 <td className="px-4 py-3">
                   {hasData && (
                     <div className="flex flex-col gap-1">
@@ -371,6 +431,9 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
             <td className="px-4 py-3 text-right tabular-nums font-extrabold text-emerald-700 dark:text-emerald-300 font-mono">{fmtHa(totalHa)}</td>
             <td className="px-4 py-3 text-right tabular-nums font-extrabold text-green-700 dark:text-green-300 font-mono">{fmtSt(totalStabala)}</td>
             <td className="px-4 py-3 text-right tabular-nums font-extrabold text-amber-700 dark:text-amber-300 font-mono">{fmtKm(totalKm)}</td>
+            <ProsjekTd v={fmtProsjek(god.haDan)} jako />
+            <ProsjekTd v={fmtProsjek(god.stHa, 0)} jako />
+            <ProsjekTd v={fmtProsjek(god.kmDan)} jako />
             <td />
           </tr>
         </tfoot>
@@ -384,7 +447,10 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
 function UporedbaTabela({ data, sortKey, year, mjesec }: {
   data: UporedbaRed[]; sortKey: SortKey; year: number; mjesec: number;
 }) {
-  const sorted   = [...data].sort((a, b) => b[sortKey] - a[sortKey]);
+  const vr = (r: UporedbaRed) =>
+    sortKey === "haDan" ? prosjeci(r).haDan : sortKey === "kmDan" ? prosjeci(r).kmDan : r[sortKey];
+  const sorted   = [...data].sort((a, b) => vr(b) - vr(a));
+  const tim      = prosjeci(zbir(data));
   const maxHa    = Math.max(...sorted.map((r) => r.ha), 0.01);
   const maxSt    = Math.max(...sorted.map((r) => r.stabala), 1);
   const maxKm    = Math.max(...sorted.map((r) => r.km), 0.01);
@@ -402,7 +468,7 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{periodLabel}</p>
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
@@ -411,12 +477,16 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
               {hasHa && <th className="px-4 py-3 font-semibold text-emerald-700 dark:text-emerald-400 min-w-[160px]">Ha</th>}
               {hasSt && <th className="px-4 py-3 font-semibold text-green-700 dark:text-green-400 min-w-[160px]">Stabala</th>}
               {hasKm && <th className="px-4 py-3 font-semibold text-amber-700 dark:text-amber-400 min-w-[160px]">Km vlaka</th>}
+              {hasHa && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>}
+              {hasSt && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / dan</th>}
+              {hasKm && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {sorted.map((row, idx) => {
               const isEmpty = row.ha === 0 && row.stabala === 0 && row.km === 0;
-              const m = medal(idx, row[sortKey]);
+              const m = medal(idx, vr(row));
+              const pr = prosjeci(row);
               return (
                 <tr key={row.radnikId} className={`transition-colors ${isEmpty ? "opacity-50" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"}`}>
                   <td className="px-3 py-3 text-center text-sm font-bold tabular-nums text-gray-400 dark:text-gray-600">
@@ -464,6 +534,9 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
                       </div>
                     </td>
                   )}
+                  {hasHa && <ProsjekTd v={fmtProsjek(pr.haDan)} iznad={pr.haDan > tim.haDan} />}
+                  {hasSt && <ProsjekTd v={fmtProsjek(pr.stDan, 0)} iznad={pr.stDan > tim.stDan} />}
+                  {hasKm && <ProsjekTd v={fmtProsjek(pr.kmDan)} iznad={pr.kmDan > tim.kmDan} />}
                 </tr>
               );
             })}
@@ -471,7 +544,7 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
           <tfoot>
             <tr className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60">
               <td className="px-3 py-2.5" />
-              <td className="px-4 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Ukupno</td>
+              <td className="px-4 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide whitespace-nowrap">Ukupno · prosjek</td>
               {hasHa && (
                 <td className="px-4 py-2.5">
                   <span className="text-xs font-extrabold font-mono tabular-nums text-emerald-700 dark:text-emerald-300">{fmtHa(totalHa)}</span>
@@ -487,6 +560,9 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
                   <span className="text-xs font-extrabold font-mono tabular-nums text-amber-700 dark:text-amber-300">{fmtKm(totalKm)}</span>
                 </td>
               )}
+              {hasHa && <ProsjekTd v={fmtProsjek(tim.haDan)} jako />}
+              {hasSt && <ProsjekTd v={fmtProsjek(tim.stDan, 0)} jako />}
+              {hasKm && <ProsjekTd v={fmtProsjek(tim.kmDan)} jako />}
             </tr>
           </tfoot>
         </table>
@@ -523,6 +599,8 @@ function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
   const totalHa = data.reduce((s, o) => s + o.totalHa, 0);
   const totalSt = data.reduce((s, o) => s + o.totalStabala, 0);
   const totalKm = data.reduce((s, o) => s + o.totalKm, 0);
+  const ukDozDana = data.reduce((s, o) => s + o.dozDana, 0);
+  const ukVlDana = data.reduce((s, o) => s + o.vlDana, 0);
   const hasHa = data.some((o) => o.totalHa > 0);
   const hasSt = data.some((o) => o.totalStabala > 0);
   const hasKm = data.some((o) => o.totalKm > 0);
@@ -531,7 +609,7 @@ function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
   return (
     <div className="space-y-2">
       <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">{periodLabel} · {data.length} aktivnih odjela</p>
-      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
@@ -543,6 +621,9 @@ function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
               {hasHa && <SortTh label="Ha" col="ha" active={sort === "ha"} onSort={onSort} />}
               {hasSt && <SortTh label="Stabala" col="stabala" active={sort === "stabala"} onSort={onSort} />}
               {hasKm && <SortTh label="Km vlaka" col="km" active={sort === "km"} onSort={onSort} />}
+              {hasHa && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>}
+              {hasSt && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / ha</th>}
+              {hasKm && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>}
               <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 min-w-[160px]">Projektanti</th>
             </tr>
           </thead>
@@ -572,6 +653,9 @@ function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
                     {fmtKm(o.totalKm)}
                   </td>
                 )}
+                {hasHa && <ProsjekTd v={fmtProsjek(podijeli(o.totalHa, o.dozDana))} />}
+                {hasSt && <ProsjekTd v={fmtProsjek(podijeli(o.totalStabala, o.totalHa), 0)} />}
+                {hasKm && <ProsjekTd v={fmtProsjek(podijeli(o.totalKm, o.vlDana))} />}
                 <td className="px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
                   {o.projektanti.map((p) => p.ime).join(", ")}
                 </td>
@@ -598,12 +682,27 @@ function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
                   {fmtKm(totalKm)}
                 </td>
               )}
+              {hasHa && <ProsjekTd v={fmtProsjek(podijeli(totalHa, ukDozDana))} jako />}
+              {hasSt && <ProsjekTd v={fmtProsjek(podijeli(totalSt, totalHa), 0)} jako />}
+              {hasKm && <ProsjekTd v={fmtProsjek(podijeli(totalKm, ukVlDana))} jako />}
               <td />
             </tr>
           </tfoot>
         </table>
       </div>
     </div>
+  );
+}
+
+function ProsjekTd({ v, jako, iznad }: { v: string; jako?: boolean; iznad?: boolean }) {
+  return (
+    <td className={`px-3 py-2.5 text-right tabular-nums font-mono text-xs whitespace-nowrap ${
+      jako ? "font-extrabold text-gray-800 dark:text-gray-100"
+      : iznad ? "font-semibold text-green-700 dark:text-green-400"
+      : v === "—" ? "text-gray-300 dark:text-gray-700" : "text-gray-600 dark:text-gray-300"
+    }`} title={iznad ? "Iznad prosjeka tima" : undefined}>
+      {v}
+    </td>
   );
 }
 

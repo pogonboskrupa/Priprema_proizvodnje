@@ -58,7 +58,7 @@ export function faza(unosi: readonly UnosRada[]): Faza | null {
   return { od, do_, trajanje: dnevnaRazlika(od, do_) + 1, radnihDana: dani.length };
 }
 
-const podijeli = (a: number, b: number) => (b > 0 ? a / b : 0);
+export const podijeli = (a: number, b: number) => (b > 0 ? a / b : 0);
 
 export function statistikaOdjela(unosi: readonly UnosRada[], povrsina: number): OdjelStatistika {
   const doz = unosi.filter((u) => u.vrsta === "DOZNAKA");

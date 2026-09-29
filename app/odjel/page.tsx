@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getOdjelPregled, type OdjelPregledData } from "@/lib/db";
-import { statistikaOdjela, godineRada, type Faza } from "@/lib/odjel-pregled";
+import { statistikaOdjela, godineRada, podijeli, type Faza, type OdjelStatistika } from "@/lib/odjel-pregled";
 import { fmtBroj, ucinakLabel, unioDrugi, DANI_KRATKO } from "@/lib/sihtarica";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDate, fmtDateLong, monthYearLabel } from "@/lib/format";
@@ -226,6 +226,8 @@ function OdjelPregled() {
             </div>
           </Sekcija>
 
+          <ProsjeciOdjela st={st} />
+
           {st.poMjesecima.length > 1 && (
             <Sekcija naslov="Po mjesecima">
               <div className="overflow-x-auto">
@@ -398,6 +400,91 @@ function Pokrivenost({ udio, ha, povrsina }: { udio: number; ha: number; povrsin
         <div className={`h-full rounded-full ${preko ? "bg-red-500" : "bg-green-600"}`} style={{ width: `${Math.min(100, pct)}%` }} />
       </div>
       {preko && <p className="mt-1 text-xs text-red-600 dark:text-red-400">Doznačeno više od površine odjela — provjeri unose ili površinu.</p>}
+    </div>
+  );
+}
+
+type ProjektantRed = OdjelStatistika["projektanti"][number];
+
+/** Prosjeci po projektant-danu: red po projektantu + prosjek odjela (ukupno / zbir projektant-dana) */
+function ProsjeciOdjela({ st }: { st: OdjelStatistika }) {
+  const doz = st.projektanti.filter((p) => p.doznaka.dana > 0);
+  const vl = st.projektanti.filter((p) => p.vlaka.dana > 0);
+  if (!doz.length && !vl.length) return null;
+  const dozDana = doz.reduce((s, p) => s + p.doznaka.dana, 0);
+  const vlDana = vl.reduce((s, p) => s + p.vlaka.dana, 0);
+
+  return (
+    <Sekcija naslov="Prosjeci u odjelu" meta="po radnom danu projektanta">
+      <div className="grid md:grid-cols-2 md:divide-x divide-y md:divide-y-0 divide-gray-200 dark:divide-gray-700">
+        <ProsjekTabela
+          naslov="Doznaka"
+          tackaCls="bg-green-500"
+          prazno="Nema doznake u ovom periodu."
+          kolone={["Dana", "ha / dan", "stabala / dan", "stabala / ha"]}
+          redovi={doz.map((p) => ({ p, vrijednosti: prosjekDoznake(p.doznaka.dana, p.doznaka.ha, p.doznaka.stabala) }))}
+          prosjek={prosjekDoznake(dozDana, st.doznaka.ha, st.doznaka.stabala)}
+        />
+        <ProsjekTabela
+          naslov="Vlake"
+          tackaCls="bg-orange-500"
+          prazno="Nema vlaka u ovom periodu."
+          kolone={["Dana", "km / dan"]}
+          redovi={vl.map((p) => ({ p, vrijednosti: [String(p.vlaka.dana), fmtBroj(podijeli(p.vlaka.km, p.vlaka.dana))] }))}
+          prosjek={[String(vlDana), fmtBroj(podijeli(st.vlaka.km, vlDana))]}
+        />
+      </div>
+    </Sekcija>
+  );
+}
+
+function prosjekDoznake(dana: number, ha: number, stabala: number): string[] {
+  return [String(dana), fmtBroj(podijeli(ha, dana)), fmtBroj(podijeli(stabala, dana), 0), fmtBroj(podijeli(stabala, ha), 0)];
+}
+
+function ProsjekTabela({ naslov, tackaCls, prazno, kolone, redovi, prosjek }: {
+  naslov: string;
+  tackaCls: string;
+  prazno: string;
+  kolone: string[];
+  redovi: { p: ProjektantRed; vrijednosti: string[] }[];
+  prosjek: string[];
+}) {
+  return (
+    <div className="min-w-0">
+      <h3 className="px-4 pt-3 pb-2 flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100">
+        <span className={`w-2 h-2 rounded-full ${tackaCls}`} />{naslov}
+      </h3>
+      {redovi.length === 0 ? (
+        <p className="px-4 pb-4 text-sm text-gray-500 dark:text-gray-400">{prazno}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm tabular-nums">
+            <thead className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <tr className="border-y border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <th className="text-left font-semibold px-4 py-2">Projektant</th>
+                {kolone.map((k) => <th key={k} className="text-right font-semibold px-3 py-2 whitespace-nowrap last:pr-4">{k}</th>)}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {redovi.map(({ p, vrijednosti }) => (
+                <tr key={p.id}>
+                  <td className="px-4 py-2 whitespace-nowrap text-gray-800 dark:text-gray-100">{p.ime}</td>
+                  {vrijednosti.map((v, i) => (
+                    <td key={kolone[i]} className={`px-3 py-2 text-right last:pr-4 ${i === 0 ? "text-gray-500 dark:text-gray-400" : "text-gray-800 dark:text-gray-100"}`}>{v}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 border-gray-300 dark:border-gray-600 bg-green-50 dark:bg-green-950/40 font-semibold text-green-900 dark:text-green-200">
+                <tr>
+                  <td className="px-4 py-2 whitespace-nowrap">Prosjek odjela</td>
+                  {prosjek.map((v, i) => <td key={kolone[i]} className="px-3 py-2 text-right last:pr-4">{v}</td>)}
+                </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

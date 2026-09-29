@@ -972,7 +972,30 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
   }));
 }
 
-export interface UcinakMjesec {
+/** Projektant-dani: broj parova (projektant, datum) s doznakom odnosno vlakom — osnova za prosjeke po danu */
+export interface RadniDani {
+  dozDana: number;
+  vlDana: number;
+}
+
+type UcinakAcc = { ha: number; stabala: number; km: number; doz: Set<string>; vl: Set<string> };
+const noviUcinakAcc = (): UcinakAcc => ({ ha: 0, stabala: 0, km: 0, doz: new Set(), vl: new Set() });
+
+function dodajUcinak(a: UcinakAcc, u: Record<string, unknown>) {
+  const kljuc = `${u.inzinjerId}|${(u.datum as string).slice(0, 10)}`;
+  if (u.vrsta === 'DOZNAKA') {
+    a.ha += Number(u.hektari) || 0;
+    a.stabala += Number(u.brojStabala) || 0;
+    a.doz.add(kljuc);
+  } else {
+    a.km += Number(u.kilometri) || 0;
+    a.vl.add(kljuc);
+  }
+}
+
+const zatvoriUcinak = ({ ha, stabala, km, doz, vl }: UcinakAcc) => ({ ha, stabala, km, dozDana: doz.size, vlDana: vl.size });
+
+export interface UcinakMjesec extends RadniDani {
   mjesec: number;
   ha: number;
   stabala: number;
@@ -988,33 +1011,26 @@ export async function getStatistikaUcinka(year: number, inzinjerId?: string): Pr
     where('datum', '<=', Timestamp.fromDate(do_)),
   ]);
 
-  const acc: Record<number, { ha: number; stabala: number; km: number }> = {};
-  for (let m = 1; m <= 12; m++) acc[m] = { ha: 0, stabala: 0, km: 0 };
+  const acc = Array.from({ length: 13 }, noviUcinakAcc);
 
   for (const u of unosiRaw) {
     if (inzinjerId && u.inzinjerId !== inzinjerId) continue;
     const vrsta = u.vrsta as string;
     if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
-    const m = Number((u.datum as string).slice(5, 7));
-    if (vrsta === 'DOZNAKA') {
-      acc[m].ha += Number(u.hektari) || 0;
-      acc[m].stabala += Number(u.brojStabala) || 0;
-    } else {
-      acc[m].km += Number(u.kilometri) || 0;
-    }
+    dodajUcinak(acc[Number((u.datum as string).slice(5, 7))], u);
   }
 
-  return Array.from({ length: 12 }, (_, i) => ({ mjesec: i + 1, ...acc[i + 1] }));
+  return Array.from({ length: 12 }, (_, i) => ({ mjesec: i + 1, ...zatvoriUcinak(acc[i + 1]) }));
 }
 
-export interface OdjelStatistika {
+export interface OdjelStatistika extends RadniDani {
   odjelId: string;
   gj: string;
   broj: string;
   totalHa: number;
   totalStabala: number;
   totalKm: number;
-  projektanti: { radnikId: string; ime: string; ha: number; stabala: number; km: number }[];
+  projektanti: ({ radnikId: string; ime: string; ha: number; stabala: number; km: number } & RadniDani)[];
 }
 
 export async function getStatistikaPoOdjelima(year: number, month?: number): Promise<OdjelStatistika[]> {
@@ -1036,7 +1052,7 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
   );
 
   // odjel → projektant → stats
-  const acc: Record<string, Record<string, { ha: number; stabala: number; km: number }>> = {};
+  const acc: Record<string, Record<string, UcinakAcc>> = {};
 
   for (const u of unosiRaw) {
     const vrsta = u.vrsta as string;
@@ -1044,18 +1060,15 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
     const odjelId = u.odjelId as string;
     const radnikId = u.inzinjerId as string;
     if (!odjelId || !radnikId) continue;
-    if (!acc[odjelId]) acc[odjelId] = {};
-    if (!acc[odjelId][radnikId]) acc[odjelId][radnikId] = { ha: 0, stabala: 0, km: 0 };
-    const a = acc[odjelId][radnikId];
-    if (vrsta === 'DOZNAKA') { a.ha += Number(u.hektari) || 0; a.stabala += Number(u.brojStabala) || 0; }
-    else a.km += Number(u.kilometri) || 0;
+    acc[odjelId] ??= {};
+    dodajUcinak((acc[odjelId][radnikId] ??= noviUcinakAcc()), u);
   }
 
   return Object.entries(acc)
     .map(([odjelId, radnici]) => {
       const o = odMap[odjelId];
       const projektanti = Object.entries(radnici)
-        .map(([radnikId, s]) => ({ radnikId, ime: korMap[radnikId] ?? radnikId, ...s }))
+        .map(([radnikId, s]) => ({ radnikId, ime: korMap[radnikId] ?? radnikId, ...zatvoriUcinak(s) }))
         .sort((a, b) => b.ha - a.ha);
       return {
         odjelId,
@@ -1064,13 +1077,15 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
         totalHa: projektanti.reduce((s, p) => s + p.ha, 0),
         totalStabala: projektanti.reduce((s, p) => s + p.stabala, 0),
         totalKm: projektanti.reduce((s, p) => s + p.km, 0),
+        dozDana: projektanti.reduce((s, p) => s + p.dozDana, 0),
+        vlDana: projektanti.reduce((s, p) => s + p.vlDana, 0),
         projektanti,
       };
     })
     .sort(cmpOdjel);
 }
 
-export interface UporedbaRed {
+export interface UporedbaRed extends RadniDani {
   radnikId: string;
   ime: string;
   ha: number;
@@ -1090,20 +1105,14 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
     getAll('users'),
   ]);
 
-  const acc: Record<string, { ha: number; stabala: number; km: number }> = {};
+  const acc: Record<string, UcinakAcc> = {};
 
   for (const u of unosiRaw) {
     const vrsta = u.vrsta as string;
     if (vrsta !== 'DOZNAKA' && vrsta !== 'VLAKA') continue;
     const id = u.inzinjerId as string;
     if (!id) continue;
-    if (!acc[id]) acc[id] = { ha: 0, stabala: 0, km: 0 };
-    if (vrsta === 'DOZNAKA') {
-      acc[id].ha += Number(u.hektari) || 0;
-      acc[id].stabala += Number(u.brojStabala) || 0;
-    } else {
-      acc[id].km += Number(u.kilometri) || 0;
-    }
+    dodajUcinak((acc[id] ??= noviUcinakAcc()), u);
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
@@ -1113,9 +1122,7 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
   return workers.map((k) => ({
     radnikId: k.id,
     ime: k.fullName || k.ime,
-    ha: acc[k.id]?.ha ?? 0,
-    stabala: acc[k.id]?.stabala ?? 0,
-    km: acc[k.id]?.km ?? 0,
+    ...zatvoriUcinak(acc[k.id] ?? noviUcinakAcc()),
   }));
 }
 
