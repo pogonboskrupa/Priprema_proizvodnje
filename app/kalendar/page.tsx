@@ -837,10 +837,10 @@ function PregledEvidencije({
   const projRows: Row[] = workers.map((w) => {
     const wu = unosi.filter((u) => u.inzinjerId === w.id);
     const sveDatume = new Set(wu.map((u) => u.datum.slice(0, 10)));
-    const byDate = (vrsta: string) => new Set(wu.filter((u) => u.vrsta === vrsta).map((u) => u.datum.slice(0, 10))).size;
+    const byDate = (...vrste: string[]) => new Set(wu.filter((u) => vrste.includes(u.vrsta)).map((u) => u.datum.slice(0, 10))).size;
     return {
       name: w.fullName || w.ime,
-      teren:       byDate("TEREN"),
+      teren:       byDate("TEREN", "DOZNAKA", "VLAKA"),
       kancelarija: byDate("KANCELARIJA"),
       bolovanje:   byDate("BOLOVANJE"),
       godisnji:    byDate("GODISNJI"),
