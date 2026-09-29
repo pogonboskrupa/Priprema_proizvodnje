@@ -1003,7 +1003,7 @@ function PregledEvidencije({
               <tr key={r.name} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
                 <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{r.name}</td>
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" && (r[c.key] as number) > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-600 dark:text-gray-300"}`}>
+                  <td key={c.key} className={`px-3 py-2.5 text-right font-medium ${c.key === "zastoj" ? "text-amber-600 dark:text-amber-400" : "text-amber-700 dark:text-amber-300"}`}>
                     {fmtDani(r[c.key] as number)}
                   </td>
                 ))}
@@ -1017,7 +1017,7 @@ function PregledEvidencije({
                 <tr>
                   <td className="px-4 py-2.5">Ukupno</td>
                   {cols.map((c) => (
-                    <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" && (s[c.key] as number) > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                    <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" ? "text-amber-600 dark:text-amber-400" : "text-amber-700 dark:text-amber-300"}`}>
                       {fmtDani(s[c.key] as number)}
                     </td>
                   ))}
