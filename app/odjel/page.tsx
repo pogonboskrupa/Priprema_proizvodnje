@@ -41,6 +41,7 @@ function OdjelPregled() {
   const [err, setErr] = useState("");
   const [izbor, setIzbor] = useState<Godina | null>(null);
   const [sviDnevnik, setSviDnevnik] = useState(false);
+  const [dnevnikSort, setDnevnikSort] = useState<"datum" | "desc" | "asc">("datum");
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -77,7 +78,16 @@ function OdjelPregled() {
   const o = data.odjel;
   const naziv = o ? `${o.gj} / ${o.broj}` : "Nepoznat odjel";
   const dnevnik = [...unosi].reverse();
-  const prikazaniDnevnik = sviDnevnik ? dnevnik : dnevnik.slice(0, 20);
+  function ucinakVrijednost(u: (typeof dnevnik)[number]): number {
+    if (u.vrsta === "DOZNAKA") return Number(u.hektari) || 0;
+    if (u.vrsta === "VLAKA") return Number(u.kilometri) || 0;
+    return 0;
+  }
+  const sortiraniDnevnik = dnevnikSort === "datum" ? dnevnik
+    : [...dnevnik].sort((a, b) => dnevnikSort === "desc"
+        ? ucinakVrijednost(b) - ucinakVrijednost(a)
+        : ucinakVrijednost(a) - ucinakVrijednost(b));
+  const prikazaniDnevnik = sviDnevnik ? sortiraniDnevnik : sortiraniDnevnik.slice(0, 20);
 
   async function exportExcel() {
     const { exportXlsx } = await import("@/lib/export");
@@ -257,7 +267,14 @@ function OdjelPregled() {
             </Sekcija>
           )}
 
-          <Sekcija naslov="Dnevnik rada" meta={`${dnevnik.length} ${dnevnik.length === 1 ? "unos" : "unosa"}`}>
+          <Sekcija naslov="Dnevnik rada" meta={`${dnevnik.length} ${dnevnik.length === 1 ? "unos" : "unosa"}`}
+            akcija={
+              <button type="button"
+                onClick={() => setDnevnikSort((s) => s === "datum" ? "desc" : s === "desc" ? "asc" : "datum")}
+                className="text-xs font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 flex items-center gap-1 tabular-nums">
+                {dnevnikSort === "datum" ? <><span className="opacity-60">↕</span> Sortiraj učinak</> : dnevnikSort === "desc" ? <>↓ Najveći</>  : <>↑ Najmanji</>}
+              </button>
+            }>
             <ul className="divide-y divide-gray-100 dark:divide-gray-800">
               {prikazaniDnevnik.map((u) => {
                 const vs = vrstaStyle(u.vrsta);
@@ -493,12 +510,13 @@ function ProsjekTabela({ naslov, tackaCls, prazno, kolone, redovi, prosjek }: {
   );
 }
 
-function Sekcija({ naslov, meta, children }: { naslov: string; meta?: string; children: React.ReactNode }) {
+function Sekcija({ naslov, meta, akcija, children }: { naslov: string; meta?: string; akcija?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
-      <h2 className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex items-baseline gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100">
-        {naslov}
+      <h2 className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-100">
+        <span>{naslov}</span>
         {meta && <span className="text-xs font-normal text-gray-400 dark:text-gray-500">{meta}</span>}
+        {akcija && <span className="ml-auto">{akcija}</span>}
       </h2>
       {children}
     </section>
