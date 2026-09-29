@@ -134,6 +134,7 @@ function OdjelPregled() {
               naslov="Doznaka"
               boja={VRSTA.DOZNAKA}
               faza={st.doznaka.faza}
+              radnihDana={st.doznaka.dana}
               zavrseno={!!o?.doznaceno}
               brojke={[
                 { label: "Stabala", value: fmtBroj(st.doznaka.stabala, 0), unit: "st." },
@@ -153,6 +154,7 @@ function OdjelPregled() {
               naslov="Vlake"
               boja={VRSTA.VLAKA}
               faza={st.vlaka.faza}
+              radnihDana={st.vlaka.dana}
               zavrseno={!!o?.vlakeProjektovane}
               brojke={[{ label: "Dužina", value: fmtBroj(st.vlaka.km), unit: "km" }]}
               prosjeci={[{ label: "km po radnom danu", value: fmtBroj(st.vlaka.kmPoDanu) }]}
@@ -324,10 +326,12 @@ function StatusPill({ gotovo, faza, gotovoTekst, uTokuTekst, nijeTekst }: {
   return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>{tekst}</span>;
 }
 
-function FazaKartica({ naslov, boja, faza, zavrseno, brojke, prosjeci, children }: {
+function FazaKartica({ naslov, boja, faza, radnihDana, zavrseno, brojke, prosjeci, children }: {
   naslov: string;
   boja: { dot: string };
   faza: Faza | null;
+  /** Radni dani na ovom poslu u odjelu (po projektantu) — ista osnova kao prosjeci */
+  radnihDana: number;
   zavrseno: boolean;
   brojke: { label: string; value: string; unit: string }[];
   prosjeci: { label: string; value: string }[];
@@ -350,7 +354,7 @@ function FazaKartica({ naslov, boja, faza, zavrseno, brojke, prosjeci, children 
             <div className="flex flex-col items-center text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
               <span className="tabular-nums">{faza.trajanje} {faza.trajanje === 1 ? "dan" : "dana"}</span>
               <span className="block w-16 h-px bg-gray-300 dark:bg-gray-700 my-1" aria-hidden />
-              <span className="tabular-nums">rad {faza.radnihDana} {faza.radnihDana === 1 ? "dan" : "dana"}</span>
+              <span className="tabular-nums" title="Radni dani na ovom poslu u odjelu, zbir po projektantima">rad {radnihDana} {radnihDana === 1 ? "dan" : "dana"}</span>
             </div>
             <div className="text-right">
               <div className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">{zavrseno ? "Završeno" : "Zadnji dan rada"}</div>
@@ -411,11 +415,11 @@ function ProsjeciOdjela({ st }: { st: OdjelStatistika }) {
   const doz = st.projektanti.filter((p) => p.doznaka.dana > 0);
   const vl = st.projektanti.filter((p) => p.vlaka.dana > 0);
   if (!doz.length && !vl.length) return null;
-  const dozDana = doz.reduce((s, p) => s + p.doznaka.dana, 0);
-  const vlDana = vl.reduce((s, p) => s + p.vlaka.dana, 0);
+  const dozDana = st.doznaka.dana;
+  const vlDana = st.vlaka.dana;
 
   return (
-    <Sekcija naslov="Prosjeci u odjelu" meta="po radnom danu projektanta">
+    <Sekcija naslov="Prosjeci u odjelu" meta="učinak ÷ radni dani na tom poslu u ovom odjelu">
       <div className="grid md:grid-cols-2 md:divide-x divide-y md:divide-y-0 divide-gray-200 dark:divide-gray-700">
         <ProsjekTabela
           naslov="Doznaka"

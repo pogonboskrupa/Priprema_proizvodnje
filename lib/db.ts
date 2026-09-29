@@ -1033,7 +1033,8 @@ export interface OdjelStatistika extends RadniDani {
   projektanti: ({ radnikId: string; ime: string; ha: number; stabala: number; km: number } & RadniDani)[];
 }
 
-export async function getStatistikaPoOdjelima(year: number, month?: number): Promise<OdjelStatistika[]> {
+/** `ukupno`: radni dani na poslu bez obzira na odjel — dan rada u dva odjela je jedan dan doznake */
+export async function getStatistikaPoOdjelima(year: number, month?: number): Promise<{ odjeli: OdjelStatistika[]; ukupno: RadniDani }> {
   const od = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1);
   const do_ = month ? new Date(year, month, 0, 23, 59, 59, 999) : new Date(year, 11, 31, 23, 59, 59, 999);
 
@@ -1053,6 +1054,7 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
 
   // odjel → projektant → stats
   const acc: Record<string, Record<string, UcinakAcc>> = {};
+  const sve = noviUcinakAcc();
 
   for (const u of unosiRaw) {
     const vrsta = u.vrsta as string;
@@ -1062,9 +1064,10 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
     if (!odjelId || !radnikId) continue;
     acc[odjelId] ??= {};
     dodajUcinak((acc[odjelId][radnikId] ??= noviUcinakAcc()), u);
+    dodajUcinak(sve, u);
   }
 
-  return Object.entries(acc)
+  const odjeli = Object.entries(acc)
     .map(([odjelId, radnici]) => {
       const o = odMap[odjelId];
       const projektanti = Object.entries(radnici)
@@ -1083,6 +1086,7 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
       };
     })
     .sort(cmpOdjel);
+  return { odjeli, ukupno: { dozDana: sve.doz.size, vlDana: sve.vl.size } };
 }
 
 export interface UporedbaRed extends RadniDani {

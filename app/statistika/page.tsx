@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getStatistikaPrisutnosti, getStatistikaUcinka, getUporedbaUcinka, getStatistikaPoOdjelima, getKorisnici,
-  type PrisutnostRow, type UcinakMjesec, type UporedbaRed, type OdjelStatistika,
+  type PrisutnostRow, type UcinakMjesec, type UporedbaRed, type OdjelStatistika, type RadniDani,
 } from "@/lib/db";
 import type { Korisnik, VrstaRada } from "@/lib/types";
 import { VRSTA, heatClass } from "@/lib/vrste";
@@ -117,7 +117,7 @@ function ProsjeciTraka({ z, naslov }: { z: UcinakZbir; naslov: string }) {
   return (
     <section aria-label={naslov} className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <h2 className="px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-        {naslov} <span className="normal-case tracking-normal font-normal text-gray-400 dark:text-gray-500">· po radnom danu projektanta</span>
+        {naslov} <span className="normal-case tracking-normal font-normal text-gray-400 dark:text-gray-500">· učinak ÷ radni dani na tom poslu</span>
       </h2>
       <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-200 dark:divide-gray-700">
         {kartice.map((k) => (
@@ -152,6 +152,7 @@ export default function StatistikaPage() {
   const [sortKey, setSortKey]           = useState<SortKey>("ha");
 
   const [odjeliData, setOdjeliData]     = useState<OdjelStatistika[]>([]);
+  const [odjeliDani, setOdjeliDani]     = useState<RadniDani>({ dozDana: 0, vlDana: 0 });
   const [odjeliMjesec, setOdjeliMjesec] = useState<number>(0);
   const [odjeliSort, setOdjeliSort]     = useState<OdjeliSort>("gj");
 
@@ -180,7 +181,7 @@ export default function StatistikaPage() {
       tab === "prisutnost" ? getStatistikaPrisutnosti(year).then(guard(setPrisutnostData))
       : tab === "ucanak"   ? getStatistikaUcinka(year, filterRadnik || undefined).then(guard(setUcinakData))
       : tab === "usporedba"? getUporedbaUcinka(year, upoMjesec || undefined).then(guard(setUporedbaData))
-      : getStatistikaPoOdjelima(year, odjeliMjesec || undefined).then(guard(setOdjeliData));
+      : getStatistikaPoOdjelima(year, odjeliMjesec || undefined).then(guard((r) => { setOdjeliData(r.odjeli); setOdjeliDani(r.ukupno); }));
     req
       .catch(() => { if (!cancelled) setErr("Greška pri učitavanju. Provjeri internet i pokušaj ponovo."); })
       .finally(() => { if (!cancelled) setBusy(false); });
@@ -297,10 +298,10 @@ export default function StatistikaPage() {
             <p className="text-sm text-gray-400 py-4">Nema podataka za odabrani period.</p>
           )}
           {odjeliData.length > 0 && (
-            <ProsjeciTraka z={zbir(odjeliData.map((o) => ({ ha: o.totalHa, stabala: o.totalStabala, km: o.totalKm, dozDana: o.dozDana, vlDana: o.vlDana })))} naslov="Prosjek svih odjela" />
+            <ProsjeciTraka z={{ ...zbir(odjeliData.map((o) => ({ ha: o.totalHa, stabala: o.totalStabala, km: o.totalKm, dozDana: 0, vlDana: 0 }))), ...odjeliDani }} naslov="Prosjek svih odjela" />
           )}
           {odjeliData.length > 0 && (
-            <OdjeliTabela data={odjeliData} year={year} mjesec={odjeliMjesec} sort={odjeliSort} onSort={setOdjeliSort} />
+            <OdjeliTabela data={odjeliData} ukupnoDani={odjeliDani} year={year} mjesec={odjeliMjesec} sort={odjeliSort} onSort={setOdjeliSort} />
           )}
         </div>
       )}
@@ -592,15 +593,15 @@ function SortTh({ label, col, active, onSort }: { label: string; col: OdjeliSort
   );
 }
 
-function OdjeliTabela({ data, year, mjesec, sort, onSort }: {
-  data: OdjelStatistika[]; year: number; mjesec: number; sort: OdjeliSort; onSort: (s: OdjeliSort) => void;
+function OdjeliTabela({ data, ukupnoDani, year, mjesec, sort, onSort }: {
+  data: OdjelStatistika[]; ukupnoDani: RadniDani; year: number; mjesec: number; sort: OdjeliSort; onSort: (s: OdjeliSort) => void;
 }) {
   const sorted = sortOdjeli(data, sort);
   const totalHa = data.reduce((s, o) => s + o.totalHa, 0);
   const totalSt = data.reduce((s, o) => s + o.totalStabala, 0);
   const totalKm = data.reduce((s, o) => s + o.totalKm, 0);
-  const ukDozDana = data.reduce((s, o) => s + o.dozDana, 0);
-  const ukVlDana = data.reduce((s, o) => s + o.vlDana, 0);
+  // dan rada u dva odjela je u ukupnom prosjeku jedan dan, zato ne zbir po odjelima
+  const { dozDana: ukDozDana, vlDana: ukVlDana } = ukupnoDani;
   const hasHa = data.some((o) => o.totalHa > 0);
   const hasSt = data.some((o) => o.totalStabala > 0);
   const hasKm = data.some((o) => o.totalKm > 0);

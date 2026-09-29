@@ -27,6 +27,8 @@ export interface MjesecUcinak {
 export interface OdjelStatistika {
   doznaka: {
     faza: Faza | null;
+    /** Radni dani na doznaci u odjelu: zbir dana po projektantu (dva projektanta isti dan = 2 dana) */
+    dana: number;
     stabala: number;
     ha: number;
     unosa: number;
@@ -37,7 +39,7 @@ export interface OdjelStatistika {
     /** Doznačeni ha / površina odjela, 0–1+ (null ako površina nije upisana) */
     pokrivenost: number | null;
   };
-  vlaka: { faza: Faza | null; km: number; unosa: number; kmPoDanu: number };
+  vlaka: { faza: Faza | null; dana: number; km: number; unosa: number; kmPoDanu: number };
   projektanti: ProjektantUcinak[];
   poMjesecima: MjesecUcinak[];
 }
@@ -90,6 +92,10 @@ export function statistikaOdjela(unosi: readonly UnosRada[], povrsina: number): 
     };
   }).sort((a, b) => b.doznaka.ha - a.doznaka.ha || b.vlaka.km - a.vlaka.km || a.ime.localeCompare(b.ime));
 
+  // prosjeci = učinak / radni dani na tom poslu u odjelu
+  const dozDana = projektanti.reduce((s, p) => s + p.doznaka.dana, 0);
+  const vlDana = projektanti.reduce((s, p) => s + p.vlaka.dana, 0);
+
   const mjeseci = new Map<string, MjesecUcinak>();
   for (const u of [...doz, ...vl]) {
     const m = u.datum.slice(0, 7);
@@ -103,15 +109,16 @@ export function statistikaOdjela(unosi: readonly UnosRada[], povrsina: number): 
   return {
     doznaka: {
       faza: dozFaza,
+      dana: dozDana,
       stabala,
       ha,
       unosa: doz.length,
-      haPoDanu: podijeli(ha, dozFaza?.radnihDana ?? 0),
-      stabalaPoDanu: podijeli(stabala, dozFaza?.radnihDana ?? 0),
+      haPoDanu: podijeli(ha, dozDana),
+      stabalaPoDanu: podijeli(stabala, dozDana),
       stabalaPoHa: podijeli(stabala, ha),
       pokrivenost: povrsina > 0 ? ha / povrsina : null,
     },
-    vlaka: { faza: vlFaza, km, unosa: vl.length, kmPoDanu: podijeli(km, vlFaza?.radnihDana ?? 0) },
+    vlaka: { faza: vlFaza, dana: vlDana, km, unosa: vl.length, kmPoDanu: podijeli(km, vlDana) },
     projektanti,
     poMjesecima: [...mjeseci.values()].sort((a, b) => a.mjesec.localeCompare(b.mjesec)),
   };
