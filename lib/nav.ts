@@ -49,7 +49,7 @@ export function navFor(ses: Pick<Session, "role" | "operater" | "sihter"> | null
     const base = [I.pocetna, I.unos, ...(ses.operater ? [I.unosUcinka] : []), I.izvjestaji, I.evidencijaRada, I.sihtarica, I.elaborat, I.mojiOdjeli, I.postavke];
     return {
       all: base,
-      primary: [I.pocetna, I.unos, I.evidencijaRada, I.sihtarica],
+      primary: [I.pocetna, I.unos, I.izvjestaji, I.evidencijaRada],
       cta: I.unos,
     };
   }

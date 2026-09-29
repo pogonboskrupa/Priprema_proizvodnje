@@ -324,7 +324,7 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!session) return;
-    if (!isWorker) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
+    if (!isWorker || isSihter) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
   }, [session, isWorker, canEdit]);
 
