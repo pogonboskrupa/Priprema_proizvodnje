@@ -861,12 +861,16 @@ function PregledEvidencije({
     };
   });
 
-  const cols: { key: keyof Row; label: string }[] = [
+  type Col = { key: keyof Row; label: string };
+  const colsProj: Col[] = [
     { key: "teren",       label: "Teren" },
     { key: "kancelarija", label: "Kancelarija" },
     { key: "bolovanje",   label: "Bolovanje" },
     { key: "godisnji",    label: "Godišnji" },
-    { key: "zastoj",      label: "Zastoj" },
+  ];
+  const colsPm: Col[] = [
+    ...colsProj,
+    { key: "zastoj", label: "Zastoj" },
   ];
 
   const sumRow = (rows: Row[]): Row => {
@@ -878,7 +882,7 @@ function PregledEvidencije({
   const btnNav = "w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
   const isLoading = loading || sihteLoading;
 
-  const Tbl = ({ rows, title, ukupno }: { rows: Row[]; title: string; ukupno?: boolean }) => (
+  const Tbl = ({ rows, title, ukupno, cols }: { rows: Row[]; title: string; ukupno?: boolean; cols: Col[] }) => (
     <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
         <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
@@ -937,8 +941,8 @@ function PregledEvidencije({
         {isLoading && <span className="ml-3 text-xs text-gray-400 dark:text-gray-500">Učitava se…</span>}
       </div>
 
-      <Tbl rows={projRows} title="Projektanti" ukupno />
-      {radnici.length > 0 && <Tbl rows={pmRows} title="Pomoćni radnici" ukupno />}
+      <Tbl rows={projRows} title="Projektanti" ukupno cols={colsProj} />
+      {radnici.length > 0 && <Tbl rows={pmRows} title="Pomoćni radnici" ukupno cols={colsPm} />}
     </div>
   );
 }
