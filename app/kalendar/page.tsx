@@ -251,7 +251,7 @@ const emptyEditForm = (): EditForm => ({
   vrsta: "DOZNAKA", odjelId: "", brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
-type EvidencijaTab = "projektanti" | "pomocni";
+type EvidencijaTab = "pregled" | "projektanti" | "pomocni";
 type PomocniView = "pregled" | "sihtarica" | "evidencija";
 const POMOCNI_VIEWS: { id: PomocniView; label: string }[] = [
   { id: "pregled", label: "Pregled" },
@@ -271,7 +271,7 @@ export default function KalendarPage() {
   const { zakljucan } = useZakljucavanje();
 
   // ── Evidencija tab (šihter only) ─────────────────────────────────────────
-  const [evTab, setEvTab] = useState<EvidencijaTab>("projektanti");
+  const [evTab, setEvTab] = useState<EvidencijaTab>("pregled");
 
   // ── Pomoćni radnici state ────────────────────────────────────────────────
   const [pmView, setPmView] = useState<PomocniView>("pregled");
@@ -338,9 +338,14 @@ export default function KalendarPage() {
     getPomocniRadnici().then(setRadnici).catch(() => {});
   }, [isSihter]);
 
+  // Sync pmMjesec s glavnim kalendarom na Pregled tabu
+  useEffect(() => {
+    if (evTab === "pregled") setPmMjesec({ year, month });
+  }, [evTab, year, month]);
+
   // Tipke za četku (samo na pomoćnim radnicima)
   useEffect(() => {
-    if (evTab !== "pomocni" || pmView === "evidencija") return;
+    if ((evTab !== "pomocni" && evTab !== "pregled") || pmView === "evidencija") return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (e.ctrlKey || e.metaKey || e.altKey || el.closest("input, select, textarea")) return;
@@ -483,19 +488,38 @@ export default function KalendarPage() {
     <div>
       {/* ── Naslov i tab switcher za šihtera ────────────────────────────────── */}
       {isSihter && (
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex flex-wrap items-center gap-3 mb-5">
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Evidencija rada</h1>
           <div role="tablist" className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 gap-1">
-            {(["projektanti", "pomocni"] as EvidencijaTab[]).map((t) => (
-              <button key={t} type="button" role="tab" aria-selected={evTab === t} onClick={() => setEvTab(t)}
+            {([
+              { id: "pregled",      label: "Pregled" },
+              { id: "projektanti",  label: "Kalendar" },
+              { id: "pomocni",      label: "Pomoćni radnici" },
+            ] as { id: EvidencijaTab; label: string }[]).map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={evTab === t.id} onClick={() => setEvTab(t.id)}
                 className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 ${
-                  evTab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  evTab === t.id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                 }`}>
-                {t === "projektanti" ? "Projektanti" : "Pomoćni radnici"}
+                {t.label}
               </button>
             ))}
           </div>
         </div>
+      )}
+
+      {/* ── Tab: Pregled (šihter only) ──────────────────────────────────────── */}
+      {isSihter && evTab === "pregled" && (
+        <PregledEvidencije
+          year={year} month={month}
+          prevMonth={prevMonth} nextMonth={nextMonth}
+          naTekucem={naTekucem} loading={loading}
+          workers={workers.filter((w) => !w.arhiviran)}
+          unosi={unosi}
+          radnici={aktivniPm}
+          sihte={sihte}
+          sihteLoading={sihteLoading}
+          danas={localDateStr()}
+        />
       )}
 
       {/* ── Tab: Pomoćni radnici (šihter only) ──────────────────────────────── */}
@@ -873,6 +897,153 @@ export default function KalendarPage() {
       )}
       </div>
       )}
+    </div>
+  );
+}
+
+// ── Pregled evidencije rada ───────────────────────────────────────────────────
+
+function radniDaniUMjesecu(year: number, month: number, do_: string): string[] {
+  const days: string[] = [];
+  const total = new Date(year, month, 0).getDate();
+  for (let d = 1; d <= total; d++) {
+    const ds = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    if (ds > do_) break;
+    const dow = new Date(year, month - 1, d).getDay();
+    if (dow !== 0 && dow !== 6) days.push(ds);
+  }
+  return days;
+}
+
+function fmtDani(n: number): string {
+  if (!n) return "–";
+  return `${n} (${n * 8}h)`;
+}
+
+function PregledEvidencije({
+  year, month, prevMonth, nextMonth, naTekucem, loading,
+  workers, unosi, radnici, sihte, sihteLoading, danas,
+}: {
+  year: number; month: number;
+  prevMonth: () => void; nextMonth: () => void;
+  naTekucem: boolean; loading: boolean;
+  workers: import("@/lib/types").Korisnik[];
+  unosi: import("@/lib/types").UnosRada[];
+  radnici: import("@/lib/types").PomocniRadnik[];
+  sihte: Record<string, import("@/lib/pomocni").DaniSihte>;
+  sihteLoading: boolean;
+  danas: string;
+}) {
+  const monthLabel = monthYearLabel(year, month);
+  const radniDani = radniDaniUMjesecu(year, month, danas);
+
+  type Row = { name: string; teren: number; kancelarija: number; bolovanje: number; godisnji: number; zastoj: number };
+
+  const projRows: Row[] = workers.map((w) => {
+    const wu = unosi.filter((u) => u.inzinjerId === w.id);
+    const sveDatume = new Set(wu.map((u) => u.datum.slice(0, 10)));
+    const byDate = (vrsta: string) => new Set(wu.filter((u) => u.vrsta === vrsta).map((u) => u.datum.slice(0, 10))).size;
+    return {
+      name: w.fullName || w.ime,
+      teren:       byDate("TEREN"),
+      kancelarija: byDate("KANCELARIJA"),
+      bolovanje:   byDate("BOLOVANJE"),
+      godisnji:    byDate("GODISNJI"),
+      zastoj:      radniDani.filter((d) => !sveDatume.has(d)).length,
+    };
+  }).filter((r) => r.teren + r.kancelarija + r.bolovanje + r.godisnji + r.zastoj > 0 || workers.length <= 10);
+
+  const pmRows: Row[] = radnici.map((r) => {
+    const dani = sihte[r.id] ?? {};
+    const count = (v: string) => Object.values(dani).filter((x) => x === v).length;
+    return {
+      name:        punoIme(r),
+      teren:       count("TEREN"),
+      kancelarija: count("KANCELARIJA"),
+      bolovanje:   count("BOLOVANJE"),
+      godisnji:    count("GODISNJI"),
+      zastoj:      count("OSTALO"),
+    };
+  });
+
+  const cols: { key: keyof Row; label: string }[] = [
+    { key: "teren",       label: "Teren" },
+    { key: "kancelarija", label: "Kancelarija" },
+    { key: "bolovanje",   label: "Bolovanje" },
+    { key: "godisnji",    label: "Godišnji" },
+    { key: "zastoj",      label: "Zastoj" },
+  ];
+
+  const sumRow = (rows: Row[]): Row => {
+    const s: Row = { name: "Ukupno", teren: 0, kancelarija: 0, bolovanje: 0, godisnji: 0, zastoj: 0 };
+    for (const r of rows) { s.teren += r.teren; s.kancelarija += r.kancelarija; s.bolovanje += r.bolovanje; s.godisnji += r.godisnji; s.zastoj += r.zastoj; }
+    return s;
+  };
+
+  const btnNav = "w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
+  const isLoading = loading || sihteLoading;
+
+  const Tbl = ({ rows, title, ukupno }: { rows: Row[]; title: string; ukupno?: boolean }) => (
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Prikaz dana rada · 1 dan = 8 sati</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[540px]">
+          <thead className="bg-gray-50 dark:bg-gray-800 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <tr>
+              <th className="text-left font-semibold px-4 py-2.5">Radnik</th>
+              {cols.map((c) => (
+                <th key={c.key} className="text-right font-semibold px-3 py-2.5 whitespace-nowrap">{c.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 tabular-nums">
+            {rows.length === 0 ? (
+              <tr><td colSpan={cols.length + 1} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Nema podataka za ovaj mjesec.</td></tr>
+            ) : rows.map((r) => (
+              <tr key={r.name} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
+                <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{r.name}</td>
+                {cols.map((c) => (
+                  <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" && (r[c.key] as number) > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-600 dark:text-gray-300"}`}>
+                    {fmtDani(r[c.key] as number)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+          {ukupno && rows.length > 1 && (() => {
+            const s = sumRow(rows);
+            return (
+              <tfoot className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-100">
+                <tr>
+                  <td className="px-4 py-2.5">Ukupno</td>
+                  {cols.map((c) => (
+                    <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" && (s[c.key] as number) > 0 ? "text-amber-600 dark:text-amber-400" : ""}`}>
+                      {fmtDani(s[c.key] as number)}
+                    </td>
+                  ))}
+                </tr>
+              </tfoot>
+            );
+          })()}
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-2">
+        <button type="button" className={btnNav} disabled={jePrviMjesecEvidencije(year, month)} onClick={prevMonth} aria-label="Prethodni">‹</button>
+        <span className="min-w-[9rem] text-center text-base font-semibold capitalize text-gray-700 dark:text-gray-200">{monthLabel}</span>
+        <button type="button" className={btnNav} disabled={naTekucem} onClick={nextMonth} aria-label="Sljedeći">›</button>
+        {isLoading && <span className="ml-3 text-xs text-gray-400 dark:text-gray-500">Učitava se…</span>}
+      </div>
+
+      <Tbl rows={projRows} title="Projektanti" ukupno />
+      {radnici.length > 0 && <Tbl rows={pmRows} title="Pomoćni radnici" ukupno />}
     </div>
   );
 }
