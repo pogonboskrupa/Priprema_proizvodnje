@@ -13,7 +13,7 @@ import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
 import { EVIDENCIJA_OD_DATUM, mjeseciEvidencije } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
-import { praznik, jeRadniDan } from "@/lib/praznici";
+import { praznik } from "@/lib/praznici";
 import { zabranaUpisa } from "@/lib/sihtarica";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
@@ -83,7 +83,7 @@ export default function UnosPage() {
 
   const multiDayDates =
     multiDay && datumDo && datumDo >= form.datum
-      ? getWorkDays(form.datum, datumDo).filter((d) => form.vrsta !== "GODISNJI" || jeRadniDan(d))
+      ? getWorkDays(form.datum, datumDo)
       : [];
 
   useEffect(() => {

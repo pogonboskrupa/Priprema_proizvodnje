@@ -1,6 +1,6 @@
 import type { UnosRada, VrstaRada } from "@/lib/types";
 import { localDateStr } from "@/lib/format";
-import { praznik, jeRadniDan } from "@/lib/praznici";
+import { praznik } from "@/lib/praznici";
 import { VRSTA } from "@/lib/vrste";
 
 // Odsustvo isključuje rad istog dana; oba zajedno su greška u unosu
@@ -73,7 +73,13 @@ export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRa
   // doznaka/vlaka mogu biti u više odjela istog dana
   const visestruko = vrsta === "DOZNAKA" || vrsta === "VLAKA";
   if (!visestruko && postojeci.some((u) => u.vrsta === vrsta)) return `${label} je već upisan za ovaj dan.`;
-  if (vrsta === "GODISNJI" && !jeRadniDan(datum)) return "Godišnji se ne upisuje za vikend ni praznik — ti dani se ne troše iz godišnjeg.";
+  // Jedan unos po danu: prisustvo (teren, kancelarija, godišnji, bolovanje) isključuje sve drugo;
+  // doznaka/vlaka mogu biti višestruki ali ne miješaju se s prisustvima.
+  if (postojeci.length > 0) {
+    const imaPrisustvo = postojeci.some((u) => u.vrsta !== "DOZNAKA" && u.vrsta !== "VLAKA");
+    if (imaPrisustvo) return "Za ovaj dan je već upisan unos — jedan dan, jedan tip aktivnosti.";
+    if (!visestruko) return "Za ovaj dan su već upisane doznaka ili vlaka.";
+  }
   if (jeKonflikt([...postojeci, { vrsta }])) {
     return ODSUSTVO.has(vrsta)
       ? `${label} je za cijeli dan — ovaj dan već ima drugu aktivnost.`
