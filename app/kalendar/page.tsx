@@ -251,7 +251,7 @@ const emptyEditForm = (): EditForm => ({
   vrsta: "DOZNAKA", odjelId: "", brojStabala: "", hektari: "", kilometri: "", napomena: "",
 });
 
-type EvTab = "pregled" | "pomocni";
+type EvTab = "pregled" | "pomocni" | "kalendar";
 type PomocniView = "pregled" | "sihtarica" | "evidencija";
 const POMOCNI_VIEWS: { id: PomocniView; label: string }[] = [
   { id: "pregled", label: "Pregled" },
@@ -329,22 +329,22 @@ export default function KalendarPage() {
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
   }, [session, isWorker, canEdit]);
 
-  const [evTab, setEvTab] = useState<EvTab>("pregled");
+  const [evTab, setEvTab] = useState<EvTab>(() => isAdmin ? "kalendar" : "pregled");
 
-  // Učitaj pomoćne radnike za šihtera
+  // Učitaj pomoćne radnike za canSeeAll
   useEffect(() => {
-    if (!isSihter) return;
+    if (!canSeeAll) return;
     getPomocniRadnici().then(setRadnici).catch(() => {});
-  }, [isSihter]);
+  }, [canSeeAll]);
 
   // Sync pmMjesec sa glavnim kalendarom (samo na pregled tabu)
   useEffect(() => {
-    if (isSihter && evTab === "pregled") setPmMjesec({ year, month });
-  }, [isSihter, evTab, year, month]);
+    if (canSeeAll && evTab === "pregled") setPmMjesec({ year, month });
+  }, [canSeeAll, evTab, year, month]);
 
   // Tipke za četku (samo na pomoćnim radnicima)
   useEffect(() => {
-    if (!isSihter || evTab !== "pomocni" || pmView === "evidencija") return;
+    if (!canSeeAll || evTab !== "pomocni" || pmView === "evidencija") return;
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (e.ctrlKey || e.metaKey || e.altKey || el.closest("input, select, textarea")) return;
@@ -353,7 +353,7 @@ export default function KalendarPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isSihter, evTab, pmView]);
+  }, [canSeeAll, evTab, pmView]);
 
   const userId = session?.userId;
 
@@ -485,12 +485,17 @@ export default function KalendarPage() {
 
   return (
     <div>
-      {/* ── Naslov + tab switcher za šihtera ────────────────────────────────── */}
-      {isSihter && (
+      {/* ── Naslov + tab switcher za admin/šihtera ──────────────────────────── */}
+      {canSeeAll && (
         <div className="flex flex-wrap items-center gap-3 mb-5">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Evidencija rada</h1>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">
+            {isSihter ? "Evidencija rada" : "Kalendar"}
+          </h1>
           <div role="tablist" className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 gap-1">
-            {([{ id: "pregled", label: "Pregled" }, { id: "pomocni", label: "Pomoćni radnici" }] as { id: EvTab; label: string }[]).map((t) => (
+            {(isAdmin
+              ? ([{ id: "kalendar", label: "Kalendar" }, { id: "pregled", label: "Pregled" }, { id: "pomocni", label: "Pomoćni radnici" }] as { id: EvTab; label: string }[])
+              : ([{ id: "pregled", label: "Pregled" }, { id: "pomocni", label: "Pomoćni radnici" }] as { id: EvTab; label: string }[])
+            ).map((t) => (
               <button key={t.id} type="button" role="tab" aria-selected={evTab === t.id} onClick={() => setEvTab(t.id)}
                 className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 ${
                   evTab === t.id ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -501,7 +506,7 @@ export default function KalendarPage() {
       )}
 
       {/* ── Podtab: Pregled ──────────────────────────────────────────────────── */}
-      {isSihter && evTab === "pregled" && (
+      {canSeeAll && evTab === "pregled" && (
         <PregledEvidencije
           year={year} month={month}
           prevMonth={prevMonth} nextMonth={nextMonth}
@@ -516,7 +521,7 @@ export default function KalendarPage() {
       )}
 
       {/* ── Podtab: Pomoćni radnici ──────────────────────────────────────────── */}
-      {isSihter && evTab === "pomocni" && (
+      {canSeeAll && evTab === "pomocni" && (
         <div className="space-y-5">
           <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
             <div className="mr-auto min-w-0 flex items-center gap-1">
@@ -600,12 +605,12 @@ export default function KalendarPage() {
         </div>
       )}
 
-      {/* ── Kalendar projektanata (samo za non-šihter) ──────────────────────── */}
-      {!isSihter && (
+      {/* ── Kalendar projektanata ───────────────────────────────────────────── */}
+      {(!canSeeAll || evTab === "kalendar") && (
       <div>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {!isSihter && <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>}
+        {!canSeeAll && <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Kalendar</h1>}
 
         {!isWorker && shownWorkers.length > 0 && (
           <select
