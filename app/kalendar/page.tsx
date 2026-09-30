@@ -920,8 +920,8 @@ function FmtDani({ n }: { n: number }) {
       <span className="text-amber-700 dark:text-amber-300">{n}</span>
       {" "}
       <span
-        className="text-yellow-400 dark:text-yellow-300 text-xs"
-        style={{ WebkitTextStroke: "0.6px white", textStroke: "0.6px white" } as React.CSSProperties}
+        className="text-yellow-300 dark:text-yellow-200 text-xs font-semibold"
+        style={{ WebkitTextStroke: "1px black", textStroke: "1px black", paintOrder: "stroke fill" } as React.CSSProperties}
       >({n * 8}h)</span>
     </>
   );
