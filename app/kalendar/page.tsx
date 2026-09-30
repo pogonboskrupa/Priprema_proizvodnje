@@ -913,9 +913,18 @@ function radniDaniUMjesecu(year: number, month: number, do_: string): string[] {
   return days;
 }
 
-function fmtDani(n: number): string {
-  if (!n) return "–";
-  return `${n} (${n * 8}h)`;
+function FmtDani({ n }: { n: number }) {
+  if (!n) return <span className="text-gray-300 dark:text-gray-600">–</span>;
+  return (
+    <>
+      <span className="text-amber-700 dark:text-amber-300">{n}</span>
+      {" "}
+      <span
+        className="text-yellow-400 dark:text-yellow-300 text-xs"
+        style={{ WebkitTextStroke: "0.6px white", textStroke: "0.6px white" } as React.CSSProperties}
+      >({n * 8}h)</span>
+    </>
+  );
 }
 
 function PregledEvidencije({
@@ -1008,8 +1017,8 @@ function PregledEvidencije({
               <tr key={r.name} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
                 <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{r.name}</td>
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-3 py-2.5 text-right font-medium ${c.key === "zastoj" ? "text-amber-600 dark:text-amber-400" : "text-amber-700 dark:text-amber-300"}`}>
-                    {fmtDani(r[c.key] as number)}
+                  <td key={c.key} className="px-3 py-2.5 text-right font-medium">
+                    <FmtDani n={r[c.key] as number} />
                   </td>
                 ))}
               </tr>
@@ -1022,8 +1031,8 @@ function PregledEvidencije({
                 <tr>
                   <td className="px-4 py-2.5">Ukupno</td>
                   {cols.map((c) => (
-                    <td key={c.key} className={`px-3 py-2.5 text-right ${c.key === "zastoj" ? "text-amber-600 dark:text-amber-400" : "text-amber-700 dark:text-amber-300"}`}>
-                      {fmtDani(s[c.key] as number)}
+                    <td key={c.key} className="px-3 py-2.5 text-right">
+                      <FmtDani n={s[c.key] as number} />
                     </td>
                   ))}
                 </tr>
