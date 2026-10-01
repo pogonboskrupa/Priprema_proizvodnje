@@ -28,7 +28,7 @@ export default function Home() {
   const router = useRouter();
   const [rezime, setRezime] = useState<MjesecniRezime | null>(null);
   const [prosli, setProsli] = useState<MjesecniRezime | null>(null);
-  const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
+  const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[] | null>(null);
   const [plan, setPlan] = useState<PlanProjektantRed[] | null>(null);
   const [zadnji, setZadnji] = useState<Record<string, ZadnjiDan> | null>(null);
   const [projektanti, setProjektanti] = useState<Korisnik[]>([]);
@@ -133,19 +133,35 @@ export default function Home() {
         )}
       </section>
 
-      {plan && (isWorker
-        ? <MojPlan red={mojPlan} godina={danasD.getFullYear()} />
-        : <PlanTima redovi={plan} godina={danasD.getFullYear()} />)}
-
-      {odjeliRezime.length > 0 && (
-        <section aria-labelledby="odjeli-naslov">
-          <SectionTitle id="odjeli-naslov" title={isWorker ? "Moji odjeli" : "Aktivnost po odjelima"} meta={mesec} />
+      <section aria-labelledby="odjeli-naslov">
+        <SectionTitle
+          id="odjeli-naslov"
+          title={isWorker ? "Odjeli u kojima sam radio" : "Odjeli u kojima se radilo"}
+          meta={mesec}
+          action={<DetaljnoLink href="/izvjestaji">Detaljan pregled</DetaljnoLink>}
+        />
+        {odjeliRezime === null ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2" aria-hidden>
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="h-[142px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />
+            ))}
+          </div>
+        ) : odjeliRezime.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {odjeliRezime.map((o) => <OdjelCard key={o.odjelId} odjel={o} />)}
             <UkupnoOdjeliCard odjeli={odjeliRezime} />
           </div>
-        </section>
-      )}
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Ovaj mjesec nema rada vezanog za odjele.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Odjel će se prikazati nakon prvog unosa doznake ili vlake.</p>
+          </div>
+        )}
+      </section>
+
+      {plan && (isWorker
+        ? <MojPlan red={mojPlan} godina={danasD.getFullYear()} />
+        : <PlanTima redovi={plan} godina={danasD.getFullYear()} />)}
 
       <section aria-labelledby="stranice-naslov">
         <SectionTitle id="stranice-naslov" title="Brzi pristup" />
@@ -495,3 +511,4 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
     </Link>
   );
 }
+
