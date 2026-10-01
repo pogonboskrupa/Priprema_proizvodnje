@@ -511,4 +511,3 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
     </Link>
   );
 }
-
