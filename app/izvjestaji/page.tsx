@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import {
@@ -481,8 +482,15 @@ function OdjelIzvjestaj({ rows, period, usporedba }: { rows: OdjelRow[]; period:
               {rows.map((r) => (
                 <tr key={String(r.odjel.id)} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 tabular-nums">
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-gray-500 dark:text-gray-400 text-xs">{r.odjel.gj} /</span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100 ml-1">{r.odjel.broj}</span>
+                    <Link
+                      href={`/odjel/?id=${encodeURIComponent(String(r.odjel.id))}`}
+                      className="group/odjel inline-flex items-center rounded-md px-1.5 py-1 -mx-1.5 -my-1 text-green-800 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                      aria-label={`Otvori pregled odjela ${r.odjel.gj} / ${r.odjel.broj}`}
+                    >
+                      <span className="text-green-700/70 dark:text-green-400/70 text-xs">{r.odjel.gj} /</span>
+                      <span className="font-semibold ml-1 underline decoration-transparent group-hover/odjel:decoration-current">{r.odjel.broj}</span>
+                      <Icon name="arrow" className="ml-1 w-3 h-3 opacity-50 group-hover/odjel:opacity-100" />
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{fmtBroj(r.odjel.povrsina)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400">{r.ukupnoHektara > 0 ? fmtBroj(r.ukupnoHektara) : "–"}</td>
@@ -704,10 +712,15 @@ function MojIzvjestaj({ row, period, usporedba, odjeli }: {
           <ul className="divide-y divide-gray-100 dark:divide-gray-800">
             {odjeli.map((o) => (
               <li key={o.odjelId} className="px-5 py-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 tabular-nums">
-                <span className="min-w-[7rem]">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">{o.gj} /</span>
-                  <span className="ml-1 font-semibold text-gray-900 dark:text-gray-100">{o.broj}</span>
-                </span>
+                <Link
+                  href={`/odjel/?id=${encodeURIComponent(o.odjelId)}`}
+                  className="group/odjel min-w-[7rem] inline-flex items-center rounded-md px-1.5 py-1 -mx-1.5 -my-1 text-green-800 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+                  aria-label={`Otvori pregled odjela ${o.gj} / ${o.broj}`}
+                >
+                  <span className="text-xs text-green-700/70 dark:text-green-400/70">{o.gj} /</span>
+                  <span className="ml-1 font-semibold underline decoration-transparent group-hover/odjel:decoration-current">{o.broj}</span>
+                  <Icon name="arrow" className="ml-1 w-3 h-3 opacity-50 group-hover/odjel:opacity-100" />
+                </Link>
                 <span className="text-xs text-gray-500 dark:text-gray-400">{o.dani} {o.dani === 1 ? "dan" : "dana"}</span>
                 <span className="ml-auto flex flex-wrap gap-x-4 text-sm">
                   {o.ha > 0 && <span className="font-semibold text-green-700 dark:text-green-400">{fmtBroj(o.ha)} ha</span>}
