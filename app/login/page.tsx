@@ -19,7 +19,7 @@ export default function LoginPage() {
   useEffect(() => {
     const ses = getSession();
     if (ses) router.replace("/");
-  }, []);
+  }, [router]);
 
   function addDigit(d: string) {
     if (pin.length >= 4) return;

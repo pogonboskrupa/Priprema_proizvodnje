@@ -16,9 +16,13 @@
 # next.js
 /.next/
 /out/
+/docs/
 
 # production
 /build
+
+# Generated release artifacts
+/public/app-release.apk
 
 # misc
 .DS_Store

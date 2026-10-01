@@ -11,7 +11,7 @@ export default function ElaboratPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   if (authLoading || !session) return null;
 

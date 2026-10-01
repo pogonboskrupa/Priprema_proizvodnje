@@ -45,7 +45,7 @@ function OdjelPregled() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   const load = useCallback(() => {
     if (!id) return;

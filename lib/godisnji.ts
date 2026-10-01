@@ -1,4 +1,4 @@
-import type { UnosRada } from "@/lib/types";
+import type { UnosRada } from "./types";
 
 // Pravo na GO se broji od 1. jula: neiskorišteni dani prethodne godine važe do 30. juna
 export const GO_POCETAK_MJESEC = 7;

@@ -4,6 +4,6 @@ import { useRouter } from "next/navigation";
 
 export default function InzinjeriPage() {
   const router = useRouter();
-  useEffect(() => { router.replace("/postavke"); }, []);
+  useEffect(() => { router.replace("/postavke"); }, [router]);
   return null;
 }

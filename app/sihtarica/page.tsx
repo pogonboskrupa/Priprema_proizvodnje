@@ -66,7 +66,7 @@ export default function SihtaricaPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   function toast(text: string, error = false) {
     setMsg({ text, error });

@@ -34,7 +34,7 @@ export default function MojiOdjeliPage() {
   useEffect(() => {
     if (!loading && !session) { router.replace("/login/"); return; }
     if (!loading && session?.role !== "worker") { router.replace("/"); return; }
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   useEffect(() => {
     if (!session || session.role !== "worker") return;

@@ -164,7 +164,7 @@ export default function StatistikaPage() {
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
     if (!loading && session && session.role !== "admin") router.replace("/");
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   useEffect(() => {
     if (!session) return;

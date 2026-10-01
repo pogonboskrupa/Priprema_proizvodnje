@@ -7,7 +7,29 @@ Verzioniranje: `MAJOR.MINOR.PATCH`
 
 Patch ide od 1.0.0 → 1.0.1 → ... → 1.0.9 → 1.1.0 (minor).
 
-Gdje promijeniti verziju: `docs/index.html`, konstanta `VERSION` na vrhu `<script>` bloka.
+Verzija se mijenja samo u `package.json`; web i Android je čitaju iz tog izvora.
+
+---
+
+## [1.5.122] — 2026-10-01
+
+### Sigurnost i ovisnosti
+- Next.js ažuriran na 16.3.8 radi zakrpe kritične ranjivosti
+- Uklonjen ranjivi `xlsx`; izvoz koristi `write-excel-file`
+- Ažurirani razvojni alati i uvedena kontrolirana `@grpc/grpc-js` zakrpa
+
+### Kvaliteta
+- Dodani TypeScript, lint, Vitest i audit koraci u CI
+- Dodani testovi ključnih poslovnih pravila
+- Izdvojene rekapitulacije kalendara i statističke funkcije u zasebne module
+- Ispravljen uvjetni redoslijed React hookova i komponenta definirana unutar rendera
+
+### Build i repozitorij
+- Fontovi su lokalni npm resursi; build više ne ovisi o Google Fonts mreži
+- Generirani `docs/` i placeholder APK uklonjeni iz repozitorija
+- Deployment se pokreće samo s grane `main`
+- Verzija weba, paketa i Androida izvedena je iz `package.json`
+- README zamijenjen stvarnim uputama za razvoj, provjere i deployment
 
 ---
 

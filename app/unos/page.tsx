@@ -88,12 +88,12 @@ export default function UnosPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   useEffect(() => {
     if (!session || !isWorker) return;
     setForm((f) => ({ ...f, inzinjerId: session.userId }));
-  }, [session]);
+  }, [session, isWorker]);
 
   async function load() {
     try {

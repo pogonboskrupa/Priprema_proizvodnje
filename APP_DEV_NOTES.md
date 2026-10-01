@@ -275,7 +275,7 @@ Svaki tab koji ima print dugme ima svoju `print*()` funkciju.
 
 ## Verzioniranje
 
-Konstanta `VERSION` u `docs/index.html` (vrh `<script>` bloka).
+Jedini izvor verzije je polje `version` u `package.json`. Web i Android je čitaju automatski.
 Prikaz: login ekran (`#lg-ver`) i Postavke tab (`#app-ver-badge`).
 Detalji: vidi `CHANGELOG.md`.
 
@@ -296,7 +296,7 @@ Patch: 1.0.0 → 1.0.1 → ... → 1.0.9 → **1.1.0** (minor reset patch na 0).
   definicije u source-u.
 - **Nema frameworka.** Vanilla JS, direktna DOM manipulacija.
 - **Deployment:** `main` branch → GitHub Pages automatski.
-  Development branch: `claude/wizardly-albattani-jvhp2z`.
+  Razvoj ide kroz kratkotrajne feature brancheve i pull request u zaštićeni `main`.
 - **Service Worker** cache: `ppbk-v4`. Ako se SW treba invalidirati, inkrementovati
   verziju u `docs/sw.js`.
 - **Font:** Inter (UI) + DM Mono (numerički podaci) iz Google Fonts.

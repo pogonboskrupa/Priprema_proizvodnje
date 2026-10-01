@@ -34,13 +34,16 @@ jobs:
 
       - run: npm ci
 
+      - name: Provjere kvalitete
+        run: npm run typecheck && npm run lint && npm run test
+
       - name: Sync Capacitor
         run: npx cap sync android --no-open
 
       - name: Čitaj verziju iz version.ts
         id: version
         run: |
-          VER=$(grep "VERSION" lib/version.ts | grep -oP "'\K[^']+")
+          VER=$(node -p "require('./package.json').version")
           echo "version=$VER" >> $GITHUB_OUTPUT
 
       - name: Pripremi keystore iz GitHub Secret

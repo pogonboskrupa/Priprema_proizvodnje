@@ -17,11 +17,12 @@ import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
 import { Icon } from "@/components/Icon";
 import { useSihtePomocnih } from "@/hooks/useSihtePomocnih";
-import { POMOCNI, VRSTE_POMOCNI, daniUMjesecu, rezimeSihte, punoIme } from "@/lib/pomocni";
+import { daniUMjesecu, punoIme } from "@/lib/pomocni";
 import { CetkaTraka, type Cetka } from "@/components/pomocni/Cetka";
 import { PregledMatrica } from "@/components/pomocni/PregledMatrica";
 import { SihtaKalendar } from "@/components/pomocni/SihtaKalendar";
 import { Evidencija } from "@/components/pomocni/Evidencija";
+import { computeAllWorkersRecap, computeRecap, type WorkerRecapRow } from "@/lib/kalendar-rezime";
 
 const DAY_NAMES = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
 const pak = (st: number) => (st / 30).toFixed(1);
@@ -51,73 +52,6 @@ function personName(k: Korisnik | undefined | null): string {
 }
 function wasEdited(u: UnosRada): boolean {
   return !!u.updatedById;
-}
-
-// ── Recap computation ─────────────────────────────────────────────────────────
-
-type VrstaStats = { days: Set<string>; ha: number; stabala: number; km: number };
-function computeRecap(unosi: UnosRada[]) {
-  const byVrsta: Record<string, VrstaStats> = {};
-  const totalDates = new Set<string>();
-  for (const u of unosi) {
-    const ds = u.datum.slice(0, 10);
-    if (!ds) continue;
-    if (!byVrsta[u.vrsta]) byVrsta[u.vrsta] = { days: new Set(), ha: 0, stabala: 0, km: 0 };
-    byVrsta[u.vrsta].days.add(ds);
-    totalDates.add(ds);
-    if (u.vrsta === "DOZNAKA") {
-      byVrsta[u.vrsta].ha += Number(u.hektari) || 0;
-      byVrsta[u.vrsta].stabala += Number(u.brojStabala) || 0;
-    } else if (u.vrsta === "VLAKA") {
-      byVrsta[u.vrsta].km += Number(u.kilometri) || 0;
-    }
-  }
-  return { byVrsta, totalDays: totalDates.size };
-}
-
-type WorkerRow = {
-  id: string; name: string; totalDays: number;
-  doz: number; vl: number; ter: number; kan: number; god: number; bol: number;
-  ha: number; stabala: number; km: number;
-};
-function computeAllWorkersRecap(allUnosi: UnosRada[], workers: Korisnik[]): WorkerRow[] {
-  type Acc = {
-    total: Set<string>; doz: Set<string>; vl: Set<string>; ter: Set<string>;
-    kan: Set<string>; god: Set<string>; bol: Set<string>;
-    ha: number; stabala: number; km: number;
-  };
-  const empty = (): Acc => ({
-    total: new Set(), doz: new Set(), vl: new Set(), ter: new Set(),
-    kan: new Set(), god: new Set(), bol: new Set(), ha: 0, stabala: 0, km: 0,
-  });
-  const map: Record<string, Acc> = {};
-  for (const w of workers) map[w.id] = empty();
-  for (const u of allUnosi) {
-    const a = map[u.inzinjerId];
-    if (!a) continue;
-    const ds = u.datum.slice(0, 10);
-    if (!ds) continue;
-    a.total.add(ds);
-    switch (u.vrsta) {
-      case "DOZNAKA": a.doz.add(ds); a.ha += Number(u.hektari) || 0; a.stabala += Number(u.brojStabala) || 0; break;
-      case "VLAKA":   a.vl.add(ds); a.km += Number(u.kilometri) || 0; break;
-      case "TEREN":       a.ter.add(ds); break;
-      case "KANCELARIJA": a.kan.add(ds); break;
-      case "GODISNJI":    a.god.add(ds); break;
-      case "BOLOVANJE":   a.bol.add(ds); break;
-    }
-  }
-  return workers
-    .map((w) => {
-      const a = map[w.id];
-      return {
-        id: w.id, name: w.fullName || w.ime, totalDays: a.total.size,
-        doz: a.doz.size, vl: a.vl.size, ter: a.ter.size,
-        kan: a.kan.size, god: a.god.size, bol: a.bol.size,
-        ha: a.ha, stabala: a.stabala, km: a.km,
-      };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ── Recap components ──────────────────────────────────────────────────────────
@@ -179,7 +113,7 @@ function CellNum({ v, color }: { v: number; color: string }) {
   );
 }
 
-function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRow[]; monthLabel: string }) {
+function AdminAllWorkersRecap({ data, monthLabel }: { data: WorkerRecapRow[]; monthLabel: string }) {
   const totals = data.reduce(
     (acc, w) => ({ ha: acc.ha + w.ha, km: acc.km + w.km, stabala: acc.stabala + w.stabala }),
     { ha: 0, km: 0, stabala: 0 }
@@ -308,7 +242,7 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   useEffect(() => {
     if (!session) return;
@@ -327,7 +261,7 @@ export default function KalendarPage() {
     if (!session) return;
     if (!isWorker || isSihter) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
-  }, [session, isWorker, canEdit]);
+  }, [session, isWorker, isSihter, canEdit]);
 
   const [evTab, setEvTab] = useState<EvTab>(() => isAdmin ? "kalendar" : "pregled");
 
@@ -385,8 +319,6 @@ export default function KalendarPage() {
   }, [canSeeAll, selectedWorkerId, shownWorkers, unosi]);
 
   useUnosiRefresh(() => { if (session) reload().catch(() => {}); });
-
-  if (authLoading || !session) return null;
 
   function prevMonth() {
     if (jePrviMjesecEvidencije(year, month)) return;
@@ -482,6 +414,8 @@ export default function KalendarPage() {
   const pomjeriPm = (delta: number) => {
     setPmMjesec((m) => { const d = new Date(m.year, m.month - 1 + delta, 1); return { year: d.getFullYear(), month: d.getMonth() + 1 }; });
   };
+
+  if (authLoading || !session) return null;
 
   return (
     <div>
@@ -927,6 +861,74 @@ function FmtDani({ n }: { n: number }) {
   );
 }
 
+type EvidencijaRow = {
+  name: string;
+  teren: number;
+  kancelarija: number;
+  bolovanje: number;
+  godisnji: number;
+  zastoj: number;
+};
+
+type EvidencijaCol = { key: keyof EvidencijaRow; label: string };
+
+function sumEvidencijaRows(rows: EvidencijaRow[]): EvidencijaRow {
+  const sum: EvidencijaRow = { name: "Ukupno", teren: 0, kancelarija: 0, bolovanje: 0, godisnji: 0, zastoj: 0 };
+  for (const row of rows) {
+    sum.teren += row.teren;
+    sum.kancelarija += row.kancelarija;
+    sum.bolovanje += row.bolovanje;
+    sum.godisnji += row.godisnji;
+    sum.zastoj += row.zastoj;
+  }
+  return sum;
+}
+
+function PregledTabela({ rows, title, ukupno, cols }: {
+  rows: EvidencijaRow[];
+  title: string;
+  ukupno?: boolean;
+  cols: EvidencijaCol[];
+}) {
+  const sum = ukupno && rows.length > 1 ? sumEvidencijaRows(rows) : null;
+  return (
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
+        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Prikaz dana rada · 1 dan = 8 sati</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[540px]">
+          <thead className="bg-gray-50 dark:bg-gray-800 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <tr>
+              <th className="text-left font-semibold px-4 py-2.5">Radnik</th>
+              {cols.map((col) => <th key={col.key} className="text-right font-semibold px-3 py-2.5 whitespace-nowrap">{col.label}</th>)}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 tabular-nums">
+            {rows.length === 0 ? (
+              <tr><td colSpan={cols.length + 1} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Nema podataka za ovaj mjesec.</td></tr>
+            ) : rows.map((row) => (
+              <tr key={row.name} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
+                <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{row.name}</td>
+                {cols.map((col) => <td key={col.key} className="px-3 py-2.5 text-right font-medium"><FmtDani n={row[col.key] as number} /></td>)}
+              </tr>
+            ))}
+          </tbody>
+          {sum && (
+            <tfoot className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-100">
+              <tr>
+                <td className="px-4 py-2.5">Ukupno</td>
+                {cols.map((col) => <td key={col.key} className="px-3 py-2.5 text-right"><FmtDani n={sum[col.key] as number} /></td>)}
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function PregledEvidencije({
   year, month, prevMonth, nextMonth, naTekucem, loading,
   workers, unosi, radnici, sihte, sihteLoading, danas,
@@ -944,9 +946,7 @@ function PregledEvidencije({
   const monthLabel = monthYearLabel(year, month);
   const radniDani = radniDaniUMjesecu(year, month, danas);
 
-  type Row = { name: string; teren: number; kancelarija: number; bolovanje: number; godisnji: number; zastoj: number };
-
-  const projRows: Row[] = workers.map((w) => {
+  const projRows: EvidencijaRow[] = workers.map((w) => {
     const wu = unosi.filter((u) => u.inzinjerId === w.id);
     const sveDatume = new Set(wu.map((u) => u.datum.slice(0, 10)));
     const byDate = (...vrste: string[]) => new Set(wu.filter((u) => vrste.includes(u.vrsta)).map((u) => u.datum.slice(0, 10))).size;
@@ -960,7 +960,7 @@ function PregledEvidencije({
     };
   }).filter((r) => r.teren + r.kancelarija + r.bolovanje + r.godisnji + r.zastoj > 0 || workers.length <= 10);
 
-  const pmRows: Row[] = radnici.map((r) => {
+  const pmRows: EvidencijaRow[] = radnici.map((r) => {
     const dani = sihte[r.id] ?? {};
     const count = (v: string) => Object.values(dani).filter((x) => x === v).length;
     return {
@@ -973,76 +973,19 @@ function PregledEvidencije({
     };
   });
 
-  type Col = { key: keyof Row; label: string };
-  const colsProj: Col[] = [
+  const colsProj: EvidencijaCol[] = [
     { key: "teren",       label: "Teren" },
     { key: "kancelarija", label: "Kancelarija" },
     { key: "bolovanje",   label: "Bolovanje" },
     { key: "godisnji",    label: "Godišnji" },
   ];
-  const colsPm: Col[] = [
+  const colsPm: EvidencijaCol[] = [
     ...colsProj,
     { key: "zastoj", label: "Zastoj" },
   ];
 
-  const sumRow = (rows: Row[]): Row => {
-    const s: Row = { name: "Ukupno", teren: 0, kancelarija: 0, bolovanje: 0, godisnji: 0, zastoj: 0 };
-    for (const r of rows) { s.teren += r.teren; s.kancelarija += r.kancelarija; s.bolovanje += r.bolovanje; s.godisnji += r.godisnji; s.zastoj += r.zastoj; }
-    return s;
-  };
-
   const btnNav = "w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors";
   const isLoading = loading || sihteLoading;
-
-  const Tbl = ({ rows, title, ukupno, cols }: { rows: Row[]; title: string; ukupno?: boolean; cols: Col[] }) => (
-    <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60">
-        <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{title}</h2>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Prikaz dana rada · 1 dan = 8 sati</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[540px]">
-          <thead className="bg-gray-50 dark:bg-gray-800 text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            <tr>
-              <th className="text-left font-semibold px-4 py-2.5">Radnik</th>
-              {cols.map((c) => (
-                <th key={c.key} className="text-right font-semibold px-3 py-2.5 whitespace-nowrap">{c.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800 tabular-nums">
-            {rows.length === 0 ? (
-              <tr><td colSpan={cols.length + 1} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">Nema podataka za ovaj mjesec.</td></tr>
-            ) : rows.map((r) => (
-              <tr key={r.name} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
-                <td className="px-4 py-2.5 font-medium text-gray-800 dark:text-gray-100">{r.name}</td>
-                {cols.map((c) => (
-                  <td key={c.key} className="px-3 py-2.5 text-right font-medium">
-                    <FmtDani n={r[c.key] as number} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-          {ukupno && rows.length > 1 && (() => {
-            const s = sumRow(rows);
-            return (
-              <tfoot className="border-t-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/60 tabular-nums text-sm font-semibold text-gray-800 dark:text-gray-100">
-                <tr>
-                  <td className="px-4 py-2.5">Ukupno</td>
-                  {cols.map((c) => (
-                    <td key={c.key} className="px-3 py-2.5 text-right">
-                      <FmtDani n={s[c.key] as number} />
-                    </td>
-                  ))}
-                </tr>
-              </tfoot>
-            );
-          })()}
-        </table>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-5">
@@ -1053,8 +996,8 @@ function PregledEvidencije({
         {isLoading && <span className="ml-3 text-xs text-gray-400 dark:text-gray-500">Učitava se…</span>}
       </div>
 
-      <Tbl rows={projRows} title="Projektanti" ukupno cols={colsProj} />
-      {radnici.length > 0 && <Tbl rows={pmRows} title="Pomoćni radnici" ukupno cols={colsPm} />}
+      <PregledTabela rows={projRows} title="Projektanti" ukupno cols={colsProj} />
+      {radnici.length > 0 && <PregledTabela rows={pmRows} title="Pomoćni radnici" ukupno cols={colsPm} />}
     </div>
   );
 }

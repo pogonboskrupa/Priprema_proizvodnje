@@ -1,4 +1,4 @@
-import { monthYearLabel } from "@/lib/format";
+import { monthYearLabel } from "./format";
 
 /** "YYYY-MM": taj mjesec i svi raniji su zaključani; null = ništa nije zaključano */
 export type ZakljucanoDo = string | null;

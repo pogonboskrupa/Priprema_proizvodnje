@@ -59,7 +59,7 @@ export default function PlanPage() {
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
     if (!loading && session?.role !== "admin") router.replace("/");
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   useEffect(() => { loadOdjeli(); }, []);
 

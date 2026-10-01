@@ -98,13 +98,13 @@ export default function PostavkePage() {
 
   useEffect(() => {
     if (!loading && !session) router.replace("/login/");
-  }, [session, loading]);
+  }, [session, loading, router]);
 
   useEffect(() => {
     if (!session) return;
     loadMe(session.userId);
     if (isAdmin) loadKorisnici();
-  }, [session]);
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps -- početno učitavanje sesije
 
   useEffect(() => {
     if (tab !== "unosi" || !canSeeUnosi) return;

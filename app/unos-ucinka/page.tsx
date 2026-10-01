@@ -225,7 +225,7 @@ export default function UnosUcinkaPage() {
   useEffect(() => {
     if (!authLoading && !session) { router.replace("/login/"); return; }
     if (!authLoading && session && !canAccess) router.replace("/");
-  }, [session, authLoading]);
+  }, [session, authLoading, canAccess, router]);
 
   useEffect(() => {
     Promise.all([getOdjeli(), getKorisnici(), getUnosi()]).then(([od, kor, allUn]) => {

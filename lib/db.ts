@@ -25,6 +25,9 @@ import {
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog } from './types';
 import { localDateStr, cmpOdjel } from './format';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
+import { dodajUcinak, jeRadnikZaIzvjestaj, noviUcinakAcc, zatvoriUcinak, type RadniDani, type UcinakAcc } from './statistika';
+
+export type { RadniDani } from './statistika';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -60,10 +63,6 @@ export async function getKorisnici(opts: { ukljuciArhivirane?: boolean } = {}): 
 }
 
 // Arhivirani projektant ostaje u izvještajima samo za periode u kojima ima unose
-function isReportWorker(k: Korisnik, hasData: boolean): boolean {
-  return k.role === 'worker' && (!k.arhiviran || hasData);
-}
-
 export async function getKorisnik(id: string): Promise<Korisnik | null> {
   const raw = await getById('users', id);
   return raw ? (raw as unknown as Korisnik) : null;
@@ -238,7 +237,7 @@ export async function getGodisnjePlanPoProjektantu(year: number): Promise<PlanPr
   }
 
   return (usersRaw as unknown as Korisnik[])
-    .filter((k) => isReportWorker(k, acc.has(k.id)))
+    .filter((k) => jeRadnikZaIzvjestaj(k, acc.has(k.id)))
     .map((k) => {
       const a = acc.get(k.id);
       const legacyPlan = inzinjeri
@@ -669,7 +668,7 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
   }
 
   const radnici = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => isReportWorker(k, !!entries[k.id]))
+    .filter((k) => jeRadnikZaIzvjestaj(k, !!entries[k.id]))
     .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime))
     .map((k) => ({ id: k.id, name: k.fullName || k.ime }));
 
@@ -794,7 +793,7 @@ export async function getIzvjestaj(
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])
-      .filter((k) => isReportWorker(k, !!grouped[k.id]))
+      .filter((k) => jeRadnikZaIzvjestaj(k, !!grouped[k.id]))
       .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
     const data = workers.map((k) => {
@@ -962,7 +961,7 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => isReportWorker(k, !!acc[k.id]))
+    .filter((k) => jeRadnikZaIzvjestaj(k, !!acc[k.id]))
     .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime));
 
   return workers.map((k) => ({
@@ -973,28 +972,6 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
 }
 
 /** Projektant-dani: broj parova (projektant, datum) s doznakom odnosno vlakom — osnova za prosjeke po danu */
-export interface RadniDani {
-  dozDana: number;
-  vlDana: number;
-}
-
-type UcinakAcc = { ha: number; stabala: number; km: number; doz: Set<string>; vl: Set<string> };
-const noviUcinakAcc = (): UcinakAcc => ({ ha: 0, stabala: 0, km: 0, doz: new Set(), vl: new Set() });
-
-function dodajUcinak(a: UcinakAcc, u: Record<string, unknown>) {
-  const kljuc = `${u.inzinjerId}|${(u.datum as string).slice(0, 10)}`;
-  if (u.vrsta === 'DOZNAKA') {
-    a.ha += Number(u.hektari) || 0;
-    a.stabala += Number(u.brojStabala) || 0;
-    a.doz.add(kljuc);
-  } else {
-    a.km += Number(u.kilometri) || 0;
-    a.vl.add(kljuc);
-  }
-}
-
-const zatvoriUcinak = ({ ha, stabala, km, doz, vl }: UcinakAcc) => ({ ha, stabala, km, dozDana: doz.size, vlDana: vl.size });
-
 export interface UcinakMjesec extends RadniDani {
   mjesec: number;
   ha: number;
@@ -1120,7 +1097,7 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
   }
 
   const workers = (korisnaciRaw as unknown as Korisnik[])
-    .filter((k) => isReportWorker(k, !!acc[k.id]))
+    .filter((k) => jeRadnikZaIzvjestaj(k, !!acc[k.id]))
     .sort((a, b) => (acc[b.id]?.ha ?? 0) - (acc[a.id]?.ha ?? 0));
 
   return workers.map((k) => ({

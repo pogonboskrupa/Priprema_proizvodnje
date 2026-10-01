@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main, claude/wizardly-albattani-jvhp2z]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,15 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: TypeScript provjera
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testovi
+        run: npm run test
 
       # A missing secret would otherwise build an app with a broken Firebase
       # config and silently replace the working deployment.

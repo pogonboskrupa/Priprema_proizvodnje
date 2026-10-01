@@ -106,7 +106,7 @@ export default function OdjeliPage() {
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
     if (!authLoading && session?.role !== "admin") router.replace("/");
-  }, [session, authLoading]);
+  }, [session, authLoading, router]);
 
   async function load() {
     try {

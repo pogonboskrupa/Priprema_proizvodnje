@@ -1,32 +1,46 @@
 {
   "name": "priprema-app",
-  "version": "1.1.0",
+  "version": "1.5.122",
   "private": true,
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6",
+    "@capacitor/cli": {
+      "xcode": {
+        "uuid": "^11.1.1"
+      }
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
-    "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
-    "@playwright/test": "^1.63.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource/libre-baskerville": "^5.3.0",
     "firebase": "^12.19.0",
-    "next": "16.3.5",
+    "next": "^16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "xlsx": "^0.18.5"
+    "write-excel-file": "^4.1.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.8",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   }
 }

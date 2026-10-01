@@ -1,7 +1,7 @@
-import type { UnosRada, VrstaRada } from "@/lib/types";
-import { localDateStr } from "@/lib/format";
-import { praznik } from "@/lib/praznici";
-import { VRSTA } from "@/lib/vrste";
+import type { UnosRada, VrstaRada } from "./types";
+import { localDateStr } from "./format";
+import { praznik } from "./praznici";
+import { VRSTA } from "./vrste";
 
 // Odsustvo isključuje rad istog dana; oba zajedno su greška u unosu
 const ODSUSTVO: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE"]);

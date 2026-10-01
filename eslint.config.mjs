@@ -11,8 +11,17 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "docs/**",
+    "android/**",
     "next-env.d.ts",
   ]),
+  {
+    // Učitavanje podataka i pretplate namjerno postavljaju loading/stanje u effectima.
+    // Pravila o redoslijedu hookova i njihovim ovisnostima ostaju uključena.
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;

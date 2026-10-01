@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Priprema Proizvodnje
 
-## Getting Started
+Web/PWA i Android aplikacija za evidenciju rada u pripremi šumske proizvodnje: doznaka, vlake, terenski i kancelarijski rad, godišnji odmor, bolovanje, planovi i izvještaji po projektantu i odjelu.
 
-First, run the development server:
+## Tehnologije
+
+- Next.js 16, React 19 i TypeScript
+- Firebase Authentication i Firestore s offline cacheom
+- Tailwind CSS 4
+- Capacitor 8 za Android omotač
+- GitHub Pages i GitHub Actions
+
+## Lokalni razvoj
+
+Potrebni su Node.js 20+ i npm.
 
 ```bash
+npm ci
+Copy-Item .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Popunite `.env.local` vrijednostima iz Firebase projekta. Datoteke `.env*` s tajnama ne smiju se commitati.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Provjere kvalitete
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run typecheck
+npm run lint
+npm run test
+npm run build
+```
 
-## Learn More
+Sve provjere zajedno:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run check
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Testovi pokrivaju pravila dnevnih unosa, godišnji odmor, zaključavanje mjeseci, parsiranje brojčanih vrijednosti i kalendarsku rekapitulaciju.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Produkcijski build
 
-## Deploy on Vercel
+Aplikacija koristi statički Next.js export. Za GitHub Pages:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+$env:NEXT_PUBLIC_BASE_PATH = "/Priprema_proizvodnje"
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Rezultat se generira u `out/`. Ta mapa, kao i raniji `docs/` build artefakti, nije dio izvornog koda. GitHub Actions objavljuje `out/` direktno kao Pages artefakt.
+
+## Verzija i Android
+
+Jedini izvor verzije je polje `version` u `package.json`. Web prikaz, Android `versionName`, Android `versionCode` i naziv GitHub Releasea izvode se iz te vrijednosti.
+
+Android aplikacija učitava objavljenu GitHub Pages verziju. Potpisani APK nastaje u workflowu `Build Android APK` i objavljuje se kroz GitHub Releases; APK datoteke se ne spremaju u repozitorij.
+
+Potrebni GitHub Actions secrets:
+
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (opcionalno)
+- `ANDROID_KEYSTORE_B64`
+- `ANDROID_KEY_PASS`
+- `ANDROID_STORE_PASS`
+
+## Git tijek rada
+
+`main` je produkcijska grana. Promjene se rade u zasebnom branchu i spajaju pull requestom nakon prolaska TypeScript, lint i test provjera. Deployment se pokreće samo za `main`.
+
+## Struktura
+
+- `app/` — stranice i globalni stilovi
+- `components/` — zajedničke UI komponente
+- `hooks/` — React hookovi
+- `lib/` — poslovna pravila, Firebase pristup, izvještaji i izvoz
+- `tests/` — Vitest testovi poslovnih pravila
+- `android/` — Capacitor Android projekt
+- `.github/workflows/` — CI, Pages deployment i APK release
+
+Promjene po verzijama nalaze se u [CHANGELOG.md](CHANGELOG.md).

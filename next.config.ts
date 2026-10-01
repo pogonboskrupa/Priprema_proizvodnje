@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
   trailingSlash: true,
   images: { unoptimized: true },
+  turbopack: { root: process.cwd() },
 };
 
 export default nextConfig;
