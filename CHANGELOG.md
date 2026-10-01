@@ -5,9 +5,21 @@ Verzioniranje: `MAJOR.MINOR.PATCH`
 - **MINOR** (1.x.0) — nova funkcionalna cjelina, refaktoring, promjena sheme
 - **MAJOR** (x.0.0) — kompletna promjena arhitekture ili platforme
 
-Patch ide od 1.0.0 → 1.0.1 → ... → 1.0.9 → 1.1.0 (minor).
+Posljednja cifra ide od 0 do 9. Nakon `1.6.9` povećava se srednja cifra i slijedi `1.7.0`, zatim `1.7.1` itd.
 
 Verzija se mijenja samo u `package.json`; web i Android je čitaju iz tog izvora.
+
+---
+
+## [1.6.1] — 2026-10-01
+
+### Početna i izvještaji
+- Na početnoj je istaknut mjesečni pregled odjela u kojima se radilo
+- U `Izvještaji → Učinak` naziv odjela otvara njegov detaljni pregled
+
+### Verzioniranje
+- Web, Android i GitHub Release koriste verziju `1.6.1` iz `package.json`
+- Zadnja cifra raste do 9; nakon toga povećava se srednja cifra i zadnja se vraća na 0
 
 ---
 

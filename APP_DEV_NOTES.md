@@ -281,11 +281,11 @@ Detalji: vidi `CHANGELOG.md`.
 
 | Tip promjene | Šta inkrementovati | Primjer |
 |--------------|--------------------|---------|
-| Bugfix, sitna UI promjena, novo polje | PATCH | 1.0.0 → 1.0.1 |
-| Nova funkcionalna cjelina, promjena sheme | MINOR | 1.0.9 → 1.1.0 |
+| Bugfix, sitna UI promjena, novo polje | PATCH | 1.6.1 → 1.6.2 |
+| Nova funkcionalna cjelina ili dosegnuta zadnja cifra 9 | MINOR | 1.6.9 → 1.7.0 |
 | Promjena arhitekture ili platforme | MAJOR | 1.x.x → 2.0.0 |
 
-Patch: 1.0.0 → 1.0.1 → ... → 1.0.9 → **1.1.0** (minor reset patch na 0).
+Pravilo projekta: zadnja cifra ide od 0 do 9. Primjer: 1.6.1 → 1.6.2 → ... → 1.6.9 → **1.7.0**, zatim 1.7.1.
 
 ---
 

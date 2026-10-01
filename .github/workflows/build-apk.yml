@@ -6,7 +6,8 @@ on:
     paths:
       - 'android/**'
       - 'capacitor.config.ts'
-      - 'lib/version.ts'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/build-apk.yml'
   workflow_dispatch:
 
@@ -40,7 +41,7 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android --no-open
 
-      - name: Čitaj verziju iz version.ts
+      - name: Čitaj verziju iz package.json
         id: version
         run: |
           VER=$(node -p "require('./package.json').version")

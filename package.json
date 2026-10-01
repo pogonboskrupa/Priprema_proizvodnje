@@ -1,6 +1,6 @@
 {
   "name": "priprema-app",
-  "version": "1.5.122",
+  "version": "1.6.1",
   "private": true,
   "overrides": {
     "@grpc/grpc-js": "^1.13.6",

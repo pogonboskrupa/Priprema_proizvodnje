@@ -54,6 +54,8 @@ Rezultat se generira u `out/`. Ta mapa, kao i raniji `docs/` build artefakti, ni
 
 Jedini izvor verzije je polje `version` u `package.json`. Web prikaz, Android `versionName`, Android `versionCode` i naziv GitHub Releasea izvode se iz te vrijednosti.
 
+Zadnja cifra verzije povećava se do 9; nakon `1.6.9` slijedi `1.7.0`, pa `1.7.1` itd.
+
 Android aplikacija učitava objavljenu GitHub Pages verziju. Potpisani APK nastaje u workflowu `Build Android APK` i objavljuje se kroz GitHub Releases; APK datoteke se ne spremaju u repozitorij.
 
 Potrebni GitHub Actions secrets:
