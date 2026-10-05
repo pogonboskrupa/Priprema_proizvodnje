@@ -4,8 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
-import type { Korisnik, UnosRada, VrstaSuma } from "@/lib/types";
-import { ZVANJE_SUMA } from "@/lib/zvanje";
+import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
@@ -81,7 +80,7 @@ export default function PostavkePage() {
   const [me, setMe] = useState<Korisnik | null>(null);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
-  const [addForm, setAddForm] = useState<{ ime: string; fullName: string; title: string; suma: VrstaSuma | "" }>({ ime: "", fullName: "", title: "", suma: "" });
+  const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "" });
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
@@ -178,13 +177,12 @@ export default function PostavkePage() {
       ime,
       fullName: addForm.fullName || addForm.ime,
       title: addForm.title,
-      suma: addForm.suma || null,
       pin,
       role: "worker",
       avatar: "",
       odjeliIds: [],
     });
-    setAddForm({ ime: "", fullName: "", title: "", suma: "" });
+    setAddForm({ ime: "", fullName: "", title: "" });
     setShowAdd(false);
     loadKorisnici();
     setPinNotice({ ime, pin, novi: true });
@@ -379,7 +377,7 @@ export default function PostavkePage() {
 
           {showAdd && (
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Korisničko ime (za prijavu)</label>
                   <input
@@ -407,17 +405,6 @@ export default function PostavkePage() {
                     maxLength={60}
                   />
                 </div>
-                <div>
-                  <label htmlFor="novi-suma" className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Šume (zvanje na šihtarici)</label>
-                  <select id="novi-suma"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={addForm.suma}
-                    onChange={(e) => setAddForm({ ...addForm, suma: e.target.value as VrstaSuma | "" })}>
-                    <option value="">— nije izabrano —</option>
-                    <option value="visoke">Visoke šume</option>
-                    <option value="izdanacke">Izdanačke šume</option>
-                  </select>
-                </div>
               </div>
               <div className="flex gap-2">
                 <button onClick={addKorisnik} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
@@ -437,7 +424,6 @@ export default function PostavkePage() {
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
-                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Šume</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnji online</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -453,21 +439,6 @@ export default function PostavkePage() {
                       }`}>
                         {k.role}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {k.role === "worker" && (
-                        <select aria-label={`Šume — ${k.fullName || k.ime}`} title={k.suma ? ZVANJE_SUMA[k.suma] : "Zvanje na šihtarici: upisana titula"}
-                          className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                          value={k.suma ?? ""}
-                          onChange={(e) => guarded(async () => {
-                            await updateKorisnik(k.id, { suma: (e.target.value || null) as VrstaSuma | null });
-                            loadKorisnici();
-                          })}>
-                          <option value="">—</option>
-                          <option value="visoke">Visoke</option>
-                          <option value="izdanacke">Izdanačke</option>
-                        </select>
-                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}

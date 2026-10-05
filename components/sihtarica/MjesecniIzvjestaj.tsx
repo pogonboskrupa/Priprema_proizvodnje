@@ -2,7 +2,6 @@
 import { useMemo, useState } from "react";
 import { monthName, monthYearLabel } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
-import { zvanje } from "@/lib/zvanje";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
 import { mjesecniRedovi, radniDaniMjeseca } from "@/lib/mjesecni";
@@ -72,7 +71,7 @@ export function MjesecniIzvjestaj() {
                 <td className={td}>{i + 1}</td>
                 <td className={`${td} text-left`}>
                   {r.korisnik.fullName || r.korisnik.ime}
-                  {zvanje(r.korisnik) && <div>{zvanje(r.korisnik)}</div>}
+                  {r.korisnik.title && <div>{r.korisnik.title}</div>}
                 </td>
                 <td className={td}>{radniDani}</td>
                 <td className={td}>{broj(r.go)}</td>

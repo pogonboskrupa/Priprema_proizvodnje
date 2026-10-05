@@ -3,15 +3,12 @@ export type VrstaRada = 'DOZNAKA' | 'VLAKA' | 'GODISNJI' | 'KANCELARIJA' | 'BOLO
 export type VrstaPomocnog = 'TEREN' | 'GODISNJI' | 'BOLOVANJE' | 'KANCELARIJA' | 'OSTALO';
 export type PeriodIzvjestaja = 'sedmicno' | 'mjesecno' | 'godisnje';
 export type UserRole = 'admin' | 'worker';
-export type VrstaSuma = 'visoke' | 'izdanacke';
 
 export interface Korisnik {
   id: string;
   ime: string;
   fullName: string;
   title: string;
-  /** Visoke ili izdanačke šume — određuje zvanje na šihtarici i obrascima */
-  suma?: VrstaSuma | null;
   pin: string;
   role: UserRole;
   operater?: boolean;

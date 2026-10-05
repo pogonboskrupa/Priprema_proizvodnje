@@ -16,7 +16,6 @@ import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { monthYearLabel, fmtDate } from "@/lib/format";
 import { recentOdjelIdsByInzinjer } from "@/lib/recent";
 import { VRSTA } from "@/lib/vrste";
-import { zvanje } from "@/lib/zvanje";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { DanRed } from "@/components/sihtarica/DanRed";
 import { DanEditor } from "@/components/sihtarica/DanEditor";
@@ -277,7 +276,7 @@ export default function SihtaricaPage() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 truncate">
             {imeProjektanta || "—"}
           </h1>
-          {korisnik && zvanje(korisnik) && <p className="text-sm text-gray-500 dark:text-gray-400">{zvanje(korisnik)}</p>}
+          {korisnik?.title && <p className="text-sm text-gray-500 dark:text-gray-400">{korisnik.title}</p>}
         </div>
 
         {canPick && (
