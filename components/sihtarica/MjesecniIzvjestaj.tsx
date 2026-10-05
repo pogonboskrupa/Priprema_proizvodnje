@@ -5,7 +5,9 @@ import { fmtBroj } from "@/lib/sihtarica";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
 import { mjesecniRedovi, radniDaniMjeseca } from "@/lib/mjesecni";
-import { PapirList, PeriodTraka, ZAGLAVLJE, tdPapir as td, type Orijentacija } from "@/components/sihtarica/PapirIzvjestaj";
+import { PapirList, PeriodTraka, tdPapir as td, type Orijentacija } from "@/components/sihtarica/PapirIzvjestaj";
+import { useIzvjestajPostavke } from "@/hooks/useIzvjestajPostavke";
+import { poredaj, imeUIzvjestaju, zvanjeUIzvjestaju } from "@/lib/izvjestaj-postavke";
 
 interface Mjesec { year: number; month: number }
 
@@ -29,11 +31,12 @@ export function MjesecniIzvjestaj() {
   const od = useMemo(() => new Date(mj.year, mj.month - 1, 1), [mj]);
   const do_ = useMemo(() => new Date(mj.year, mj.month, 0, 23, 59, 59, 999), [mj]);
   const { podaci, loading, err } = useRadPoProjektantima(od, do_);
+  const { postavke } = useIzvjestajPostavke();
 
   const radniDani = radniDaniMjeseca(mj.year, mj.month).length;
   const redovi = useMemo(
-    () => (podaci ? mjesecniRedovi(podaci.korisnici, podaci.unosi, mj.year, mj.month) : []),
-    [podaci, mj],
+    () => (podaci ? mjesecniRedovi(poredaj(podaci.korisnici, postavke.redoslijed), podaci.unosi, mj.year, mj.month) : []),
+    [podaci, mj, postavke.redoslijed],
   );
   const t = tekuci();
 
@@ -51,10 +54,11 @@ export function MjesecniIzvjestaj() {
         onOrijentacija={setOrijentacija}
       />
       <PapirList
+        postavke={postavke}
         orijentacija={orijentacija}
         prigusen={loading && !!podaci}
         naslov={<>MJESEČNI IZVJEŠTAJ O RADU ZA MJESEC – {monthName(mj.month).toUpperCase()}<br />{mj.year}. GODINE</>}
-        prijeTabele={<div className="mt-4 ml-24">{ZAGLAVLJE.sekcija}</div>}
+        prijeTabele={postavke.sekcija && <div className="mt-4 ml-24">{postavke.sekcija}</div>}
       >
         <table className="mt-3 w-full border-collapse border-2 border-black text-[12px] leading-tight tabular-nums">
           <thead>
@@ -70,8 +74,8 @@ export function MjesecniIzvjestaj() {
               <tr key={r.korisnik.id} className="break-inside-avoid">
                 <td className={td}>{i + 1}</td>
                 <td className={`${td} text-left`}>
-                  {r.korisnik.fullName || r.korisnik.ime}
-                  {r.korisnik.title && <div>{r.korisnik.title}</div>}
+                  {imeUIzvjestaju(r.korisnik, postavke)}
+                  {zvanjeUIzvjestaju(r.korisnik, postavke) && <div>{zvanjeUIzvjestaju(r.korisnik, postavke)}</div>}
                 </td>
                 <td className={td}>{radniDani}</td>
                 <td className={td}>{broj(r.go)}</td>

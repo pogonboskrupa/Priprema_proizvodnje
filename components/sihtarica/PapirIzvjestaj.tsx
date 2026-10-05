@@ -1,10 +1,5 @@
 import type { ReactNode } from "react";
-
-export const ZAGLAVLJE = {
-  firma: ["ŠPD »UNSKO-SANSKE ŠUME« d.o.o.", "BOSANSKA KRUPA", "Sekcija pripreme proizvodnje", "Pogon gospodarenja za općinu Bosanska Krupa"],
-  primalac: "N/r Hikmet Kurbegović, dipl.ing.šum.",
-  sekcija: "Sekcija Bosanska Krupa",
-} as const;
+import type { IzvjestajPostavke } from "@/lib/izvjestaj-postavke";
 
 export type Orijentacija = "portrait" | "landscape";
 
@@ -61,7 +56,8 @@ export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled,
 }
 
 /** List papira: uvijek crno na bijelom, i u tamnoj temi i pri štampi */
-export function PapirList({ orijentacija, naslov, prijeTabele, prigusen, children }: {
+export function PapirList({ postavke, orijentacija, naslov, prijeTabele, prigusen, children }: {
+  postavke: IzvjestajPostavke;
   orijentacija: Orijentacija;
   naslov: ReactNode;
   prijeTabele?: ReactNode;
@@ -74,14 +70,14 @@ export function PapirList({ orijentacija, naslov, prijeTabele, prigusen, childre
       <article style={{ width: SIRINA[orijentacija] }}
         className={`mx-auto shadow-md print:shadow-none bg-white text-black px-8 py-10 print:!w-auto print:p-0 transition-opacity ${prigusen ? "opacity-50" : ""}`}>
         <header className="font-serif text-[15px] leading-snug">
-          {ZAGLAVLJE.firma.map((l) => <div key={l}>{l}</div>)}
-          <div className="mt-6 text-right">{ZAGLAVLJE.primalac}</div>
+          {postavke.firma.map((l, i) => <div key={i}>{l}</div>)}
+          {postavke.primalac && <div className="mt-6 text-right">{postavke.primalac}</div>}
           <h2 className="mt-6 text-center text-base">{naslov}</h2>
           {prijeTabele}
         </header>
         {children}
         <footer className="mt-14 flex justify-end font-serif text-[15px]">
-          <span>VODEĆI PROJEKTANT :</span>
+          <span>{postavke.potpis}</span>
           <span className="ml-6 inline-block w-40 border-b border-black" />
         </footer>
       </article>

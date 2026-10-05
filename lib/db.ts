@@ -25,6 +25,7 @@ import {
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog, VrstaRada } from './types';
 import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
+import { saZadanim, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
@@ -292,6 +293,26 @@ export function pratiZakljucavanje(cb: (z: ZakljucanoDo) => void): () => void {
       () => { /* bez mreže ostaje zadnje poznato stanje */ });
   });
   return () => { stopped = true; unsub?.(); };
+}
+
+// ── Postavke sedmičnog i mjesečnog izvještaja (postavke/izvjestaji) ─────────────
+
+const IZVJ_DOC = 'izvjestaji';
+
+export function pratiIzvjestajPostavke(cb: (p: IzvjestajPostavke) => void): () => void {
+  let unsub: (() => void) | null = null;
+  let stopped = false;
+  authReady().then(() => {
+    if (stopped) return;
+    unsub = onSnapshot(doc(db, 'postavke', IZVJ_DOC),
+      (s) => cb(saZadanim(s.data())),
+      () => { /* bez mreže ostaju zadnje poznate postavke */ });
+  });
+  return () => { stopped = true; unsub?.(); };
+}
+
+export async function setIzvjestajPostavke(p: IzvjestajPostavke): Promise<void> {
+  await setDocById('postavke', IZVJ_DOC, { ...p });
 }
 
 // Zadnja linija odbrane: ekrani sakrivaju dugmad, ali svaki upis prolazi ovdje

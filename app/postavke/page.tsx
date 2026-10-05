@@ -8,11 +8,12 @@ import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
+import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
-type Tab = "profil" | "korisnici" | "zakljucavanje" | "unosi";
+type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
 
@@ -237,7 +238,7 @@ export default function PostavkePage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "profil", label: "Profil" },
-    ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }, { id: "zakljucavanje" as Tab, label: "Zaključavanje" }] : []),
+    ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }, { id: "izvjestaji" as Tab, label: "Izvještaji" }, { id: "zakljucavanje" as Tab, label: "Zaključavanje" }] : []),
     ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
   ];
 
@@ -247,12 +248,12 @@ export default function PostavkePage() {
 
       {/* Tab bar */}
       {tabs.length > 1 && (
-        <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 whitespace-nowrap transition-colors ${
                 tab === t.id
                   ? "border-green-700 text-green-700 dark:text-green-400 dark:border-green-400"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -530,6 +531,7 @@ export default function PostavkePage() {
         </div>
       )}
 
+      {tab === "izvjestaji" && isAdmin && <IzvjestajPostavkeForma />}
       {tab === "zakljucavanje" && isAdmin && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}

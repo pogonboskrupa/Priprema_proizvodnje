@@ -4,6 +4,8 @@ import { localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
+import { useIzvjestajPostavke } from "@/hooks/useIzvjestajPostavke";
+import { poredaj, imeUIzvjestaju, zvanjeUIzvjestaju, type IzvjestajPostavke } from "@/lib/izvjestaj-postavke";
 import {
   segmentSedmice, sljedeciSegment, prethodniSegment, datumiSegmenta, nazivDana, sedmicniRedovi, rasponLabel, type SedmicniRed,
 } from "@/lib/sedmicni";
@@ -31,11 +33,12 @@ export function SedmicniIzvjestaj() {
     return d;
   }, [seg]);
   const { podaci, loading, err } = useRadPoProjektantima(seg.od, kraj);
+  const { postavke } = useIzvjestajPostavke();
 
   const datumi = useMemo(() => datumiSegmenta(seg, podaci?.unosi ?? []), [seg, podaci]);
   const redovi = useMemo(
-    () => (podaci ? sedmicniRedovi(podaci.korisnici, podaci.unosi, datumi) : []),
-    [podaci, datumi],
+    () => (podaci ? sedmicniRedovi(poredaj(podaci.korisnici, postavke.redoslijed), podaci.unosi, datumi) : []),
+    [podaci, datumi, postavke.redoslijed],
   );
 
   return (
@@ -52,6 +55,7 @@ export function SedmicniIzvjestaj() {
         err={err}
       />
       <PapirList
+        postavke={postavke}
         orijentacija={orijentacija}
         prigusen={loading && !!podaci}
         naslov={<>SEDMIČNI IZVJEŠTAJ O RADU<br />{rasponLabel(datumi)} godine</>}
@@ -68,7 +72,7 @@ export function SedmicniIzvjestaj() {
             </tr>
           </thead>
           <tbody>
-            {redovi.map((r, i) => <RadnikRedovi key={r.korisnik.id} rb={i + 1} red={r} />)}
+            {redovi.map((r, i) => <RadnikRedovi key={r.korisnik.id} rb={i + 1} red={r} postavke={postavke} />)}
             {!loading && podaci && redovi.length === 0 && (
               <tr><td colSpan={datumi.length + 5} className={`${td} py-6`}>Nema projektanata.</td></tr>
             )}
@@ -79,15 +83,15 @@ export function SedmicniIzvjestaj() {
   );
 }
 
-function RadnikRedovi({ rb, red }: { rb: number; red: SedmicniRed }) {
+function RadnikRedovi({ rb, red, postavke }: { rb: number; red: SedmicniRed; postavke: IzvjestajPostavke }) {
   const { korisnik: k } = red;
   return (
     <>
       <tr className="break-inside-avoid">
         <td rowSpan={2} className={td}>{rb}.</td>
         <td rowSpan={2} className={`${td} text-[12px]`}>
-          {k.fullName || k.ime}
-          {k.title && <div>{k.title}</div>}
+          {imeUIzvjestaju(k, postavke)}
+          {zvanjeUIzvjestaju(k, postavke) && <div>{zvanjeUIzvjestaju(k, postavke)}</div>}
         </td>
         <td rowSpan={2} className={td}>{red.odjeli.map((o) => <div key={o}>{o}</div>)}</td>
         <td className={`${td} whitespace-nowrap`}>Broj stabala</td>
