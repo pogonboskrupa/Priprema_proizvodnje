@@ -6,14 +6,21 @@ export const ZAGLAVLJE = {
   sekcija: "Sekcija Bosanska Krupa",
 } as const;
 
+export type Orijentacija = "portrait" | "landscape";
+
+// A4 na ekranu (96 dpi): 210 mm ≈ 794 px, 297 mm ≈ 1123 px
+const SIRINA: Record<Orijentacija, string> = { portrait: "794px", landscape: "1123px" };
+
 /** Ćelija tabele na papiru */
 export const tdPapir = "border border-black px-1.5 py-1 align-middle text-center";
 
 const btnNav = "w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent text-lg";
 const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
 
-export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled, loading, err }: {
+export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled, loading, err, orijentacija, onOrijentacija }: {
   label: string;
+  orijentacija: Orijentacija;
+  onOrijentacija: (o: Orijentacija) => void;
   onPrev: () => void;
   onNext: () => void;
   prevDisabled: boolean;
@@ -30,7 +37,19 @@ export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled,
           <button type="button" className={btnNav} disabled={nextDisabled || loading} onClick={onNext} aria-label="Sljedeći period">›</button>
         </div>
         {loading && <span className="text-xs text-gray-400 animate-pulse">Učitavam…</span>}
-        <button type="button" className={`${btnGhost} ml-auto`} onClick={() => window.print()}>Štampaj</button>
+        <div className="ml-auto inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800" role="group" aria-label="Orijentacija stranice">
+          {([["portrait", "Uspravno"], ["landscape", "Položeno"]] as const).map(([o, l]) => (
+            <button key={o} type="button" aria-pressed={orijentacija === o} onClick={() => onOrijentacija(o)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                orijentacija === o
+                  ? "bg-white dark:bg-gray-900 text-green-800 dark:text-green-300 shadow-sm"
+                  : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              }`}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <button type="button" className={btnGhost} onClick={() => window.print()}>Štampaj</button>
       </div>
       {err && (
         <div className="rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 print:hidden">
@@ -42,19 +61,18 @@ export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled,
 }
 
 /** List papira: uvijek crno na bijelom, i u tamnoj temi i pri štampi */
-export function PapirList({ orijentacija, naslov, prijeTabele, prigusen, minSirina, children }: {
-  orijentacija: "portrait" | "landscape";
+export function PapirList({ orijentacija, naslov, prijeTabele, prigusen, children }: {
+  orijentacija: Orijentacija;
   naslov: ReactNode;
   prijeTabele?: ReactNode;
   prigusen: boolean;
-  minSirina: string;
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 print:border-0 print:overflow-visible">
+    <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/60 p-3 sm:p-6 print:border-0 print:bg-transparent print:p-0 print:overflow-visible">
       <style>{`@media print{@page{size:A4 ${orijentacija};margin:10mm}}`}</style>
-      <article style={{ minWidth: minSirina }}
-        className={`bg-white text-black px-8 py-10 print:!min-w-0 print:p-0 transition-opacity ${prigusen ? "opacity-50" : ""}`}>
+      <article style={{ width: SIRINA[orijentacija] }}
+        className={`mx-auto shadow-md print:shadow-none bg-white text-black px-8 py-10 print:!w-auto print:p-0 transition-opacity ${prigusen ? "opacity-50" : ""}`}>
         <header className="font-serif text-[15px] leading-snug">
           {ZAGLAVLJE.firma.map((l) => <div key={l}>{l}</div>)}
           <div className="mt-6 text-right">{ZAGLAVLJE.primalac}</div>

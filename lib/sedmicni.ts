@@ -80,16 +80,45 @@ export function sedmicniRedovi(korisnici: readonly Korisnik[], unosi: readonly U
   });
 }
 
-/** Pon–Pet; subota samo ako neko ima unos tog dana */
-export function datumiSedmice(pon: Date, unosi: readonly UnosRada[]): string[] {
-  const datumi = Array.from({ length: 6 }, (_, i) => localDateStr(pomjeriDane(pon, i)));
-  const subota = datumi[5];
-  return unosi.some((u) => u.datum.slice(0, 10) === subota) ? datumi : datumi.slice(0, 5);
+/** Dio sedmice (Pon–Sub) unutar jednog mjeseca; od i do_ su ponoć prvog i zadnjeg dana */
+export interface SegmentSedmice { od: Date; do_: Date }
+
+const bezNedjelje = (d: Date, smjer: 1 | -1) => (d.getDay() === 0 ? pomjeriDane(d, smjer) : d);
+
+/** Sedmica koja prelazi mjesec dijeli se na dva izvještaja, npr. 28.09–30.09 i 01.10–03.10 */
+export function segmentSedmice(datum: Date): SegmentSedmice {
+  const d = bezNedjelje(new Date(datum.getFullYear(), datum.getMonth(), datum.getDate()), -1);
+  const pon = ponedjeljak(d);
+  const sub = pomjeriDane(pon, 5);
+  const prvi = new Date(d.getFullYear(), d.getMonth(), 1);
+  const zadnji = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { od: pon < prvi ? prvi : pon, do_: sub > zadnji ? zadnji : sub };
 }
 
-/** "07.09 – 11.09.2026" */
+export const sljedeciSegment = (s: SegmentSedmice) => segmentSedmice(bezNedjelje(pomjeriDane(s.do_, 1), 1));
+export const prethodniSegment = (s: SegmentSedmice) => segmentSedmice(bezNedjelje(pomjeriDane(s.od, -1), -1));
+
+/** Radni dani segmenta; subota samo ako neko ima unos tog dana ili je jedini dan segmenta */
+export function datumiSegmenta(s: SegmentSedmice, unosi: readonly UnosRada[]): string[] {
+  const svi: Date[] = [];
+  for (let d = s.od; d <= s.do_; d = pomjeriDane(d, 1)) svi.push(d);
+  const radni = svi.filter((d) => d.getDay() >= 1 && d.getDay() <= 5).map((d) => localDateStr(d));
+  const subota = svi.find((d) => d.getDay() === 6);
+  if (!subota) return radni;
+  const sub = localDateStr(subota);
+  return !radni.length || unosi.some((u) => u.datum.slice(0, 10) === sub) ? [...radni, sub] : radni;
+}
+
+/** "2026-09-28" → "Ponedjeljak" */
+export function nazivDana(datum: string): string {
+  const [y, m, d] = datum.split("-").map(Number);
+  return DANI_SEDMICE[new Date(y, m - 1, d).getDay() - 1] ?? "";
+}
+
+/** "28.09 – 30.09.2026" */
 export function rasponLabel(datumi: readonly string[]): string {
+  if (!datumi.length) return "";
   const f = (s: string) => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
   const zadnji = datumi[datumi.length - 1];
-  return `${f(datumi[0])} – ${f(zadnji)}.${zadnji.slice(0, 4)}`;
+  return datumi.length === 1 ? `${f(zadnji)}.${zadnji.slice(0, 4)}` : `${f(datumi[0])} – ${f(zadnji)}.${zadnji.slice(0, 4)}`;
 }

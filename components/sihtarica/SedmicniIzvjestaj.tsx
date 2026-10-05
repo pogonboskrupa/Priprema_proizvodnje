@@ -4,8 +4,10 @@ import { localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
-import { DANI_SEDMICE, ponedjeljak, pomjeriDane, sedmicniRedovi, datumiSedmice, rasponLabel, type SedmicniRed } from "@/lib/sedmicni";
-import { PapirList, PeriodTraka, tdPapir as td } from "@/components/sihtarica/PapirIzvjestaj";
+import {
+  segmentSedmice, sljedeciSegment, prethodniSegment, datumiSegmenta, nazivDana, sedmicniRedovi, rasponLabel, type SedmicniRed,
+} from "@/lib/sedmicni";
+import { PapirList, PeriodTraka, tdPapir as td, type Orijentacija } from "@/components/sihtarica/PapirIzvjestaj";
 
 function Celija({ grupe }: { grupe: string[][] }) {
   if (!grupe.length) return null;
@@ -21,15 +23,16 @@ function Celija({ grupe }: { grupe: string[][] }) {
 }
 
 export function SedmicniIzvjestaj() {
-  const [pon, setPon] = useState(() => ponedjeljak(new Date()));
-  const subotaKraj = useMemo(() => {
-    const d = pomjeriDane(pon, 5);
+  const [seg, setSeg] = useState(() => segmentSedmice(new Date()));
+  const [orijentacija, setOrijentacija] = useState<Orijentacija>("portrait");
+  const kraj = useMemo(() => {
+    const d = new Date(seg.do_);
     d.setHours(23, 59, 59, 999);
     return d;
-  }, [pon]);
-  const { podaci, loading, err } = useRadPoProjektantima(pon, subotaKraj);
+  }, [seg]);
+  const { podaci, loading, err } = useRadPoProjektantima(seg.od, kraj);
 
-  const datumi = useMemo(() => datumiSedmice(pon, podaci?.unosi ?? []), [pon, podaci]);
+  const datumi = useMemo(() => datumiSegmenta(seg, podaci?.unosi ?? []), [seg, podaci]);
   const redovi = useMemo(
     () => (podaci ? sedmicniRedovi(podaci.korisnici, podaci.unosi, datumi) : []),
     [podaci, datumi],
@@ -39,16 +42,17 @@ export function SedmicniIzvjestaj() {
     <div className="space-y-4">
       <PeriodTraka
         label={rasponLabel(datumi)}
-        onPrev={() => setPon((p) => pomjeriDane(p, -7))}
-        onNext={() => setPon((p) => pomjeriDane(p, 7))}
-        prevDisabled={localDateStr(pon) <= EVIDENCIJA_OD_DATUM}
-        nextDisabled={localDateStr(pon) >= localDateStr(ponedjeljak(new Date()))}
+        onPrev={() => setSeg(prethodniSegment)}
+        onNext={() => setSeg(sljedeciSegment)}
+        prevDisabled={localDateStr(seg.od) <= EVIDENCIJA_OD_DATUM}
+        nextDisabled={localDateStr(sljedeciSegment(seg).od) > localDateStr()}
+        orijentacija={orijentacija}
+        onOrijentacija={setOrijentacija}
         loading={loading}
         err={err}
       />
       <PapirList
-        orijentacija="portrait"
-        minSirina="720px"
+        orijentacija={orijentacija}
         prigusen={loading && !!podaci}
         naslov={<>SEDMIČNI IZVJEŠTAJ O RADU<br />{rasponLabel(datumi)} godine</>}
       >
@@ -59,7 +63,7 @@ export function SedmicniIzvjestaj() {
               <th className={`${td} font-normal`}>IME I<br />PREZIME</th>
               <th className={`${td} font-normal`}>ODJEL</th>
               <th className={`${td} font-normal`}>DANI</th>
-              {datumi.map((_, i) => <th key={i} className={`${td} font-normal`}>{DANI_SEDMICE[i]}</th>)}
+              {datumi.map((d) => <th key={d} className={`${td} font-normal`}>{nazivDana(d)}</th>)}
               <th className={`${td} font-bold`}>UKUPNO:</th>
             </tr>
           </thead>

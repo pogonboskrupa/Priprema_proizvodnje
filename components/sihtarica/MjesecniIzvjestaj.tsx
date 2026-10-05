@@ -5,7 +5,7 @@ import { fmtBroj } from "@/lib/sihtarica";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
 import { mjesecniRedovi, radniDaniMjeseca } from "@/lib/mjesecni";
-import { PapirList, PeriodTraka, ZAGLAVLJE, tdPapir as td } from "@/components/sihtarica/PapirIzvjestaj";
+import { PapirList, PeriodTraka, ZAGLAVLJE, tdPapir as td, type Orijentacija } from "@/components/sihtarica/PapirIzvjestaj";
 
 interface Mjesec { year: number; month: number }
 
@@ -25,6 +25,7 @@ const KOLONE = ["GO", "ČL.76", "plaćeno odsustvo", "PRAZ.", "BOLOV.", "TEREN",
 
 export function MjesecniIzvjestaj() {
   const [mj, setMj] = useState<Mjesec>(tekuci);
+  const [orijentacija, setOrijentacija] = useState<Orijentacija>("landscape");
   const od = useMemo(() => new Date(mj.year, mj.month - 1, 1), [mj]);
   const do_ = useMemo(() => new Date(mj.year, mj.month, 0, 23, 59, 59, 999), [mj]);
   const { podaci, loading, err } = useRadPoProjektantima(od, do_);
@@ -46,10 +47,11 @@ export function MjesecniIzvjestaj() {
         nextDisabled={mj.year === t.year && mj.month === t.month}
         loading={loading}
         err={err}
+        orijentacija={orijentacija}
+        onOrijentacija={setOrijentacija}
       />
       <PapirList
-        orijentacija="landscape"
-        minSirina="900px"
+        orijentacija={orijentacija}
         prigusen={loading && !!podaci}
         naslov={<>MJESEČNI IZVJEŠTAJ O RADU ZA MJESEC – {monthName(mj.month).toUpperCase()}<br />{mj.year}. GODINE</>}
         prijeTabele={<div className="mt-4 ml-24">{ZAGLAVLJE.sekcija}</div>}
