@@ -130,6 +130,7 @@ function OdjelPregled() {
           ))}
           {godine.length > 1 && <button type="button" className={chip(godina === "sve")} onClick={() => setIzbor("sve")}>Sve</button>}
           {unosi.length > 0 && <button type="button" className={chip(false)} onClick={exportExcel}>Excel</button>}
+          <button type="button" className={chip(false)} onClick={() => window.print()}>Štampaj</button>
         </div>
       </header>
 

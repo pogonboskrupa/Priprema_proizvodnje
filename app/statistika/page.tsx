@@ -194,13 +194,19 @@ export default function StatistikaPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Statistika</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Prisutnost, učinak i usporedba projektanata</p>
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Statistika</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Prisutnost, učinak i usporedba projektanata</p>
+        </div>
+        <button type="button" onClick={() => window.print()}
+          className="print:hidden px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          Štampaj
+        </button>
       </div>
 
       {/* Tab bar */}
-      <div className="border-b border-gray-200 dark:border-gray-800">
+      <div className="border-b border-gray-200 dark:border-gray-800 print:hidden">
         <div className="flex gap-0 overflow-x-auto" role="tablist">
           {TAB_LABELS.map(([t, label]) => (
             <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={tabCls(tab === t)}>
@@ -210,7 +216,7 @@ export default function StatistikaPage() {
         </div>
       </div>
 
-      <YearBar years={years} year={year} onYear={setYear} busy={busy} />
+      <div className="print:hidden"><YearBar years={years} year={year} onYear={setYear} busy={busy} /></div>
 
       {err && (
         <div className="rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">

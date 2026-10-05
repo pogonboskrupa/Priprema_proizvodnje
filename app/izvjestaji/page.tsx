@@ -232,11 +232,17 @@ export default function IzvjestajiPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
-        {isWorker ? "Moji izvještaji" : "Izvještaji"}
-      </h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+          {isWorker ? "Moji izvještaji" : "Izvještaji"}
+        </h1>
+        <button type="button" onClick={() => window.print()}
+          className="print:hidden px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          Štampaj
+        </button>
+      </div>
 
-      <div className="inline-flex gap-1 p-1 mb-6 rounded-lg bg-gray-100 dark:bg-gray-800" role="tablist">
+      <div className="inline-flex gap-1 p-1 mb-6 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
         {([
           ["statistike", "chart", "Učinak"],
           ["odjeli", "map", "Pregled odjela"],
@@ -260,7 +266,7 @@ export default function IzvjestajiPage() {
 
       {mainTab === "statistike" && (
         <>
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end">
+          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 mb-6 flex flex-wrap gap-4 items-end print:hidden">
             <div>
               <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1.5 font-medium">Period</span>
               <div className="inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800">
@@ -334,6 +340,10 @@ export default function IzvjestajiPage() {
                   : uToku && <div>period u toku</div>}
               </div>
             )}
+            <button type="button" onClick={() => window.print()}
+              className="self-end px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              Štampaj
+            </button>
           </div>
 
           {err && (

@@ -165,7 +165,13 @@ export default function MojiOdjeliPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-1">Moji odjeli</h1>
+      <div className="flex items-start justify-between mb-1">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Moji odjeli</h1>
+        <button type="button" onClick={() => window.print()}
+          className="print:hidden px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          Štampaj
+        </button>
+      </div>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
         Odjeli u kojima radiš. Zvjezdica = rješenje o izradi projekta (samo jedan projektant po odjelu).
       </p>
@@ -181,7 +187,7 @@ export default function MojiOdjeliPage() {
       )}
 
       {/* Add odjel */}
-      <div className="mb-6 flex gap-2 max-w-lg">
+      <div className="mb-6 flex gap-2 max-w-lg print:hidden">
         <select
           value={addOdjelId}
           onChange={(e) => setAddOdjelId(e.target.value)}
@@ -263,7 +269,7 @@ export default function MojiOdjeliPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-3 print:hidden">
                     {/* Claim rješenje button */}
                     <button
                       onClick={() => claimRjesenje(odjel.id)}

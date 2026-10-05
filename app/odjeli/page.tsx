@@ -280,7 +280,13 @@ export default function OdjeliPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Odjeli</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Odjeli</h1>
+        <button type="button" onClick={() => window.print()}
+          className="print:hidden px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          Štampaj
+        </button>
+      </div>
 
       {err && (
         <div className="mb-4 rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300">
@@ -290,7 +296,7 @@ export default function OdjeliPage() {
 
       {/* Mode toggle (samo kad nije edit) */}
       {!editId && (
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 print:hidden">
           <button
             onClick={() => switchMode(false)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -314,7 +320,7 @@ export default function OdjeliPage() {
       {!bulkMode && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3"
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 print:hidden"
         >
           <div>
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Gospodarska jedinica</label>
@@ -370,7 +376,7 @@ export default function OdjeliPage() {
       {bulkMode && (
         <form
           onSubmit={handleBulkSubmit}
-          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 space-y-4"
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 space-y-4 print:hidden"
         >
           <div className="max-w-xs">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -472,7 +478,7 @@ export default function OdjeliPage() {
       })()}
 
       {odjeli.length > 0 && (
-        <div role="group" aria-label="Prikaži odjele" className="inline-flex flex-wrap gap-1 p-1 mb-4 rounded-lg bg-gray-100 dark:bg-gray-800">
+        <div role="group" aria-label="Prikaži odjele" className="inline-flex flex-wrap gap-1 p-1 mb-4 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden">
           {FILTERI.map((f) => (
             <button
               key={f.id}
@@ -534,7 +540,7 @@ export default function OdjeliPage() {
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Zadnji rad</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Proj.</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs hidden sm:table-cell">Unosi</th>
-                          <th className="px-3 py-2 w-20"></th>
+                          <th className="px-3 py-2 w-20 print:hidden"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -588,7 +594,7 @@ export default function OdjeliPage() {
                             </td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.inzinjeri ?? 0}</td>
                             <td className="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400 hidden sm:table-cell">{o._count?.unosi ?? 0}</td>
-                            <td className="px-3 py-2.5 text-right w-20">
+                            <td className="px-3 py-2.5 text-right w-20 print:hidden">
                               {editId === o.id ? (
                                 <div className="flex flex-col items-end gap-0.5">
                                   <button onClick={saveInlineEdit} disabled={loading} className="text-green-600 dark:text-green-400 hover:underline text-xs font-semibold">
