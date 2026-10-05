@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
+import { zvanje } from "@/lib/zvanje";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
 import {
@@ -87,7 +88,7 @@ function RadnikRedovi({ rb, red }: { rb: number; red: SedmicniRed }) {
         <td rowSpan={2} className={td}>{rb}.</td>
         <td rowSpan={2} className={`${td} text-[12px]`}>
           {k.fullName || k.ime}
-          {k.title && <div>{k.title}</div>}
+          {zvanje(k) && <div>{zvanje(k)}</div>}
         </td>
         <td rowSpan={2} className={td}>{red.odjeli.map((o) => <div key={o}>{o}</div>)}</td>
         <td className={`${td} whitespace-nowrap`}>Broj stabala</td>
