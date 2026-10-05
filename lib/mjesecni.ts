@@ -5,6 +5,8 @@ import { praznik } from "@/lib/praznici";
 export interface MjesecniRed {
   korisnik: Korisnik;
   go: number;
+  clan76: number;
+  placeno: number;
   /** Praznici na radne dane u koje radnik nema unos */
   praznici: number;
   bolovanje: number;
@@ -15,7 +17,7 @@ export interface MjesecniRed {
   km: number;
 }
 
-type TipDana = "go" | "bolovanje" | "teren" | "kancelarija";
+type TipDana = "go" | "clan76" | "placeno" | "bolovanje" | "teren" | "kancelarija";
 
 const TERENSKE: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["TEREN", "DOZNAKA", "VLAKA"]);
 
@@ -23,6 +25,8 @@ const TERENSKE: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["TEREN", "DOZNAKA",
 function tipDana(vrste: ReadonlySet<VrstaRada>): TipDana | null {
   if (vrste.has("BOLOVANJE")) return "bolovanje";
   if (vrste.has("GODISNJI")) return "go";
+  if (vrste.has("CLAN76")) return "clan76";
+  if (vrste.has("PLACENO")) return "placeno";
   if ([...vrste].some((v) => TERENSKE.has(v))) return "teren";
   if (vrste.has("KANCELARIJA")) return "kancelarija";
   return null;
@@ -52,7 +56,7 @@ export function mjesecniRedovi(korisnici: readonly Korisnik[], unosi: readonly U
   return korisnici.map((korisnik) => {
     const dani = poRadniku.get(korisnik.id) ?? new Map<string, UnosRada[]>();
     const red: MjesecniRed = {
-      korisnik, go: 0, bolovanje: 0, teren: 0, kancelarija: 0,
+      korisnik, go: 0, clan76: 0, placeno: 0, bolovanje: 0, teren: 0, kancelarija: 0,
       praznici: prazniciRadni.filter((d) => !dani.has(d)).length,
       stabala: 0, ha: 0, km: 0,
     };

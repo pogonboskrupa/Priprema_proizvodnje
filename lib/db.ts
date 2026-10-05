@@ -22,8 +22,9 @@ import {
   deleteField,
   onSnapshot,
 } from './firebase';
-import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog } from './types';
+import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog, VrstaRada } from './types';
 import { localDateStr, cmpOdjel } from './format';
+import { ODSUSTVA } from './vrste';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
@@ -478,7 +479,7 @@ function rezimeIzUnosa(unosi: Record<string, unknown>[]): MjesecniRezime {
     else if (vrsta === 'VLAKA') r.km += Number(u.kilometri) || 0;
     const key = brojac[vrsta as keyof typeof brojac];
     if (key && !vrstaDani.has(`${dan}|${vrsta}`)) { vrstaDani.add(`${dan}|${vrsta}`); r[key]++; }
-    if (vrsta !== 'GODISNJI' && vrsta !== 'BOLOVANJE') radni.add(dan);
+    if (!ODSUSTVA.has(vrsta as VrstaRada)) radni.add(dan);
   }
   r.radniDani = radni.size;
   return r;
@@ -809,7 +810,7 @@ export async function getIzvjestaj(
       else if (u.vrsta === 'BOLOVANJE') grouped[key].bolovanje.add(dan);
       else if (u.vrsta === 'TEREN' || u.vrsta === 'DOZNAKA' || u.vrsta === 'VLAKA') grouped[key].terenDani.add(dan);
       // dan s terenom i kancelarijom je jedan radni dan, ne dva
-      if (u.vrsta !== 'GODISNJI' && u.vrsta !== 'BOLOVANJE') grouped[key].radniDani.add(dan);
+      if (!ODSUSTVA.has(u.vrsta as VrstaRada)) grouped[key].radniDani.add(dan);
     }
 
     const workers = (korisnaciRaw as unknown as Korisnik[])

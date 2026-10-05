@@ -1,7 +1,7 @@
 import type { VrstaRada } from "@/lib/types";
 import { parseCount, parseDecimal } from "@/lib/format";
 
-export const NO_ODJEL_VRSTE: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"]);
+export const NO_ODJEL_VRSTE: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE", "CLAN76", "PLACENO"]);
 
 export interface UnosEditForm {
   vrsta: VrstaRada;

@@ -330,7 +330,7 @@ export default function UnosPage() {
                 ))}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE"] as VrstaRada[]).map((v) => (
+                {(["TEREN", "GODISNJI", "KANCELARIJA", "BOLOVANJE", "CLAN76", "PLACENO"] as VrstaRada[]).map((v) => (
                   <label
                     key={v}
                     className={`flex items-center justify-center gap-1 py-2 rounded-lg border-2 cursor-pointer text-xs font-medium transition-colors text-center ${

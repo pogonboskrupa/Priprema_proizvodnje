@@ -4,7 +4,7 @@ import type { VrstaRada } from "@/lib/types";
 import { VRSTA } from "@/lib/vrste";
 import { datumiZaPopunu, type DanSihtarice } from "@/lib/sihtarica";
 
-const VRSTE_PERIODA: readonly VrstaRada[] = ["GODISNJI", "BOLOVANJE", "TEREN", "KANCELARIJA"];
+const VRSTE_PERIODA: readonly VrstaRada[] = ["GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO", "TEREN", "KANCELARIJA"];
 
 export function PopuniPeriod({
   dani, onSubmit, onClose,

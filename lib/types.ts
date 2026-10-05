@@ -1,5 +1,5 @@
 // Firestore document IDs are strings
-export type VrstaRada = 'DOZNAKA' | 'VLAKA' | 'GODISNJI' | 'KANCELARIJA' | 'BOLOVANJE' | 'TEREN';
+export type VrstaRada = 'DOZNAKA' | 'VLAKA' | 'GODISNJI' | 'KANCELARIJA' | 'BOLOVANJE' | 'TEREN' | 'CLAN76' | 'PLACENO';
 export type VrstaPomocnog = 'TEREN' | 'GODISNJI' | 'BOLOVANJE' | 'KANCELARIJA' | 'OSTALO';
 export type PeriodIzvjestaja = 'sedmicno' | 'mjesecno' | 'godisnje';
 export type UserRole = 'admin' | 'worker';

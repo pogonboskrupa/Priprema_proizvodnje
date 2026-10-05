@@ -70,9 +70,30 @@ export const VRSTA: Record<VrstaRada, VrstaStyle> = {
     borderL: "border-l-red-500",
     heat: ["bg-red-50 dark:bg-red-950/40", "bg-red-100 dark:bg-red-900/60", "bg-red-200 dark:bg-red-800/80"],
   },
+  CLAN76: {
+    label: "Čl. 76", short: "Č76", abbr: "Č76", emoji: "📄",
+    dot: "bg-teal-500",
+    badge: "bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200",
+    btnActive: "bg-teal-500 text-white border-teal-500",
+    text: "text-teal-700 dark:text-teal-300",
+    borderL: "border-l-teal-500",
+    heat: ["bg-teal-50 dark:bg-teal-950/40", "bg-teal-100 dark:bg-teal-900/60", "bg-teal-200 dark:bg-teal-800/80"],
+  },
+  PLACENO: {
+    label: "Plaćeno odsustvo", short: "PO", abbr: "PO", emoji: "📅",
+    dot: "bg-pink-500",
+    badge: "bg-pink-100 dark:bg-pink-900/60 text-pink-800 dark:text-pink-200",
+    btnActive: "bg-pink-500 text-white border-pink-500",
+    text: "text-pink-700 dark:text-pink-300",
+    borderL: "border-l-pink-500",
+    heat: ["bg-pink-50 dark:bg-pink-950/40", "bg-pink-100 dark:bg-pink-900/60", "bg-pink-200 dark:bg-pink-800/80"],
+  },
 };
 
-export const VRSTE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE"];
+export const VRSTE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"];
+
+/** Cjelodnevna odsustva — isključuju svaku drugu aktivnost istog dana i ne ulaze u radne dane */
+export const ODSUSTVA: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"]);
 
 const FALLBACK: VrstaStyle = {
   label: "–", short: "?", abbr: "?", emoji: "",

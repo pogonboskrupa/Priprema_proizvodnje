@@ -16,7 +16,7 @@ function fmtVrijeme(iso: string): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}. ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
-const BRZI: readonly VrstaRada[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE"];
+const BRZI: readonly VrstaRada[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"];
 
 const prazanForm = (vrsta: VrstaRada = "DOZNAKA", odjelId = ""): Form => ({
   vrsta, odjelId, brojStabala: "", hektari: "", kilometri: "", napomena: "",

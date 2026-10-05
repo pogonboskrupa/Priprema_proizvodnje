@@ -755,6 +755,10 @@ function formatAktivnost(a: DnevnaAktivnost): string {
       return "Kancelarija";
     case "BOLOVANJE":
       return "Bolovanje";
+    case "CLAN76":
+      return "Čl. 76";
+    case "PLACENO":
+      return "Plaćeno odsustvo";
     default:
       return prefix || a.vrsta;
   }

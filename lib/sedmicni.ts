@@ -7,6 +7,8 @@ export const DANI_SEDMICE = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "P
 const ODSUSTVO_SIFRA: Partial<Record<VrstaRada, string>> = {
   KANCELARIJA: "K",
   BOLOVANJE: "B",
+  CLAN76: "ČL.76",
+  PLACENO: "PO",
   GODISNJI: "GO",
   TEREN: "T",
 };

@@ -1,10 +1,8 @@
 import type { UnosRada, VrstaRada } from "@/lib/types";
 import { localDateStr } from "@/lib/format";
 import { praznik } from "@/lib/praznici";
-import { VRSTA } from "@/lib/vrste";
+import { VRSTA, ODSUSTVA as ODSUSTVO } from "@/lib/vrste";
 
-// Odsustvo isključuje rad istog dana; oba zajedno su greška u unosu
-const ODSUSTVO: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE"]);
 
 export const DANI_KRATKO = ["Ned", "Pon", "Uto", "Sri", "Čet", "Pet", "Sub"] as const;
 
@@ -83,7 +81,7 @@ export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRa
   if (jeKonflikt([...postojeci, { vrsta }])) {
     return ODSUSTVO.has(vrsta)
       ? `${label} je za cijeli dan — ovaj dan već ima drugu aktivnost.`
-      : "Za ovaj dan je upisan godišnji ili bolovanje.";
+      : "Za ovaj dan je upisano odsustvo (godišnji, bolovanje, čl. 76 ili plaćeno odsustvo).";
   }
   return null;
 }
@@ -117,7 +115,7 @@ export interface SihtaricaRezime {
 export function rezime(dani: readonly DanSihtarice[]): SihtaricaRezime {
   const r: SihtaricaRezime = {
     radnihDana: 0, popunjeno: 0, ha: 0, stabala: 0, km: 0, konflikti: 0,
-    daniPoVrsti: { DOZNAKA: 0, VLAKA: 0, TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0 },
+    daniPoVrsti: { DOZNAKA: 0, VLAKA: 0, TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, CLAN76: 0, PLACENO: 0 },
   };
   for (const d of dani) {
     if (!d.neradni && !d.buduci) {

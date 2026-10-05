@@ -365,7 +365,7 @@ export default function SihtaricaPage() {
       {!loading && rez.popunjeno > 0 && (() => {
         const terenUkupno = rez.daniPoVrsti.DOZNAKA + rez.daniPoVrsti.VLAKA + rez.daniPoVrsti.TEREN;
         const TERENSKE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN"];
-        const OSTALE: readonly VrstaRada[] = ["KANCELARIJA", "GODISNJI", "BOLOVANJE"];
+        const OSTALE: readonly VrstaRada[] = ["KANCELARIJA", "GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"];
         const sati = (d: number) => d ? `${d * 8}` : "–";
         const numCls = (d: number) => d
           ? "text-gray-800 dark:text-gray-100 font-semibold"

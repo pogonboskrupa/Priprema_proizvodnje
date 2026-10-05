@@ -73,8 +73,8 @@ export function MjesecniIzvjestaj() {
                 </td>
                 <td className={td}>{radniDani}</td>
                 <td className={td}>{broj(r.go)}</td>
-                <td className={td} />
-                <td className={td} />
+                <td className={td}>{broj(r.clan76)}</td>
+                <td className={td}>{broj(r.placeno)}</td>
                 <td className={td}>{broj(r.praznici)}</td>
                 <td className={td}>{broj(r.bolovanje)}</td>
                 <td className={td}>{broj(r.teren)}</td>
