@@ -2,11 +2,6 @@ import type { Korisnik, UnosRada, VrstaRada } from "@/lib/types";
 import { localDateStr } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 
-export const ZAGLAVLJE = {
-  firma: ["ŠPD »UNSKO-SANSKE ŠUME« d.o.o.", "BOSANSKA KRUPA", "Sekcija pripreme proizvodnje", "Pogon gospodarenja za općinu Bosanska Krupa"],
-  primalac: "N/r Hikmet Kurbegović, dipl.ing.šum",
-} as const;
-
 export const DANI_SEDMICE = ["Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"] as const;
 
 const ODSUSTVO_SIFRA: Partial<Record<VrstaRada, string>> = {

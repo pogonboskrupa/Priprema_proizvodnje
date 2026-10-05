@@ -677,7 +677,7 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
 }
 
 /** Svi projektanti i njihovi unosi u periodu; server-first jer šihter u cache-u ima samo svoje unose */
-export async function getSedmicniIzvjestaj(od: Date, do_: Date): Promise<{ korisnici: Korisnik[]; unosi: UnosRada[] }> {
+export async function getRadPoProjektantima(od: Date, do_: Date): Promise<{ korisnici: Korisnik[]; unosi: UnosRada[] }> {
   const [raw, usersRaw, odjeliRaw] = await Promise.all([
     queryColFresh('unosi', rasponDatuma(od, do_)),
     getAll('users'),

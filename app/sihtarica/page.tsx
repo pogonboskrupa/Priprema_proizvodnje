@@ -22,6 +22,7 @@ import { DanEditor } from "@/components/sihtarica/DanEditor";
 import { GoKartica } from "@/components/sihtarica/GoKartica";
 import { PopuniPeriod } from "@/components/sihtarica/PopuniPeriod";
 import { SedmicniIzvjestaj } from "@/components/sihtarica/SedmicniIzvjestaj";
+import { MjesecniIzvjestaj } from "@/components/sihtarica/MjesecniIzvjestaj";
 import { MjesecTraka } from "@/components/sihtarica/MjesecTraka";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
@@ -56,7 +57,7 @@ export default function SihtaricaPage() {
   const [openDay, setOpenDay] = useState<{ key: string; datum: string } | null>(null);
   const [showPopuni, setShowPopuni] = useState(false);
   const [confirm, setConfirm] = useState<UnosRada | null>(null);
-  const [tab, setTab] = useState<"sihtarica" | "sedmicni">("sihtarica");
+  const [tab, setTab] = useState<"sihtarica" | "sedmicni" | "mjesecni">("sihtarica");
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { zakljucan } = useZakljucavanje();
@@ -239,11 +240,11 @@ export default function SihtaricaPage() {
   const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
   const pctPopunjeno = rez.radnihDana ? Math.round((rez.popunjeno / rez.radnihDana) * 100) : 0;
 
-  // sedmični izvještaj obuhvata sve projektante — samo za admina i šihtera
+  // sedmični i mjesečni izvještaj obuhvataju sve projektante — samo za admina i šihtera
   const mozeSedmicni = canPick || !!session.sihter;
   const tabovi = mozeSedmicni && (
-    <div className="inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
-      {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"]] as const).map(([id, label]) => (
+    <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
+      {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"], ["mjesecni", "Mjesečni izvještaj"]] as const).map(([id, label]) => (
         <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             tab === id
@@ -256,11 +257,11 @@ export default function SihtaricaPage() {
     </div>
   );
 
-  if (mozeSedmicni && tab === "sedmicni") {
+  if (mozeSedmicni && tab !== "sihtarica") {
     return (
       <div className="space-y-5">
         {tabovi}
-        <SedmicniIzvjestaj />
+        {tab === "sedmicni" ? <SedmicniIzvjestaj /> : <MjesecniIzvjestaj />}
       </div>
     );
   }
