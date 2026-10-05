@@ -676,6 +676,25 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
   return { radnici, entries, od: localDateStr(od), do_: localDateStr(do_) };
 }
 
+/** Svi projektanti i njihovi unosi u periodu; server-first jer šihter u cache-u ima samo svoje unose */
+export async function getSedmicniIzvjestaj(od: Date, do_: Date): Promise<{ korisnici: Korisnik[]; unosi: UnosRada[] }> {
+  const [raw, usersRaw, odjeliRaw] = await Promise.all([
+    queryColFresh('unosi', rasponDatuma(od, do_)),
+    getAll('users'),
+    getAll('odjeli'),
+  ]);
+  const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
+  const unosi = (await normalizujProjektante(raw)).map((u) => ({
+    ...(u as unknown as UnosRada),
+    odjel: odMap[u.odjelId as string],
+  }));
+  const saPodacima = new Set(unosi.map((u) => u.inzinjerId));
+  const korisnici = (usersRaw as unknown as Korisnik[])
+    .filter((k) => isReportWorker(k, saPodacima.has(k.id)))
+    .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime, 'bs'));
+  return { korisnici, unosi };
+}
+
 // ── Izvještaji ────────────────────────────────────────────────────────────────
 
 export function getDateRange(period: 'sedmicno' | 'mjesecno' | 'godisnje', refDate?: Date): {

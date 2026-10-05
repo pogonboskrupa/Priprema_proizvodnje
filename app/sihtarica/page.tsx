@@ -21,6 +21,7 @@ import { DanRed } from "@/components/sihtarica/DanRed";
 import { DanEditor } from "@/components/sihtarica/DanEditor";
 import { GoKartica } from "@/components/sihtarica/GoKartica";
 import { PopuniPeriod } from "@/components/sihtarica/PopuniPeriod";
+import { SedmicniIzvjestaj } from "@/components/sihtarica/SedmicniIzvjestaj";
 import { MjesecTraka } from "@/components/sihtarica/MjesecTraka";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
@@ -55,6 +56,7 @@ export default function SihtaricaPage() {
   const [openDay, setOpenDay] = useState<{ key: string; datum: string } | null>(null);
   const [showPopuni, setShowPopuni] = useState(false);
   const [confirm, setConfirm] = useState<UnosRada | null>(null);
+  const [tab, setTab] = useState<"sihtarica" | "sedmicni">("sihtarica");
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { zakljucan } = useZakljucavanje();
@@ -237,8 +239,35 @@ export default function SihtaricaPage() {
   const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
   const pctPopunjeno = rez.radnihDana ? Math.round((rez.popunjeno / rez.radnihDana) * 100) : 0;
 
+  // sedmični izvještaj obuhvata sve projektante — samo za admina i šihtera
+  const mozeSedmicni = canPick || !!session.sihter;
+  const tabovi = mozeSedmicni && (
+    <div className="inline-flex gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
+      {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"]] as const).map(([id, label]) => (
+        <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
+          className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            tab === id
+              ? "bg-white dark:bg-gray-900 text-green-800 dark:text-green-300 shadow-sm"
+              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+          }`}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (mozeSedmicni && tab === "sedmicni") {
+    return (
+      <div className="space-y-5">
+        {tabovi}
+        <SedmicniIzvjestaj />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
+      {tabovi}
       {/* Zaglavlje */}
       <header className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="mr-auto min-w-0">
