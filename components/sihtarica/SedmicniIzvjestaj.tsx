@@ -90,7 +90,7 @@ function RadnikRedovi({ rb, red, postavke }: { rb: number; red: SedmicniRed; pos
       <tr className="break-inside-avoid">
         <td rowSpan={2} className={td}>{rb}.</td>
         <td rowSpan={2} className={`${td} text-[12px]`}>
-          {imeUIzvjestaju(k, postavke)}
+          <span className={postavke.imeBold ? "font-bold" : ""}>{imeUIzvjestaju(k, postavke)}</span>
           {zvanjeUIzvjestaju(k, postavke) && <div>{zvanjeUIzvjestaju(k, postavke)}</div>}
         </td>
         <td rowSpan={2} className={td}>{red.odjeli.map((o) => <div key={o}>{o}</div>)}</td>

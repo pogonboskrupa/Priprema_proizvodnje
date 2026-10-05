@@ -11,6 +11,8 @@ export interface IzvjestajPostavke {
   primalac: string;
   sekcija: string;
   potpis: string;
+  /** Ime i prezime projektanta podebljano u tabeli */
+  imeBold: boolean;
   /** ID-evi korisnika redom; ko nije na listi ide na kraj, abecedno */
   redoslijed: string[];
   projektanti: Record<string, ProjektantUIzvjestaju>;
@@ -21,6 +23,7 @@ export const ZADANE_POSTAVKE: IzvjestajPostavke = {
   primalac: "N/r Hikmet Kurbegović, dipl.ing.šum.",
   sekcija: "Sekcija Bosanska Krupa",
   potpis: "VODEĆI PROJEKTANT :",
+  imeBold: false,
   redoslijed: [],
   projektanti: {},
 };
@@ -42,6 +45,7 @@ export function saZadanim(raw: Record<string, unknown> | null | undefined): Izvj
     primalac: str(r.primalac, ZADANE_POSTAVKE.primalac),
     sekcija: str(r.sekcija, ZADANE_POSTAVKE.sekcija),
     potpis: str(r.potpis, ZADANE_POSTAVKE.potpis),
+    imeBold: r.imeBold === true,
     redoslijed: Array.isArray(r.redoslijed) ? r.redoslijed.filter((id): id is string => typeof id === "string") : [],
     projektanti,
   };

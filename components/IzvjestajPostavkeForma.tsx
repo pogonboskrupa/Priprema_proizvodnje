@@ -118,6 +118,11 @@ function Forma({ pocetne }: { pocetne: IzvjestajPostavke }) {
         <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
           <h2 className="font-semibold text-gray-700 dark:text-gray-200">Projektanti — redoslijed i ispis</h2>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Strelicama mijenjaš redoslijed. Prazno polje = ime i titula iz profila.</p>
+          <label htmlFor="izv-ime-bold" className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
+            <input id="izv-ime-bold" type="checkbox" className="w-4 h-4 accent-green-700" checked={draft.imeBold}
+              onChange={(e) => setDraft({ ...draft, imeBold: e.target.checked })} />
+            Ime i prezime <b>podebljano</b>
+          </label>
         </div>
         {poredani.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-400">Nema aktivnih projektanata.</div>

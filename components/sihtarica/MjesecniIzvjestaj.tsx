@@ -74,7 +74,7 @@ export function MjesecniIzvjestaj() {
               <tr key={r.korisnik.id} className="break-inside-avoid">
                 <td className={td}>{i + 1}</td>
                 <td className={`${td} text-left`}>
-                  {imeUIzvjestaju(r.korisnik, postavke)}
+                  <span className={postavke.imeBold ? "font-bold" : ""}>{imeUIzvjestaju(r.korisnik, postavke)}</span>
                   {zvanjeUIzvjestaju(r.korisnik, postavke) && <div>{zvanjeUIzvjestaju(r.korisnik, postavke)}</div>}
                 </td>
                 <td className={td}>{radniDani}</td>
