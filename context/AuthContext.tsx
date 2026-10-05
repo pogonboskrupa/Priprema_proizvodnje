@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { refresh(); }, []);
 
   // Sesija je snimak iz trenutka prijave: uskladi je s bazom (arhiviran/obrisan korisnik,
-  // promijenjena uloga ili operaterska prava). Offline greška ne odjavljuje.
+  // promijenjena uloga ili prava koja dodjeljuje admin). Offline greška ne odjavljuje.
   const userId = session?.userId;
   useEffect(() => {
     if (!userId) return;
@@ -56,6 +56,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...ses,
         role: k.role,
         operater: k.operater ?? false,
+        sihter: k.sihter ?? false,
+        izvjestaji: k.izvjestaji ?? false,
         fullName: k.fullName,
         ime: k.ime,
         avatar: k.avatar,

@@ -240,8 +240,8 @@ export default function SihtaricaPage() {
   const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
   const pctPopunjeno = rez.radnihDana ? Math.round((rez.popunjeno / rez.radnihDana) * 100) : 0;
 
-  // sedmični i mjesečni izvještaj obuhvataju sve projektante — samo za admina i šihtera
-  const mozeSedmicni = canPick || !!session.sihter;
+  // sedmični i mjesečni izvještaj obuhvataju sve projektante — admin, šihter i korisnici kojima admin da pravo
+  const mozeSedmicni = canPick || !!session.sihter || !!session.izvjestaji;
   const tabovi = mozeSedmicni && (
     <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
       {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"], ["mjesecni", "Mjesečni izvještaj"]] as const).map(([id, label]) => (

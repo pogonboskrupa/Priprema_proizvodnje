@@ -13,6 +13,8 @@ export interface Korisnik {
   role: UserRole;
   operater?: boolean;
   sihter?: boolean;
+  /** Vidi sedmični i mjesečni izvještaj svih projektanata (kao admin) */
+  izvjestaji?: boolean;
   avatar: string;
   odjeliIds: string[];
   odjeliRjesenjaIds?: string[];

@@ -9,6 +9,7 @@ export interface Session {
   role: UserRole;
   operater?: boolean;
   sihter?: boolean;
+  izvjestaji?: boolean;
   avatar: string;
 }
 
