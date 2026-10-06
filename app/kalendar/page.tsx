@@ -316,12 +316,12 @@ export default function KalendarPage() {
     let cancelled = false;
     setLoading(true);
     setEditId(null);
-    getUnosiZaMjesec(year, month)
+    getUnosiZaMjesec(year, month, { svi: canSeeAll })
       .then((u) => { if (!cancelled) setUnosi(u); })
       .catch(() => { if (!cancelled) setUnosi([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [session, year, month]);
+  }, [session, year, month, canSeeAll]);
 
   useEffect(() => {
     if (!session) return;
@@ -404,7 +404,7 @@ export default function KalendarPage() {
   }
 
   async function reload() {
-    const u = await getUnosiZaMjesec(year, month);
+    const u = await getUnosiZaMjesec(year, month, { svi: canSeeAll });
     setUnosi(u);
   }
 

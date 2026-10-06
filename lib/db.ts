@@ -524,17 +524,22 @@ export async function getRezimeZaPeriod(od: Date, do_: Date, ids?: readonly stri
   return rezimeIzUnosa(idSet ? unosi.filter((u) => idSet.has(u.inzinjerId as string)) : unosi);
 }
 
-export async function getUnosiZaMjesec(year: number, month: number): Promise<UnosRada[]> {
+/**
+ * svi: unosi svih projektanata server-first — za šihtera, čiji lokalni cache
+ * (opseg "own") sadrži samo njegove unose
+ */
+export async function getUnosiZaMjesec(year: number, month: number, { svi = false } = {}): Promise<UnosRada[]> {
   const od = new Date(year, month - 1, 1);
   const do_ = new Date(year, month, 0);
   do_.setHours(23, 59, 59, 999);
+  const raspon = [
+    where('datum', '>=', Timestamp.fromDate(od)),
+    where('datum', '<=', Timestamp.fromDate(do_)),
+    orderBy('datum', 'asc'),
+  ];
 
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
-    queryUnosi( [
-      where('datum', '>=', Timestamp.fromDate(od)),
-      where('datum', '<=', Timestamp.fromDate(do_)),
-      orderBy('datum', 'asc'),
-    ]),
+    svi ? queryColFresh('unosi', raspon).then(normalizujProjektante) : queryUnosi(raspon),
     getAll('inzinjeri'),
     getAll('odjeli'),
     getAll('users'),
