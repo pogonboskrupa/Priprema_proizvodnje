@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import { DANI_KRATKO, ucinakLabel, type DanSihtarice } from "@/lib/sihtarica";
+import { DANI_KRATKO, ucinakLabel, jeUnaprijedDozvoljen, type DanSihtarice } from "@/lib/sihtarica";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 
 export function DanRed({
@@ -13,8 +13,8 @@ export function DanRed({
   editor: ReactNode;
 }) {
   const prazanRadni = !dan.neradni && !dan.buduci && dan.unosi.length === 0;
-  // nedjelja se otvara samo da se postojeći unos ispravi ili obriše
-  const clickable = canEdit && !dan.buduci && (!dan.zakljucan || dan.unosi.length > 0);
+  // nedjelja se otvara samo da se postojeći unos ispravi ili obriše; budući dan samo u tekućem mjesecu (GO/bolovanje)
+  const clickable = canEdit && (!dan.buduci || jeUnaprijedDozvoljen(dan.datum)) && (!dan.zakljucan || dan.unosi.length > 0);
 
   return (
     <li id={`dan-${dan.datum}`} className={`relative scroll-mt-20 border-b border-gray-100 dark:border-gray-800 last:border-b-0 break-inside-avoid ${
@@ -28,7 +28,7 @@ export function DanRed({
         aria-expanded={open}
         className={`w-full grid grid-cols-[3.25rem_1fr_auto] items-center gap-3 px-3 py-2 text-left min-h-[3rem] focus:outline-none focus-visible:bg-green-50 dark:focus-visible:bg-green-950/30 ${
           clickable ? "hover:bg-green-50/60 dark:hover:bg-green-950/20 cursor-pointer" : "cursor-default"
-        } ${dan.buduci ? "opacity-45" : ""}`}
+        } ${dan.buduci && !dan.unosi.length ? "opacity-45" : ""}`}
       >
         <div className={`flex flex-col items-center justify-center leading-none rounded-lg py-1 ${
           dan.danas ? "bg-green-700 text-white" : ""

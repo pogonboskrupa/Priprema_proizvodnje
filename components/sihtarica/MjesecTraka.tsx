@@ -1,5 +1,5 @@
 "use client";
-import type { DanSihtarice } from "@/lib/sihtarica";
+import { jeUnaprijedDozvoljen, type DanSihtarice } from "@/lib/sihtarica";
 import { VRSTA } from "@/lib/vrste";
 
 function stanje(d: DanSihtarice): string {
@@ -23,7 +23,7 @@ export function MjesecTraka({ dani, onPick }: { dani: readonly DanSihtarice[]; o
             key={d.datum}
             type="button"
             onClick={() => onPick(d.datum)}
-            disabled={d.buduci}
+            disabled={d.buduci && !jeUnaprijedDozvoljen(d.datum)}
             title={`${d.dan}.${opis ? ` — ${opis}` : ""}`}
             aria-label={`${d.dan}. ${opis}`}
             className={`group flex-1 min-w-0 flex flex-col items-stretch gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 disabled:cursor-default`}

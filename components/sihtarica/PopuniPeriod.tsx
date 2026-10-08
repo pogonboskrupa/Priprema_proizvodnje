@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { VrstaRada } from "@/lib/types";
 import { VRSTA } from "@/lib/vrste";
-import { datumiZaPopunu, type DanSihtarice } from "@/lib/sihtarica";
+import { datumiZaPopunu, jeUnaprijedDozvoljen, type DanSihtarice } from "@/lib/sihtarica";
 
 const VRSTE_PERIODA: readonly VrstaRada[] = ["GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO", "TEREN", "KANCELARIJA"];
 
@@ -13,13 +13,16 @@ export function PopuniPeriod({
   onSubmit: (vrsta: VrstaRada, datumi: string[]) => Promise<void>;
   onClose: () => void;
 }) {
-  const dostupni = dani.filter((d) => !d.buduci);
+  // budući dani tekućeg mjeseca primaju samo godišnji i bolovanje (provjera u datumiZaPopunu)
+  const dostupni = dani.filter((d) => !d.buduci || jeUnaprijedDozvoljen(d.datum));
   const prvi = dostupni[0]?.datum ?? "";
   const zadnji = dostupni[dostupni.length - 1]?.datum ?? "";
+  const doDanas = dani.filter((d) => !d.buduci);
+  const zadnjiDoDanas = doDanas[doDanas.length - 1]?.datum ?? zadnji;
 
   const [vrsta, setVrsta] = useState<VrstaRada>("GODISNJI");
   const [od, setOd] = useState(prvi);
-  const [do_, setDo] = useState(zadnji);
+  const [do_, setDo] = useState(zadnjiDoDanas);
   const [preskociNeradne, setPreskociNeradne] = useState(true);
   const [samoPrazne, setSamoPrazne] = useState(true);
   const [busy, setBusy] = useState(false);

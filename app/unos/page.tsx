@@ -14,7 +14,7 @@ import { EVIDENCIJA_OD_DATUM, mjeseciEvidencije } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { praznik } from "@/lib/praznici";
-import { zabranaUpisa } from "@/lib/sihtarica";
+import { zabranaUpisa, krajTekucegMjeseca, VRSTE_UNAPRIJED } from "@/lib/sihtarica";
 import { useZakljucavanje } from "@/hooks/useZakljucavanje";
 import { porukaGreske } from "@/lib/zakljucavanje";
 import { Icon } from "@/components/Icon";
@@ -64,6 +64,9 @@ export default function UnosPage() {
   const { zakljucan, minDatum } = useZakljucavanje();
   const minUnos = minDatum && minDatum > EVIDENCIJA_OD_DATUM ? minDatum : EVIDENCIJA_OD_DATUM;
   const datumZakljucan = zakljucan(form.datum);
+
+  // godišnji i bolovanje se mogu upisati unaprijed, do kraja tekućeg mjeseca
+  const maxDatum = VRSTE_UNAPRIJED.has(form.vrsta) ? krajTekucegMjeseca() : today();
 
   const dayOfWeek = getDayOfWeek(form.datum);
   const isSunday = dayOfWeek === 0;
@@ -255,7 +258,7 @@ export default function UnosPage() {
                 className={inputCls}
                 value={form.datum}
                 min={minUnos}
-                max={today()}
+                max={maxDatum}
                 onChange={(e) => setForm({ ...form, datum: e.target.value })}
                 required
               />
@@ -293,7 +296,7 @@ export default function UnosPage() {
                       className={inputCls}
                       value={datumDo}
                       min={form.datum}
-                      max={today()}
+                      max={maxDatum}
                       onChange={(e) => setDatumDo(e.target.value)}
                     />
                   </div>

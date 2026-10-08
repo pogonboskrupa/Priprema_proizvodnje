@@ -56,6 +56,21 @@ export function daniMjeseca(year: number, month: number, unosi: readonly UnosRad
   });
 }
 
+/** Unaprijed (poslije danas, samo do kraja tekućeg mjeseca) upisuju se samo ova odsustva */
+export const VRSTE_UNAPRIJED: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE"]);
+
+/** Zadnji dan tekućeg mjeseca, "YYYY-MM-DD" */
+export function krajTekucegMjeseca(danas = localDateStr()): string {
+  const [y, m] = danas.split("-").map(Number);
+  return localDateStr(new Date(y, m, 0));
+}
+
+/** Budući dan u tekućem mjesecu — smije se upisati godišnji ili bolovanje */
+export function jeUnaprijedDozvoljen(datum: string, danas = localDateStr()): boolean {
+  const d = datum.slice(0, 10);
+  return d > danas && d <= krajTekucegMjeseca(danas);
+}
+
 export function jeKonflikt(unosi: readonly { vrsta: VrstaRada }[]): boolean {
   const vrste = new Set(unosi.map((u) => u.vrsta));
   const odsustva = [...vrste].filter((v) => ODSUSTVO.has(v)).length;
@@ -68,6 +83,11 @@ export function jeKonflikt(unosi: readonly { vrsta: VrstaRada }[]): boolean {
  */
 export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRada }[], vrsta: VrstaRada): string | null {
   const label = VRSTA[vrsta].label;
+  const danas = localDateStr();
+  if (datum.slice(0, 10) > danas) {
+    if (!jeUnaprijedDozvoljen(datum, danas)) return "Unaprijed se upisuje samo do kraja tekućeg mjeseca.";
+    if (!VRSTE_UNAPRIJED.has(vrsta)) return "Unaprijed se mogu upisati samo godišnji odmor i bolovanje.";
+  }
   // doznaka/vlaka mogu biti u više odjela istog dana
   const visestruko = vrsta === "DOZNAKA" || vrsta === "VLAKA";
   if (!visestruko && postojeci.some((u) => u.vrsta === vrsta)) return `${label} je već upisan za ovaj dan.`;
@@ -140,7 +160,7 @@ export function datumiZaPopunu(
   opts: { preskociNeradne: boolean; samoPrazne: boolean; vrsta: VrstaRada },
 ): string[] {
   return dani
-    .filter((d) => d.datum >= od && d.datum <= do_ && !d.buduci && !d.zakljucan)
+    .filter((d) => d.datum >= od && d.datum <= do_ && !d.zakljucan)
     .filter((d) => !(opts.preskociNeradne && d.neradni))
     .filter((d) => !(opts.samoPrazne && d.unosi.length > 0))
     .filter((d) => !zabranaUpisa(d.datum, d.unosi, opts.vrsta))

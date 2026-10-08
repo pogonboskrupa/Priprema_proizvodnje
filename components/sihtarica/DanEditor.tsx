@@ -4,7 +4,7 @@ import type { Odjel, UnosRada, VrstaRada } from "@/lib/types";
 import { editFormToPayload, NO_ODJEL_VRSTE, type UnosEditForm as Form, type UnosEditPayload } from "@/lib/unos-edit";
 import { splitOdjeliByRecent } from "@/lib/recent";
 import { VRSTA, vrsta as vrstaStyle } from "@/lib/vrste";
-import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, type DanSihtarice } from "@/lib/sihtarica";
+import { zabranaUpisa, zabranaIzmjene, ucinakLabel, unioDrugi, DANI_KRATKO, VRSTE_UNAPRIJED, type DanSihtarice } from "@/lib/sihtarica";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { fmtDateLong } from "@/lib/format";
 import { UnosEditForm, inputSmCls, labelSmCls } from "@/components/UnosEditForm";
@@ -51,7 +51,6 @@ export function DanEditor({
   const [error, setError] = useState("");
 
   const { recent, rest } = splitOdjeliByRecent(odjeli, recentIds);
-  const upisaneVrste = new Set(dan.unosi.map((u) => u.vrsta));
 
   async function run(action: () => Promise<boolean>): Promise<boolean> {
     setBusy(true);
@@ -113,7 +112,7 @@ export function DanEditor({
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400 first-letter:uppercase">{fmtDateLong(dan.datum)}</span>
         {dan.praznik && <span className="text-xs text-rose-700 dark:text-rose-300">Praznik — {dan.praznik}</span>}
         {dan.weekday === 6 && !dan.praznik && <span className="text-xs text-amber-700 dark:text-amber-400">Subota — upiši samo ako je bila radna subota.</span>}
-        {!mjesecZakljucan && !dan.zakljucan && !edit && dan.unosi.length === 0 && prethodni && (kopijaBrzi.length > 0 || kopijaUcinak) && (
+        {!mjesecZakljucan && !dan.zakljucan && !dan.buduci && !edit && dan.unosi.length === 0 && prethodni && (kopijaBrzi.length > 0 || kopijaUcinak) && (
           <button type="button" disabled={busy} onClick={kaoPrethodni}
             className="ml-auto text-xs font-medium text-green-700 dark:text-green-400 hover:underline disabled:opacity-50">
             ↺ Kao {DANI_KRATKO[prethodni.weekday].toLowerCase()} {prethodni.dan}.
@@ -171,13 +170,16 @@ export function DanEditor({
         <p className="text-xs text-gray-500 dark:text-gray-400">Nedjelja je neradni dan — postojeći unos možeš samo ispraviti ili obrisati.</p>
       )}
 
-      {!mjesecZakljucan && !edit && !dan.zakljucan && (
+      {/* jedan dan = jedan unos: forma za novi unos samo dok je dan prazan */}
+      {!mjesecZakljucan && !edit && !dan.zakljucan && dan.unosi.length === 0 && (
         <div className="grid gap-4 md:grid-cols-[auto_1fr]">
           <div>
-            <div className={labelSmCls}>Prisustvo — jedan klik upisuje dan</div>
+            <div className={labelSmCls}>
+              {dan.buduci ? "Unaprijed — samo godišnji odmor ili bolovanje" : "Prisustvo — jedan klik upisuje dan"}
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              {BRZI.map((v) => (
-                <button key={v} type="button" disabled={busy || upisaneVrste.has(v)} onClick={() => brziUpis(v)}
+              {(dan.buduci ? BRZI.filter((v) => VRSTE_UNAPRIJED.has(v)) : BRZI).map((v) => (
+                <button key={v} type="button" disabled={busy} onClick={() => brziUpis(v)}
                   title={zabrana(v) ?? undefined}
                   className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${VRSTA[v].badge} border-transparent hover:brightness-95`}>
                   + {VRSTA[v].label}
@@ -186,7 +188,7 @@ export function DanEditor({
             </div>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); sacuvajUcinak(); }} className="space-y-2">
+          {!dan.buduci && <form onSubmit={(e) => { e.preventDefault(); sacuvajUcinak(); }} className="space-y-2">
             <div className="flex items-center gap-1.5">
               <span className={`${labelSmCls} mb-0 mr-1`}>Učinak</span>
               {UCINAK.map((v) => (
@@ -248,7 +250,7 @@ export function DanEditor({
                 {busy ? "Snimam…" : "Sačuvaj"}
               </button>
             </div>
-          </form>
+          </form>}
         </div>
       )}
 

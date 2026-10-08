@@ -9,7 +9,7 @@ import { fmtDateLong, localDateStr } from "@/lib/format";
 import { recentOdjelIdsByInzinjer, splitOdjeliByRecent } from "@/lib/recent";
 import { EVIDENCIJA_OD_DATUM } from "@/lib/godine";
 import { isOffline } from "@/lib/firebase";
-import { zabranaUpisa, zabranaIzmjene } from "@/lib/sihtarica";
+import { zabranaUpisa, zabranaIzmjene, krajTekucegMjeseca } from "@/lib/sihtarica";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { NEISPRAVAN_BROJ, NO_ODJEL_VRSTE, editFormToPayload, type UnosEditForm as EditForm } from "@/lib/unos-edit";
 import { VRSTA, VRSTE, vrsta as vrstaStyle } from "@/lib/vrste";
@@ -56,7 +56,7 @@ function displayKorisnik(k: Korisnik) {
 // ── RosterNewRow ──────────────────────────────────────────────────────────────
 
 function RosterNewRow({
-  korisnik, pending, odjeli, recentOdjelIds, onUpdate, onSave, saving, onCancel,
+  korisnik, pending, odjeli, recentOdjelIds, onUpdate, onSave, saving,
 }: {
   korisnik: Korisnik;
   pending: PendingRow;
@@ -65,8 +65,6 @@ function RosterNewRow({
   onUpdate: (patch: Partial<PendingRow>) => void;
   onSave: () => void;
   saving: boolean;
-  /** Postavljen kad je ovo dodatni unos za dan koji već ima unos */
-  onCancel?: () => void;
 }) {
   const { recent: recentOdjeli, rest: sortedOdjeli } = splitOdjeliByRecent(odjeli, recentOdjelIds);
 
@@ -81,13 +79,8 @@ function RosterNewRow({
       {/* Name + save button */}
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-sm text-gray-900 dark:text-gray-100 leading-tight">
-          {onCancel ? <span className="text-xs text-gray-500 dark:text-gray-400">+ dodatni unos</span> : displayKorisnik(korisnik)}
+          {displayKorisnik(korisnik)}
         </span>
-        {onCancel && (
-          <button onClick={onCancel} className="ml-auto shrink-0 text-xs text-gray-500 dark:text-gray-400 hover:underline">
-            Odustani
-          </button>
-        )}
         {isReady && (
           <button
             onClick={onSave}
@@ -212,7 +205,6 @@ export default function UnosUcinkaPage() {
   const [editForm, setEditForm] = useState(emptyEditForm());
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
-  const [extraRows, setExtraRows] = useState<ReadonlySet<string>>(new Set());
 
   const [confirmState, setConfirmState] = useState<{ msg: string; onOk: () => void } | null>(null);
   // snimanje offline čeka i do 10 s; za to vrijeme korisnik može preći na drugi dan
@@ -269,15 +261,8 @@ export default function UnosUcinkaPage() {
 
   const existingMap = new Map<string, UnosRada[]>();
   for (const u of unosi) existingMap.set(u.inzinjerId, [...(existingMap.get(u.inzinjerId) ?? []), u]);
-  const showsNewRow = (id: string) => !existingMap.has(id) || extraRows.has(id);
-
-  function toggleExtra(id: string, on: boolean) {
-    setExtraRows((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(id); else next.delete(id);
-      return next;
-    });
-  }
+  // jedan dan = jedan unos: red za novi unos samo kad projektant taj dan nema ništa
+  const showsNewRow = (id: string) => !existingMap.has(id);
 
   function getPending(korisnikId: string): PendingRow {
     return pendingRows[korisnikId] ?? emptyPending();
@@ -339,7 +324,6 @@ export default function UnosUcinkaPage() {
     try {
       await createFromPending(korisnikId, p);
       await osvjeziDan(datum);
-      toggleExtra(korisnikId, false);
       setPendingRows((prev) => {
         const next = { ...prev };
         // Reset to auto-populate if single odjel
@@ -371,7 +355,6 @@ export default function UnosUcinkaPage() {
     try {
       await Promise.all(ready.map((k) => createFromPending(k.id, pendingRows[k.id])));
       await osvjeziDan(datum);
-      setExtraRows(new Set());
       // Reset saved rows to auto-populate
       setPendingRows((prev) => {
         const auto: Record<string, PendingRow> = {};
@@ -460,16 +443,16 @@ export default function UnosUcinkaPage() {
           <input
             type="date" value={datum}
             min={minDan}
-            max={today()}
+            max={krajTekucegMjeseca()}
             onChange={(e) => {
               const v = e.target.value;
-              if (v && v >= minDan && v <= today()) setDatum(v);
+              if (v && v >= minDan && v <= krajTekucegMjeseca()) setDatum(v);
             }}
             className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <button
             onClick={() => setDatum(nextDay(datum))}
-            disabled={datum >= today()}
+            disabled={datum >= krajTekucegMjeseca()}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >›</button>
         </div>
@@ -514,14 +497,12 @@ export default function UnosUcinkaPage() {
                 onUpdate={(patch) => updatePending(k.id, patch)}
                 onSave={() => savePendingRow(k.id)}
                 saving={savingRow === k.id}
-                onCancel={entries.length ? () => toggleExtra(k.id, false) : undefined}
               />
             );
 
             return (
               <div key={k.id}>
                 {entries.map((u, i) => {
-                  const isLast = i === entries.length - 1;
 
                   if (editId === u.id) {
                     return (
@@ -569,11 +550,6 @@ export default function UnosUcinkaPage() {
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">{u.napomena}</span>
                       )}
                       {!danZakljucan && <div className="ml-auto flex items-center gap-3 shrink-0">
-                        {isLast && !extraRows.has(k.id) && (
-                          <button onClick={() => toggleExtra(k.id, true)} className="text-green-700 dark:text-green-400 hover:underline text-xs" title="Dodaj još jedan unos za ovaj dan">
-                            + Još
-                          </button>
-                        )}
                         <button onClick={() => startEdit(u)} className="text-blue-600 dark:text-blue-400 hover:underline text-xs">
                           Uredi
                         </button>
