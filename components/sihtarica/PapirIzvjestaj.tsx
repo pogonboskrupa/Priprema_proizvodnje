@@ -66,7 +66,7 @@ export function PapirList({ postavke, orijentacija, naslov, prijeTabele, priguse
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/60 p-3 sm:p-6 print:border-0 print:bg-transparent print:p-0 print:overflow-visible">
-      <style>{`@media print{@page{size:A4 ${orijentacija};margin:10mm}}.papir-tabela{table-layout:fixed}.papir-tabela td,.papir-tabela th{overflow-wrap:break-word}`}</style>
+      <style>{`@media print{@page{size:A4 ${orijentacija};margin:0}}.papir-tabela{table-layout:fixed}.papir-tabela td,.papir-tabela th{overflow-wrap:break-word}`}</style>
       <article style={{ width: SIRINA[orijentacija] }}
         className={`mx-auto shadow-md print:shadow-none bg-white text-black px-8 py-10 print:!w-auto print:p-0 transition-opacity ${prigusen ? "opacity-50" : ""}`}>
         <header className="font-serif text-[15px] print:text-[13px] leading-snug">

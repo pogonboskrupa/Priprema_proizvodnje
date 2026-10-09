@@ -70,3 +70,17 @@ body {
   border-radius: 0.75rem;
   box-shadow: var(--card-shadow);
 }
+
+/* Štampa: browser zaglavlje/podnožje (naslov, datum, link stranice, broj strane) ispisuje se
+   u margini papira — bez margine nema ni njih. Marginu od 10 mm daje sadržaj; "clone" je
+   ponavlja i na svakoj sljedećoj strani. */
+@media print {
+  @page { margin: 0; }
+  html, body { margin: 0; background: #fff; }
+  main {
+    max-width: none !important;
+    padding: 10mm !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+}
