@@ -82,6 +82,72 @@ export default function Home() {
   const { doDana } = prosliMjesecDoDanas(danasD);
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
 
+  const sekcijaRezime = (
+    <section aria-labelledby="rezime-naslov">
+      <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
+      {rezime ? (
+        <>
+          <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-px rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800`}>
+            <Stat label="Doznaka" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
+              delta={prosli && <Delta cur={rezime.ha} prev={prosli.ha} />} />
+            <Stat label="Stabala" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
+              delta={prosli && <Delta cur={rezime.stabala} prev={prosli.stabala} dec={0} />} />
+            <Stat label="Vlake" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
+              delta={prosli && <Delta cur={rezime.km} prev={prosli.km} />} />
+            {isWorker && <>
+              <Stat label="Radni dani" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
+                delta={prosli && <Delta cur={rezime.radniDani} prev={prosli.radniDani} dec={0} />} />
+              <Stat label="Odsustva" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
+                tone="text-sky-700 dark:text-sky-400" note={`GO ${rezime.godisnji} · bol. ${rezime.bolovanje}`}
+                className="col-span-2 lg:col-span-1" />
+            </>}
+          </div>
+          {prosli && (
+            <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+              Strelice: razlika u odnosu na 1.–{doDana}. prošlog mjeseca (isti dio mjeseca).
+            </p>
+          )}
+        </>
+      ) : (
+        <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-3`} aria-hidden>
+          {Array.from({ length: isWorker ? 5 : 3 }, (_, i) => <div key={i} className="h-[112px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
+        </div>
+      )}
+    </section>
+  );
+  const sekcijaPlan = (
+    plan && (isWorker
+      ? <MojPlan red={mojPlan} godina={danasD.getFullYear()} />
+      : <PlanTima redovi={plan} godina={danasD.getFullYear()} />)
+  );
+  const sekcijaOdjeli = (
+    odjeliRezime.length > 0 && (
+      <section aria-labelledby="odjeli-naslov">
+        <SectionTitle id="odjeli-naslov" title={isWorker ? "Moji odjeli" : "Aktivnost po odjelima"} meta={mesec} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+          {odjeliRezime.map((o) => <OdjelCard key={o.odjelId} odjel={o} />)}
+          <UkupnoOdjeliCard odjeli={odjeliRezime} />
+        </div>
+      </section>
+    )
+  );
+  const sekcijaBrzi = (
+    <section aria-labelledby="stranice-naslov">
+      <SectionTitle id="stranice-naslov" title="Brzi pristup" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        {linkovi.map((l) => (
+          <Link key={l.href} href={l.href} title={l.desc}
+            className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 hover:border-green-600/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
+            <span className="w-8 h-8 flex-shrink-0 rounded-lg bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center">
+              <Icon name={l.icon} className="w-4 h-4" />
+            </span>
+            <span className="min-w-0 text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{l.label}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+
   return (
     <div className="space-y-8">
       <header>
@@ -97,70 +163,18 @@ export default function Home() {
         </div>
       )}
 
-      <ObavijestGO korisnik={korisnik} periodGodina={goPeriodGodina(danasD)} isAdmin={!isWorker} projektanti={projektanti} />
+      {isWorker && <ObavijestGO korisnik={korisnik} periodGodina={goPeriodGodina(danasD)} />}
 
       {isWorker
         ? <MojZadnjiDan zadnji={zadnji} />
         : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} />}
 
-      <section aria-labelledby="rezime-naslov">
-        <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
-        {rezime ? (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800">
-              <Stat label="Doznaka" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
-                delta={prosli && <Delta cur={rezime.ha} prev={prosli.ha} />} />
-              <Stat label="Stabala" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
-                delta={prosli && <Delta cur={rezime.stabala} prev={prosli.stabala} dec={0} />} />
-              <Stat label="Vlake" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
-                delta={prosli && <Delta cur={rezime.km} prev={prosli.km} />} />
-              <Stat label="Radni dani" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
-                delta={prosli && <Delta cur={rezime.radniDani} prev={prosli.radniDani} dec={0} />} />
-              <Stat label="Odsustva" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
-                tone="text-sky-700 dark:text-sky-400" note={`GO ${rezime.godisnji} · bol. ${rezime.bolovanje}`}
-                className="col-span-2 lg:col-span-1" />
-            </div>
-            {prosli && (
-              <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
-                Strelice: razlika u odnosu na 1.–{doDana}. prošlog mjeseca (isti dio mjeseca).
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" aria-hidden>
-            {Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[112px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
-          </div>
-        )}
-      </section>
-
-      {plan && (isWorker
-        ? <MojPlan red={mojPlan} godina={danasD.getFullYear()} />
-        : <PlanTima redovi={plan} godina={danasD.getFullYear()} />)}
-
-      {odjeliRezime.length > 0 && (
-        <section aria-labelledby="odjeli-naslov">
-          <SectionTitle id="odjeli-naslov" title={isWorker ? "Moji odjeli" : "Aktivnost po odjelima"} meta={mesec} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {odjeliRezime.map((o) => <OdjelCard key={o.odjelId} odjel={o} />)}
-            <UkupnoOdjeliCard odjeli={odjeliRezime} />
-          </div>
-        </section>
+      {isWorker ? (
+        <>{sekcijaRezime}{sekcijaPlan}{sekcijaOdjeli}{sekcijaBrzi}</>
+      ) : (
+        // admin: aktivnost po odjelima odmah ispod zadnjih dana, plan doznake na kraju
+        <>{sekcijaOdjeli}{sekcijaRezime}{sekcijaBrzi}{sekcijaPlan}</>
       )}
-
-      <section aria-labelledby="stranice-naslov">
-        <SectionTitle id="stranice-naslov" title="Brzi pristup" />
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-          {linkovi.map((l) => (
-            <Link key={l.href} href={l.href} title={l.desc}
-              className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 hover:border-green-600/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
-              <span className="w-8 h-8 flex-shrink-0 rounded-lg bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center">
-                <Icon name={l.icon} className="w-4 h-4" />
-              </span>
-              <span className="min-w-0 text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{l.label}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
@@ -413,40 +427,12 @@ function UkupnoOdjeliCard({ odjeli }: { odjeli: OdjelMjesecRezime[] }) {
   );
 }
 
-function ObavijestGO({ korisnik, periodGodina, isAdmin, projektanti }: {
+function ObavijestGO({ korisnik, periodGodina }: {
   korisnik: Korisnik | null;
   periodGodina: number;
-  isAdmin: boolean;
-  projektanti: Korisnik[];
 }) {
   const key = String(periodGodina);
   const lijepo = `${periodGodina}/${periodGodina + 1}`;
-
-  if (isAdmin) {
-    const bezDana = projektanti.filter((k) => !(k.goDanaPoUgovoru?.[key] ?? 0));
-    if (bezDana.length === 0) return null;
-    return (
-      <div role="status" className="rounded-lg px-4 py-3 text-sm border bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-start gap-3">
-        <span className="mt-0.5 text-base flex-shrink-0">📋</span>
-        <div className="min-w-0">
-          <p className="font-medium">
-            {bezDana.length === 1
-              ? "1 projektant nema upisan broj dana GO po ugovoru"
-              : `${bezDana.length} projektanata nemaju upisan broj dana GO po ugovoru`}{" "}
-            <span className="font-normal text-amber-700 dark:text-amber-300">({lijepo})</span>
-          </p>
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
-            {bezDana.map((k) => k.fullName || k.ime).join(", ")}
-            {" — "}
-            <Link href="/sihtarica" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-100">
-              Otvori šihtaricu
-            </Link>{" "}
-            i upiši u polju &quot;Dana po ugovoru&quot;.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (!korisnik) return null;
   const ima = !!(korisnik.goDanaPoUgovoru?.[key] ?? 0);
