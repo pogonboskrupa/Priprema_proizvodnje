@@ -53,6 +53,15 @@ export function SedmicniIzvjestaj() {
         onOrijentacija={setOrijentacija}
         loading={loading}
         err={err}
+        onWord={async () => {
+          const [{ sedmicniDocx }, { preuzmiFajl }] = await Promise.all([import("@/lib/word-izvjestaj"), import("@/lib/export")]);
+          const blob = await sedmicniDocx({
+            redovi, postavke, orijentacija,
+            naziviDana: datumi.map(nazivDana),
+            naslov: ["SEDMIČNI IZVJEŠTAJ O RADU", `${rasponLabel(datumi)} godine`],
+          });
+          preuzmiFajl(blob, `Sedmicni_izvjestaj_${datumi[0] ?? ""}.docx`);
+        }}
       />
       <PapirList
         postavke={postavke}

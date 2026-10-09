@@ -64,6 +64,14 @@ export function MjesecniIzvjestaj() {
         err={err}
         orijentacija={orijentacija}
         onOrijentacija={setOrijentacija}
+        onWord={async () => {
+          const [{ mjesecniDocx }, { preuzmiFajl }] = await Promise.all([import("@/lib/word-izvjestaj"), import("@/lib/export")]);
+          const blob = await mjesecniDocx({
+            redovi, radniDani, postavke, orijentacija,
+            naslov: [`MJESEČNI IZVJEŠTAJ O RADU ZA MJESEC – ${monthName(mj.month).toUpperCase()}`, `${mj.year}. GODINE`],
+          });
+          preuzmiFajl(blob, `Mjesecni_izvjestaj_${mj.year}-${String(mj.month).padStart(2, "0")}.docx`);
+        }}
       />
       <PapirList
         postavke={postavke}

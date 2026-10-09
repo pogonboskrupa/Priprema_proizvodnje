@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { IzvjestajPostavke } from "@/lib/izvjestaj-postavke";
 
 export type Orijentacija = "portrait" | "landscape";
@@ -10,10 +10,12 @@ const SIRINA: Record<Orijentacija, string> = { portrait: "794px", landscape: "11
 export const tdPapir = "border border-black px-1.5 py-1 align-middle text-center";
 
 const btnNav = "w-9 h-9 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent text-lg";
-const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors";
+const btnGhost = "px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50";
 
-export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled, loading, err, orijentacija, onOrijentacija }: {
+export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled, loading, err, orijentacija, onOrijentacija, onWord }: {
   label: string;
+  /** Pravi i preuzima .docx za uređivanje u Wordu */
+  onWord: () => Promise<void>;
   orijentacija: Orijentacija;
   onOrijentacija: (o: Orijentacija) => void;
   onPrev: () => void;
@@ -23,6 +25,21 @@ export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled,
   loading: boolean;
   err: string;
 }) {
+  const [wordBusy, setWordBusy] = useState(false);
+  const [wordErr, setWordErr] = useState("");
+
+  async function word() {
+    setWordBusy(true);
+    setWordErr("");
+    try {
+      await onWord();
+    } catch {
+      setWordErr("Word dokument nije napravljen. Pokušaj ponovo.");
+    } finally {
+      setWordBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2 print:hidden">
@@ -44,11 +61,14 @@ export function PeriodTraka({ label, onPrev, onNext, prevDisabled, nextDisabled,
             </button>
           ))}
         </div>
+        <button type="button" className={btnGhost} onClick={word} disabled={wordBusy || loading} title="Preuzmi .docx za uređivanje u Wordu">
+          {wordBusy ? "Pravim…" : "Word"}
+        </button>
         <button type="button" className={btnGhost} onClick={() => window.print()}>Štampaj</button>
       </div>
-      {err && (
+      {(err || wordErr) && (
         <div className="rounded-lg px-4 py-2.5 text-sm border bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 print:hidden">
-          {err}
+          {err || wordErr}
         </div>
       )}
     </>
