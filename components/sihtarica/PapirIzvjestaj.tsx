@@ -66,17 +66,17 @@ export function PapirList({ postavke, orijentacija, naslov, prijeTabele, priguse
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/60 p-3 sm:p-6 print:border-0 print:bg-transparent print:p-0 print:overflow-visible">
-      <style>{`@media print{@page{size:A4 ${orijentacija};margin:10mm}}`}</style>
+      <style>{`@media print{@page{size:A4 ${orijentacija};margin:10mm}}.papir-tabela{table-layout:fixed}.papir-tabela td,.papir-tabela th{overflow-wrap:break-word}`}</style>
       <article style={{ width: SIRINA[orijentacija] }}
         className={`mx-auto shadow-md print:shadow-none bg-white text-black px-8 py-10 print:!w-auto print:p-0 transition-opacity ${prigusen ? "opacity-50" : ""}`}>
-        <header className="font-serif text-[15px] leading-snug">
+        <header className="font-serif text-[15px] print:text-[13px] leading-snug">
           {postavke.firma.map((l, i) => <div key={i}>{l}</div>)}
-          {postavke.primalac && <div className="mt-6 text-right">{postavke.primalac}</div>}
-          <h2 className="mt-6 text-center text-base">{naslov}</h2>
+          {postavke.primalac && <div className="mt-6 print:mt-3 text-right">{postavke.primalac}</div>}
+          <h2 className="mt-6 print:mt-3 text-center text-base">{naslov}</h2>
           {prijeTabele}
         </header>
         {children}
-        <footer className="mt-14 flex justify-end font-serif text-[15px]">
+        <footer className="mt-14 print:mt-8 flex justify-end font-serif text-[15px] break-inside-avoid">
           <span>{postavke.potpis}</span>
           <span className="ml-6 inline-block w-40 border-b border-black" />
         </footer>

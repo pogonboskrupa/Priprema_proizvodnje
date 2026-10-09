@@ -60,26 +60,44 @@ export function SedmicniIzvjestaj() {
         prigusen={loading && !!podaci}
         naslov={<>SEDMIČNI IZVJEŠTAJ O RADU<br />{rasponLabel(datumi)} godine</>}
       >
-        <table className="mt-4 w-full border-collapse border-2 border-black text-[11px] leading-tight">
-          <thead>
-            <tr>
-              <th className={`${td} w-8 font-normal`}>RB</th>
-              <th className={`${td} font-normal`}>IME I<br />PREZIME</th>
-              <th className={`${td} font-normal`}>ODJEL</th>
-              <th className={`${td} font-normal`}>DANI</th>
-              {datumi.map((d) => <th key={d} className={`${td} font-normal`}>{nazivDana(d)}</th>)}
-              <th className={`${td} font-bold`}>UKUPNO:</th>
-            </tr>
-          </thead>
-          <tbody>
-            {redovi.map((r, i) => <RadnikRedovi key={r.korisnik.id} rb={i + 1} red={r} postavke={postavke} />)}
-            {!loading && podaci && redovi.length === 0 && (
-              <tr><td colSpan={datumi.length + 5} className={`${td} py-6`}>Nema projektanata.</td></tr>
-            )}
-          </tbody>
-        </table>
+        <SedmicnaTabelaPapir redovi={redovi} datumi={datumi} postavke={postavke} prazno={!loading && !!podaci && redovi.length === 0} />
       </PapirList>
     </div>
+  );
+}
+
+// Fiksni raspored: dani dijele ostatak širine, pa tabela uvijek staje u širinu papira
+export function SedmicnaTabelaPapir({ redovi, datumi, postavke, prazno }: {
+  redovi: readonly SedmicniRed[];
+  datumi: readonly string[];
+  postavke: IzvjestajPostavke;
+  prazno: boolean;
+}) {
+  return (
+    <table className="papir-tabela mt-4 w-full border-collapse border-2 border-black text-[11px] print:text-[10px] leading-tight">
+      <colgroup>
+        <col style={{ width: "4%" }} />
+        <col style={{ width: "15%" }} />
+        <col style={{ width: "11%" }} />
+        <col style={{ width: "8%" }} />
+        {datumi.map((d) => <col key={d} />)}
+        <col style={{ width: "8%" }} />
+      </colgroup>
+      <thead className="print:text-[9px]">
+        <tr>
+          <th className={`${td} font-normal`}>RB</th>
+          <th className={`${td} font-normal`}>IME I<br />PREZIME</th>
+          <th className={`${td} font-normal`}>ODJEL</th>
+          <th className={`${td} font-normal`}>DANI</th>
+          {datumi.map((d) => <th key={d} className={`${td} font-normal`}>{nazivDana(d)}</th>)}
+          <th className={`${td} font-bold`}>UKUPNO:</th>
+        </tr>
+      </thead>
+      <tbody>
+        {redovi.map((r, i) => <RadnikRedovi key={r.korisnik.id} rb={i + 1} red={r} postavke={postavke} />)}
+        {prazno && <tr><td colSpan={datumi.length + 5} className={`${td} py-6`}>Nema projektanata.</td></tr>}
+      </tbody>
+    </table>
   );
 }
 
@@ -89,17 +107,17 @@ function RadnikRedovi({ rb, red, postavke }: { rb: number; red: SedmicniRed; pos
     <>
       <tr className="break-inside-avoid">
         <td rowSpan={2} className={td}>{rb}.</td>
-        <td rowSpan={2} className={`${td} text-[12px]`}>
+        <td rowSpan={2} className={`${td} text-[12px] print:text-[10.5px]`}>
           <span className={postavke.imeBold ? "font-bold" : ""}>{imeUIzvjestaju(k, postavke)}</span>
           {zvanjeUIzvjestaju(k, postavke) && <div>{zvanjeUIzvjestaju(k, postavke)}</div>}
         </td>
         <td rowSpan={2} className={td}>{red.odjeli.map((o) => <div key={o}>{o}</div>)}</td>
-        <td className={`${td} whitespace-nowrap`}>Broj stabala</td>
+        <td className={td}>Broj stabala</td>
         {red.dani.map((g, i) => <td key={i} rowSpan={2} className={td}><Celija grupe={g} /></td>)}
         <td className={td}>{red.stabala ? `${fmtBroj(red.stabala, 0)}st` : ""}</td>
       </tr>
       <tr className="break-inside-avoid">
-        <td className={`${td} whitespace-nowrap`}>Površina ha</td>
+        <td className={td}>Površina ha</td>
         <td className={td}>
           {red.ha ? `${fmtBroj(red.ha)}ha` : ""}
           {red.km > 0 && <div>{fmtBroj(red.km)}km</div>}
