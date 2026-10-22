@@ -130,12 +130,25 @@ export default function OdjeliPage() {
   const vlasnikRjesenja = new Map<string, Korisnik>();
   for (const k of korisnici) for (const id of k.odjeliRjesenjaIds ?? []) vlasnikRjesenja.set(id, k);
 
+  // Transakcija ide na server i ne osvježava lokalni cache odmah — ponovno čitanje
+  // korisnika bi vratilo staro stanje, pa se izbor primijeni lokalno (i vrati ako upis padne).
+  function primijeniRjesenje(ks: readonly Korisnik[], odjelId: string, korisnikId: string | null): Korisnik[] {
+    return ks.map((k) => {
+      const rjesenja = (k.odjeliRjesenjaIds ?? []).filter((id) => id !== odjelId);
+      if (k.id !== korisnikId) return rjesenja.length === (k.odjeliRjesenjaIds ?? []).length ? k : { ...k, odjeliRjesenjaIds: rjesenja };
+      const odjeliIds = (k.odjeliIds ?? []).includes(odjelId) ? k.odjeliIds : [...(k.odjeliIds ?? []), odjelId];
+      return { ...k, odjeliRjesenjaIds: [...rjesenja, odjelId], odjeliIds };
+    });
+  }
+
   async function snimiRjesenje(o: Odjel, korisnikId: string | null) {
+    const prije = korisnici;
+    setKorisnici(primijeniRjesenje(prije, o.id, korisnikId));
     setRjesenjeSaving(o.id);
     try {
       await dodijeliRjesenje(o.id, korisnikId);
-      setKorisnici(await getKorisnici());
     } catch {
+      setKorisnici(prije);
       setErr("Greška pri snimanju projektanta odjela. Provjeri internet i pokušaj ponovo.");
     } finally {
       setRjesenjeSaving(null);
