@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOdjeli, createOdjel, updateOdjel, arhivirajOdjel } from "@/lib/db";
+import { getOdjeli, createOdjel, updateOdjel, arhivirajOdjel, getKorisnici, dodijeliRjesenje } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import type { Odjel } from "@/lib/types";
+import type { Korisnik, Odjel } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { parseDecimal, cmpOdjel, fmtDate, fmtDateShort, localDateStr } from "@/lib/format";
 
@@ -102,6 +102,8 @@ export default function OdjeliPage() {
   const [toggling, setToggling] = useState<string | null>(null); // "<odjelId>-doz" | "<odjelId>-vlak"
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
   const [err, setErr] = useState("");
+  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
+  const [rjesenjeSaving, setRjesenjeSaving] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
@@ -110,7 +112,9 @@ export default function OdjeliPage() {
 
   async function load() {
     try {
-      setSviOdjeli(await getOdjeli({ ukljuciArhivirane: true, saBrojem: true }));
+      const [od, ks] = await Promise.all([getOdjeli({ ukljuciArhivirane: true, saBrojem: true }), getKorisnici()]);
+      setSviOdjeli(od);
+      setKorisnici(ks);
     } catch {
       setErr("Greška pri učitavanju odjela. Provjeri internet i osvježi stranicu.");
     }
@@ -119,6 +123,38 @@ export default function OdjeliPage() {
   useEffect(() => { load(); }, []);
 
   if (authLoading || !session) return null;
+
+  const projektanti = korisnici.filter((k) => k.role === "worker" && !k.arhiviran);
+  const imeKorisnika = (k: Korisnik) => k.fullName || k.ime;
+  // rješenje za izvedbeni projekat: jedan projektant po odjelu
+  const vlasnikRjesenja = new Map<string, Korisnik>();
+  for (const k of korisnici) for (const id of k.odjeliRjesenjaIds ?? []) vlasnikRjesenja.set(id, k);
+
+  async function snimiRjesenje(o: Odjel, korisnikId: string | null) {
+    setRjesenjeSaving(o.id);
+    try {
+      await dodijeliRjesenje(o.id, korisnikId);
+      setKorisnici(await getKorisnici());
+    } catch {
+      setErr("Greška pri snimanju projektanta odjela. Provjeri internet i pokušaj ponovo.");
+    } finally {
+      setRjesenjeSaving(null);
+    }
+  }
+
+  function promijeniRjesenje(o: Odjel, korisnikId: string) {
+    const novi = projektanti.find((k) => k.id === korisnikId) ?? null;
+    const stari = vlasnikRjesenja.get(o.id);
+    if (!stari) { snimiRjesenje(o, novi?.id ?? null); return; }
+    setConfirmState({
+      msg: novi
+        ? `Rješenje za odjel ${o.gj} / ${o.broj} prelazi s ${imeKorisnika(stari)} na ${imeKorisnika(novi)}?`
+        : `Ukloniti ${imeKorisnika(stari)} kao projektanta odjela ${o.gj} / ${o.broj}?`,
+      okLabel: novi ? "Prebaci" : "Ukloni",
+      okColor: "amber",
+      onOk: () => { setConfirmState(null); snimiRjesenje(o, novi?.id ?? null); },
+    });
+  }
 
   const odjeli = sviOdjeli.filter((o) => !o.arhiviran);
   const arhivirani = sviOdjeli.filter((o) => o.arhiviran);
@@ -535,6 +571,7 @@ export default function OdjeliPage() {
                         <tr>
                           <th className="text-left px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Odjel br.</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Površina (ha)</th>
+                          <th className="text-left px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Projektant (rješenje)</th>
                           <th className="text-center px-2 py-2 text-green-700 dark:text-green-400 font-medium text-xs">Doznaka</th>
                           <th className="text-center px-2 py-2 text-amber-600 dark:text-amber-400 font-medium text-xs">Vlake</th>
                           <th className="text-right px-3 py-2 text-gray-700 dark:text-gray-300 font-medium text-xs">Zadnji rad</th>
@@ -570,6 +607,33 @@ export default function OdjeliPage() {
                                   className="w-full border border-blue-400 rounded px-1.5 py-0.5 text-sm text-right bg-white dark:bg-gray-800 dark:text-gray-100 outline-none"
                                 />
                               ) : (Number(o.povrsina) || 0).toFixed(2)}
+                            </td>
+                            <td className="px-3 py-2">
+                              {(() => {
+                                const vlasnik = vlasnikRjesenja.get(o.id);
+                                return (
+                                  <>
+                                    <select
+                                      aria-label={`Projektant odjela ${o.gj} / ${o.broj}`}
+                                      value={vlasnik?.id ?? ""}
+                                      disabled={rjesenjeSaving === o.id}
+                                      onChange={(e) => promijeniRjesenje(o, e.target.value)}
+                                      className={`print:hidden w-full max-w-[11rem] border rounded-md px-1.5 py-1 text-xs bg-white dark:bg-gray-800 disabled:opacity-50 ${
+                                        vlasnik
+                                          ? "border-amber-300 dark:border-amber-700 text-gray-900 dark:text-gray-100 font-medium"
+                                          : "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500"
+                                      }`}
+                                    >
+                                      <option value="">— nije dodijeljen —</option>
+                                      {vlasnik && !projektanti.some((k) => k.id === vlasnik.id) && (
+                                        <option value={vlasnik.id}>{imeKorisnika(vlasnik)}</option>
+                                      )}
+                                      {projektanti.map((k) => <option key={k.id} value={k.id}>{imeKorisnika(k)}</option>)}
+                                    </select>
+                                    <span className="hidden print:inline text-xs">{vlasnik ? imeKorisnika(vlasnik) : "–"}</span>
+                                  </>
+                                );
+                              })()}
                             </td>
                             <td className="px-2 py-2 text-center">
                               <StatusToggle

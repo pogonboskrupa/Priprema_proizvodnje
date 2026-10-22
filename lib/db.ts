@@ -128,6 +128,34 @@ export async function otpustiRjesenje(korisnikId: string, odjelId: string): Prom
   });
 }
 
+/**
+ * Admin: rješenje za odjel daje projektantu (ili ga uklanja, null) i skida ga s
+ * dosadašnjeg vlasnika. Novi vlasnik dobija odjel i u svoju listu "Moji odjeli".
+ */
+export async function dodijeliRjesenje(odjelId: string, korisnikId: string | null): Promise<void> {
+  await authReady();
+  const users = await getAllFresh('users');
+  const legacyVlasnici = users
+    .filter((u) => u.id !== korisnikId && ((u.odjeliRjesenjaIds as string[] | undefined) ?? []).includes(odjelId))
+    .map((u) => u.id as string);
+  const lockRef = doc(db, 'rjesenja', odjelId);
+
+  await runTransaction(db, async (tx) => {
+    const lock = await tx.get(lockRef);
+    const lockVlasnik = lock.exists() ? (lock.data().korisnikId as string) : null;
+    const skini = new Set(legacyVlasnici);
+    if (lockVlasnik && lockVlasnik !== korisnikId) skini.add(lockVlasnik);
+    const sada = Timestamp.now();
+    for (const id of skini) tx.update(doc(db, 'users', id), { odjeliRjesenjaIds: arrayRemove(odjelId), updatedAt: sada });
+    if (korisnikId) {
+      tx.set(lockRef, { korisnikId, odjelId, createdAt: sada });
+      tx.update(doc(db, 'users', korisnikId), { odjeliRjesenjaIds: arrayUnion(odjelId), odjeliIds: arrayUnion(odjelId), updatedAt: sada });
+    } else if (lock.exists()) {
+      tx.delete(lockRef);
+    }
+  });
+}
+
 // ── Odjeli ────────────────────────────────────────────────────────────────────
 
 export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: boolean } = {}): Promise<Odjel[]> {
