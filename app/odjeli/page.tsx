@@ -14,6 +14,7 @@ type StatusFilter = "svi" | "aktivni" | "neodradjeni" | "odradjeni" | "bezDoznak
 const jeOdradjen = (o: Odjel) => !!o.doznaceno && !!o.vlakeProjektovane;
 
 const AKTIVAN_DANA = 30;
+const BEZ_PROJEKTANTA = "__bez__";
 
 function daniOd(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
@@ -85,6 +86,8 @@ export default function OdjeliPage() {
   const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
   const [showArhiva, setShowArhiva] = useState(false);
   const [filter, setFilter] = useState<StatusFilter>("svi");
+  // "" = svi, BEZ_PROJEKTANTA = bez rješenja, inače ID projektanta
+  const [projektantFilter, setProjektantFilter] = useState("");
 
   // Pojedinačni unos / edit
   const [form, setForm] = useState({ gj: "", broj: "", povrsina: "" });
@@ -171,7 +174,11 @@ export default function OdjeliPage() {
 
   const odjeli = sviOdjeli.filter((o) => !o.arhiviran);
   const arhivirani = sviOdjeli.filter((o) => o.arhiviran);
-  const prikazani = odjeli.filter(FILTERI.find((f) => f.id === filter)!.test);
+  const odjeliProjektanta = !projektantFilter
+    ? odjeli
+    : odjeli.filter((o) => projektantFilter === BEZ_PROJEKTANTA ? !vlasnikRjesenja.has(o.id) : vlasnikRjesenja.get(o.id)?.id === projektantFilter);
+  const prikazani = odjeliProjektanta.filter(FILTERI.find((f) => f.id === filter)!.test);
+  const izabraniProjektant = korisnici.find((k) => k.id === projektantFilter);
 
   // isti odjel dva puta bi raspolovio unose i izvještaje; arhiva se računa (može se vratiti)
   const kljuc = (gj: string, broj: string) => `${gj.trim().toUpperCase()}|${broj.trim().toUpperCase()}`;
@@ -504,12 +511,13 @@ export default function OdjeliPage() {
 
       {/* ── Status summary ────────────────────────────────────────────── */}
       {odjeli.length > 0 && (() => {
-        const total = odjeli.length;
-        const dozDone = odjeli.filter(o => o.doznaceno).length;
-        const vlakDone = odjeli.filter(o => o.vlakeProjektovane).length;
-        const bothDone = odjeli.filter(o => o.doznaceno && o.vlakeProjektovane).length;
+        const total = odjeliProjektanta.length;
+        const dozDone = odjeliProjektanta.filter(o => o.doznaceno).length;
+        const vlakDone = odjeliProjektanta.filter(o => o.vlakeProjektovane).length;
+        const bothDone = odjeliProjektanta.filter(o => o.doznaceno && o.vlakeProjektovane).length;
+        const brojOdjela = (id: string) => odjeli.filter((o) => vlasnikRjesenja.get(o.id)?.id === id).length;
         return (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800">
               <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
               Doznaka: {dozDone}/{total}
@@ -522,6 +530,22 @@ export default function OdjeliPage() {
               <svg viewBox="0 0 24 24" className="w-3 h-3 fill-current"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
               Oboje: {bothDone}/{total}
             </span>
+            <label htmlFor="odjeli-projektant" className="sm:ml-auto inline-flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-300 print:hidden">
+              Projektant
+              <select id="odjeli-projektant" value={projektantFilter} onChange={(e) => setProjektantFilter(e.target.value)}
+                className={`border rounded-lg px-2.5 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 ${
+                  projektantFilter ? "border-green-600 dark:border-green-500" : "border-gray-300 dark:border-gray-600"
+                }`}>
+                <option value="">Svi projektanti</option>
+                {projektanti.map((k) => <option key={k.id} value={k.id}>{imeKorisnika(k)} ({brojOdjela(k.id)})</option>)}
+                <option value={BEZ_PROJEKTANTA}>Bez projektanta ({odjeli.filter((o) => !vlasnikRjesenja.has(o.id)).length})</option>
+              </select>
+            </label>
+            {projektantFilter && (
+              <span className="hidden print:inline text-sm">
+                Projektant: {projektantFilter === BEZ_PROJEKTANTA ? "bez projektanta" : izabraniProjektant ? imeKorisnika(izabraniProjektant) : ""}
+              </span>
+            )}
           </div>
         );
       })()}
@@ -540,7 +564,7 @@ export default function OdjeliPage() {
               }`}
             >
               {f.label}
-              <span className="text-xs tabular-nums opacity-60">{odjeli.filter(f.test).length}</span>
+              <span className="text-xs tabular-nums opacity-60">{odjeliProjektanta.filter(f.test).length}</span>
             </button>
           ))}
         </div>
@@ -554,7 +578,7 @@ export default function OdjeliPage() {
       ) : prikazani.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 px-4 py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
           Nema odjela u ovom prikazu.
-          {" "}<button onClick={() => setFilter("svi")} className="text-green-700 dark:text-green-400 hover:underline font-medium">Prikaži sve</button>
+          {" "}<button onClick={() => { setFilter("svi"); setProjektantFilter(""); }} className="text-green-700 dark:text-green-400 hover:underline font-medium">Prikaži sve</button>
         </div>
       ) : (
         (() => {
