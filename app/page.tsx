@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getRezimeZaPeriod, getRezimePoOdjelima, getInzinjeriByKorisnikId, getGodisnjePlanPoProjektantu,
-  getZadnjiDanPoProjektantu, getKorisnici, getKorisnik, tekuciMjesec,
+  getZadnjiDanPoProjektantu, getKorisnici, getKorisnik, getUnosiZaMjesec, getGodisnjiUnosi, tekuciMjesec,
   type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed, type ZadnjiDan,
 } from "@/lib/db";
 import type { Korisnik, UnosRada } from "@/lib/types";
@@ -17,11 +17,8 @@ import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { vrsta } from "@/lib/vrste";
-
-/** GO period year: 1. 7. – 30. 6.; key in goDanaPoUgovoru */
-function goPeriodGodina(now = new Date()): number {
-  return now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-}
+import { jeRadniDan, praznik } from "@/lib/praznici";
+import { goPeriod, iskoristenoDanaGO, type GoPeriod } from "@/lib/godisnji";
 
 export default function Home() {
   const { session, loading } = useAuth();
@@ -33,6 +30,8 @@ export default function Home() {
   const [zadnji, setZadnji] = useState<Record<string, ZadnjiDan> | null>(null);
   const [projektanti, setProjektanti] = useState<Korisnik[]>([]);
   const [korisnik, setKorisnik] = useState<Korisnik | null>(null);
+  const [mjesecUnosi, setMjesecUnosi] = useState<UnosRada[] | null>(null);
+  const [goUnosi, setGoUnosi] = useState<UnosRada[] | null>(null);
   const [greska, setGreska] = useState(false);
   const isWorker = session?.role === "worker";
   const [refreshTick, setRefreshTick] = useState(0);
@@ -64,6 +63,12 @@ export default function Home() {
       getRezimePoOdjelima(mj.od, mj.do_, ids).then(kad(setOdjeliRezime)).catch(pad);
       getGodisnjePlanPoProjektantu(now.getFullYear()).then(kad(setPlan)).catch(pad);
       getZadnjiDanPoProjektantu(ids).then(kad(setZadnji)).catch(pad);
+      if (isWorker && ids) {
+        const idSet = new Set(ids);
+        getUnosiZaMjesec(now.getFullYear(), now.getMonth() + 1)
+          .then((u) => kad(setMjesecUnosi)(u.filter((x) => idSet.has(x.inzinjerId)))).catch(pad);
+        getGodisnjiUnosi(session.userId).then(kad(setGoUnosi)).catch(pad);
+      }
     });
     getKorisnik(session.userId).then(kad(setKorisnik)).catch(pad);
     if (!isWorker) {
@@ -83,6 +88,12 @@ export default function Home() {
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
   const sat = danasD.getHours();
   const pozdrav = sat < 10 ? "Dobro jutro" : sat < 18 ? "Dobar dan" : "Dobra večer";
+  const danasStr = localDateStr(danasD);
+  const goPer = goPeriod(danasD.getFullYear(), danasD.getMonth() + 1);
+  const imaGoUgovor = !!(korisnik?.goDanaPoUgovoru?.[String(goPer.godina)] ?? 0);
+  const danasUpisan = isWorker && zadnji
+    ? Object.values(zadnji).some((z) => z.datum === danasStr)
+    : null;
   const granicaKasni = prethodniRadniDan(danasD);
   const kasniBroj = !isWorker && zadnji && projektanti.length > 0
     ? projektanti.filter((k) => (zadnji[k.id]?.datum ?? "") < granicaKasni).length
@@ -169,6 +180,11 @@ export default function Home() {
             <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{pozdrav}, {session.fullName || session.ime}</h1>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-green-50 ring-1 ring-white/15">{uloga}</span>
+              {isWorker && danasUpisan !== null && jeRadniDan(danasStr) && (
+                danasUpisan
+                  ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-medium text-emerald-50 ring-1 ring-emerald-300/30">✓ Današnji dan je upisan</span>
+                  : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-2.5 py-1 text-xs font-medium text-amber-50 ring-1 ring-amber-300/30">Današnji dan još nije upisan</span>
+              )}
               {kasniBroj !== null && (
                 kasniBroj === 0
                   ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-medium text-emerald-50 ring-1 ring-emerald-300/30">✓ Svi projektanti ažurni</span>
@@ -191,11 +207,18 @@ export default function Home() {
         </div>
       )}
 
-      {isWorker && <ObavijestGO korisnik={korisnik} periodGodina={goPeriodGodina(danasD)} />}
+      {isWorker && <ObavijestGO korisnik={korisnik} period={goPer} />}
 
       {isWorker
         ? <MojZadnjiDan zadnji={zadnji} />
         : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} />}
+
+      {isWorker && (
+        <div className={`grid gap-6 ${imaGoUgovor ? "lg:grid-cols-[3fr_2fr]" : ""} items-start`}>
+          <MojMjesec unosi={mjesecUnosi} danas={danasD} href={nav.cta.href} />
+          {imaGoUgovor && korisnik && <MojGO korisnik={korisnik} unosi={goUnosi} period={goPer} />}
+        </div>
+      )}
 
       {isWorker ? (
         <>{sekcijaRezime}{sekcijaPlan}{sekcijaOdjeli}{sekcijaBrzi}</>
@@ -467,12 +490,139 @@ function UkupnoOdjeliCard({ odjeli }: { odjeli: OdjelMjesecRezime[] }) {
   );
 }
 
-function ObavijestGO({ korisnik, periodGodina }: {
+const DANI_ZAGLAVLJE = ["Pon", "Uto", "Sri", "Čet", "Pet", "Sub", "Ned"];
+
+function MojMjesec({ unosi, danas, href }: { unosi: UnosRada[] | null; danas: Date; href: string }) {
+  const god = danas.getFullYear();
+  const mj = danas.getMonth();
+  const danasStr = localDateStr(danas);
+  const poDanu = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const u of unosi ?? []) {
+      const d = u.datum.slice(0, 10);
+      m.set(d, [...(m.get(d) ?? []), u.vrsta]);
+    }
+    return m;
+  }, [unosi]);
+
+  const brojDana = new Date(god, mj + 1, 0).getDate();
+  const pomak = (new Date(god, mj, 1).getDay() + 6) % 7;
+  const datumi = Array.from({ length: brojDana }, (_, i) => localDateStr(new Date(god, mj, i + 1)));
+  const propusteno = datumi.filter((d) => d < danasStr && jeRadniDan(d) && !poDanu.has(d)).length;
+  const prisutne = [...new Set([...poDanu.values()].flat())];
+
+  return (
+    <section aria-labelledby="mjesec-naslov">
+      <SectionTitle id="mjesec-naslov" title="Moj mjesec" meta={mesecLabel(danas)} />
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 shadow-sm">
+        {unosi === null ? (
+          <div className="h-[220px] rounded-xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" aria-hidden />
+        ) : (
+          <>
+            <div className="grid grid-cols-7 gap-1.5 text-center">
+              {DANI_ZAGLAVLJE.map((d, i) => (
+                <div key={d} className={`text-[10px] font-semibold uppercase tracking-wide ${i > 4 ? "text-gray-300 dark:text-gray-600" : "text-gray-400 dark:text-gray-500"}`}>{d}</div>
+              ))}
+              {Array.from({ length: pomak }, (_, i) => <div key={`p${i}`} aria-hidden />)}
+              {datumi.map((d, i) => {
+                const vrste = poDanu.get(d);
+                const radni = jeRadniDan(d);
+                const jeDanas = d === danasStr;
+                const fali = !vrste && radni && d < danasStr;
+                const stil = vrste
+                  ? vrsta(vrste[0]).badge
+                  : fali
+                    ? "border border-dashed border-amber-400 text-amber-700 dark:text-amber-400"
+                    : radni
+                      ? "text-gray-600 dark:text-gray-300"
+                      : "text-gray-300 dark:text-gray-600";
+                const opis = [
+                  `${i + 1}.`,
+                  praznik(d),
+                  vrste?.map((v) => vrsta(v).label).join(", "),
+                  fali ? "nema unosa" : null,
+                ].filter(Boolean).join(" — ");
+                return (
+                  <div key={d} title={opis} aria-label={opis}
+                    className={`flex aspect-square sm:aspect-auto sm:h-10 items-center justify-center rounded-lg text-xs font-semibold tabular-nums ${stil} ${
+                      jeDanas ? "ring-2 ring-green-600 dark:ring-green-400 ring-offset-1 ring-offset-white dark:ring-offset-gray-900" : ""
+                    }`}>
+                    {i + 1}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              {prisutne.map((v) => {
+                const s = vrsta(v);
+                return (
+                  <span key={v} className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    <span className={`h-2.5 w-2.5 rounded-sm ${s.dot}`} />{s.label}
+                  </span>
+                );
+              })}
+              <span className="ml-auto text-xs tabular-nums">
+                {propusteno > 0 ? (
+                  <Link href={href} className="font-semibold text-amber-700 dark:text-amber-400 hover:underline">
+                    Nedostaje {propusteno} {propusteno === 1 ? "radni dan" : "radnih dana"} →
+                  </Link>
+                ) : (
+                  <span className="text-green-700 dark:text-green-400 font-medium">✓ Svi radni dani su upisani</span>
+                )}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function MojGO({ korisnik, unosi, period }: { korisnik: Korisnik; unosi: UnosRada[] | null; period: GoPeriod }) {
+  const ugovor = korisnik.goDanaPoUgovoru?.[String(period.godina)] ?? 0;
+  const iskoristeno = unosi ? iskoristenoDanaGO(unosi, period) : null;
+  const preostalo = iskoristeno === null ? null : ugovor - iskoristeno;
+  const pct = iskoristeno === null || ugovor <= 0 ? 0 : (iskoristeno / ugovor) * 100;
+  return (
+    <section aria-labelledby="go-naslov">
+      <SectionTitle id="go-naslov" title="Godišnji odmor" meta={period.label}
+        action={<DetaljnoLink href="/sihtarica">Šihtarica</DetaljnoLink>} />
+      <div className="rounded-2xl border border-sky-200 dark:border-sky-900 bg-gradient-to-br from-sky-50 to-white dark:from-sky-950/40 dark:to-gray-900 p-4 shadow-sm space-y-3">
+        <div className="grid grid-cols-3 gap-2">
+          <GoBroj label="Po ugovoru" value={String(ugovor)} tone="text-gray-800 dark:text-gray-100" />
+          <GoBroj label="Iskorišteno" value={iskoristeno === null ? "…" : String(iskoristeno)} tone="text-sky-700 dark:text-sky-300" />
+          <GoBroj label="Preostalo" value={preostalo === null ? "…" : String(preostalo)}
+            tone={preostalo !== null && preostalo < 0 ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400"} />
+        </div>
+        <div className="h-2 rounded-full bg-sky-100 dark:bg-sky-900/50 overflow-hidden" role="progressbar"
+          aria-valuemin={0} aria-valuemax={ugovor} aria-valuenow={iskoristeno ?? 0}>
+          <div className={`h-full rounded-full transition-all duration-500 ${preostalo !== null && preostalo < 0 ? "bg-red-500" : "bg-sky-500"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+        </div>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          {preostalo !== null && preostalo < 0
+            ? `Prekoračeno za ${-preostalo} ${-preostalo === 1 ? "dan" : "dana"}.`
+            : "Troše se samo radni dani; važi od 1. jula."}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function GoBroj({ label, value, tone }: { label: string; value: string; tone: string }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
+      <div className={`mt-0.5 text-2xl font-bold tabular-nums ${tone}`}>{value}</div>
+    </div>
+  );
+}
+
+function ObavijestGO({ korisnik, period }: {
   korisnik: Korisnik | null;
-  periodGodina: number;
+  period: GoPeriod;
 }) {
-  const key = String(periodGodina);
-  const lijepo = `${periodGodina}/${periodGodina + 1}`;
+  const key = String(period.godina);
+  const lijepo = period.label;
 
   if (!korisnik) return null;
   const ima = !!(korisnik.goDanaPoUgovoru?.[key] ?? 0);

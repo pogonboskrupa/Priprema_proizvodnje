@@ -68,6 +68,45 @@ function kolicina(u: UnosRada): string {
   return parts.join(" · ") || "–";
 }
 
+function inicijali(ime: string): string {
+  return ime.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
+
+function ProfilZaglavlje({ ime, fullName, title, role, operater, sihter, izvjestaji, zadnjaPrijava }: {
+  ime: string; fullName: string; title: string; role: Korisnik["role"];
+  operater: boolean; sihter: boolean; izvjestaji: boolean; zadnjaPrijava?: string;
+}) {
+  const ovlasti = [
+    role === "admin" ? "Administrator" : "Projektant",
+    operater && "Operater",
+    sihter && "Šihter",
+    izvjestaji && "Izvještaji",
+  ].filter((x): x is string => !!x);
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-700 via-green-800 to-green-950 text-white shadow-sm ring-1 ring-green-950/20">
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-14 h-48 w-48 rounded-full bg-white/10" />
+      <div className="relative flex flex-wrap items-center gap-4 px-5 py-5">
+        <span aria-hidden className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-white/15 text-xl font-bold ring-2 ring-white/25">
+          {inicijali(fullName || ime)}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight truncate">{fullName || ime}</h2>
+          <p className="text-sm text-green-100/90 truncate">{title || "Titula nije upisana"}{ime.toLowerCase() !== fullName.toLowerCase() && <> · <span className="font-mono">{ime}</span></>}</p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ovlasti.map((o) => (
+              <span key={o} className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium ring-1 ring-white/15">{o}</span>
+            ))}
+          </div>
+        </div>
+        <div className="ml-auto text-right text-xs text-green-100/80">
+          <div className="uppercase tracking-wider text-[10px] text-green-200/80">Zadnja prijava</div>
+          <div className="mt-0.5 text-sm font-semibold text-white tabular-nums">{fmtLastOnline(zadnjaPrijava)}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PostavkePage() {
   const { session, loading, refresh } = useAuth();
   const router = useRouter();
@@ -293,6 +332,17 @@ export default function PostavkePage() {
 
       {/* ── TAB: Profil ─────────────────────────────────────────── */}
       {tab === "profil" && (
+        <div className="space-y-6">
+        <ProfilZaglavlje
+          ime={session.ime}
+          fullName={profForm.fullName || session.fullName}
+          title={profForm.title}
+          role={session.role}
+          operater={!!session.operater}
+          sihter={!!session.sihter}
+          izvjestaji={!!session.izvjestaji}
+          zadnjaPrijava={me?.lastLoginAt}
+        />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Profil */}
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4">
@@ -302,8 +352,10 @@ export default function PostavkePage() {
               <div className="font-bold text-gray-800 dark:text-gray-100 text-lg">{session.ime}</div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
+              <label htmlFor="prof-fullname" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
               <input
+                id="prof-fullname"
+                autoComplete="name"
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 value={profForm.fullName}
                 onChange={(e) => setProfForm({ ...profForm, fullName: e.target.value })}
@@ -311,8 +363,9 @@ export default function PostavkePage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Titula / radno mjesto</label>
+              <label htmlFor="prof-title" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Titula / radno mjesto</label>
               <input
+                id="prof-title"
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 value={profForm.title}
                 onChange={(e) => setProfForm({ ...profForm, title: e.target.value })}
@@ -332,10 +385,12 @@ export default function PostavkePage() {
             <h2 className="font-semibold text-gray-700 dark:text-gray-200">Promjena PIN-a</h2>
             {["old", "new1", "new2"].map((f, i) => (
               <div key={f}>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
+                <label htmlFor={`pin-${f}`} className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   {i === 0 ? "Trenutni PIN" : i === 1 ? "Novi PIN (4 cifre)" : "Potvrdi novi PIN"}
                 </label>
                 <input
+                  id={`pin-${f}`}
+                  autoComplete={i === 0 ? "current-password" : "new-password"}
                   type="password"
                   inputMode="numeric"
                   maxLength={4}
@@ -358,6 +413,7 @@ export default function PostavkePage() {
               Sačuvaj PIN
             </button>
           </div>
+        </div>
         </div>
       )}
 
