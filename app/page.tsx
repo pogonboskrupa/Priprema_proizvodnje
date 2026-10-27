@@ -86,8 +86,6 @@ export default function Home() {
   const linkovi = nav.all.filter((l) => l.href !== "/");
   const { doDana } = prosliMjesecDoDanas(danasD);
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
-  const sat = danasD.getHours();
-  const pozdrav = sat < 10 ? "Dobro jutro" : sat < 18 ? "Dobar dan" : "Dobra večer";
   const danasStr = localDateStr(danasD);
   const goPer = goPeriod(danasD.getFullYear(), danasD.getMonth() + 1);
   const imaGoUgovor = !!(korisnik?.goDanaPoUgovoru?.[String(goPer.godina)] ?? 0);
@@ -177,7 +175,7 @@ export default function Home() {
         <div className="relative flex flex-wrap items-end gap-x-6 gap-y-4 px-5 py-5 sm:px-7 sm:py-6">
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-green-200/90">{fmtDateLong(localDateStr(danasD))}</p>
-            <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{pozdrav}, {session.fullName || session.ime}</h1>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{session.fullName || session.ime}</h1>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-green-50 ring-1 ring-white/15">{uloga}</span>
               {isWorker && danasUpisan !== null && jeRadniDan(danasStr) && (
