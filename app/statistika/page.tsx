@@ -12,14 +12,16 @@ import { VRSTA, heatClass } from "@/lib/vrste";
 import { godineEvidencije } from "@/lib/godine";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { podijeli } from "@/lib/odjel-pregled";
+import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 
 const MJ_SHORT = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Avg","Sep","Okt","Nov","Dec"];
 const MJ_FULL  = ["Januar","Februar","Mart","April","Maj","Juni","Juli","August","Septembar","Oktobar","Novembar","Decembar"];
 
 type Tab = "prisutnost" | "ucanak" | "usporedba" | "odjeli";
 type PVrsta = "teren" | "kancelarija" | "godisnji" | "bolovanje";
-type SortKey = "ha" | "stabala" | "km" | "haDan" | "kmDan";
-type OdjeliSort = "gj" | "ha" | "stabala" | "km";
+type SortKey = "ha" | "stabala" | "km" | "haDan" | "stDan" | "kmDan";
+type OdjeliSort = "gj" | "ha" | "stabala" | "km" | "haDan" | "stHa" | "kmDan" | "projektanti";
+type UcinakSort = "mjesec" | "ha" | "stabala" | "km" | "haDan" | "stHa" | "kmDan";
 
 const cfgFor = (v: VrstaRada) => ({ label: VRSTA[v].label, color: VRSTA[v].text, bg: (n: number) => heatClass(v, n) });
 const VRSTA_CFG: Record<PVrsta, ReturnType<typeof cfgFor>> = {
@@ -149,12 +151,12 @@ export default function StatistikaPage() {
 
   const [uporedbaData, setUporedbaData] = useState<UporedbaRed[]>([]);
   const [upoMjesec, setUpoMjesec]       = useState<number>(0);
-  const [sortKey, setSortKey]           = useState<SortKey>("ha");
+  const [sortKey, setSortKey]           = useState<SortStanje<SortKey>>({ key: "ha", dir: "desc" });
 
   const [odjeliData, setOdjeliData]     = useState<OdjelStatistika[]>([]);
   const [odjeliDani, setOdjeliDani]     = useState<RadniDani>({ dozDana: 0, vlDana: 0 });
   const [odjeliMjesec, setOdjeliMjesec] = useState<number>(0);
-  const [odjeliSort, setOdjeliSort]     = useState<OdjeliSort>("gj");
+  const [odjeliSort, setOdjeliSort]     = useState<SortStanje<OdjeliSort>>({ key: "gj", dir: "asc" });
 
   const [busy, setBusy] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -275,10 +277,11 @@ export default function StatistikaPage() {
           <PeriodBar mjesec={upoMjesec} onMjesec={setUpoMjesec} />
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Sortiraj po</span>
-            {([["ha", "Hektarima"], ["stabala", "Stablima"], ["km", "Km vlaka"], ["haDan", "ha / dan"], ["kmDan", "km / dan"]] as [SortKey, string][]).map(([k, lbl]) => (
-              <button key={k} onClick={() => setSortKey(k)}
+            <span className="text-xs text-gray-400 dark:text-gray-500 order-last w-full sm:w-auto sm:order-none sm:ml-1">ili klikni zaglavlje kolone</span>
+            {([["ha", "Hektarima"], ["stabala", "Stablima"], ["km", "Km vlaka"], ["haDan", "ha / dan"], ["stDan", "st. / dan"], ["kmDan", "km / dan"]] as [SortKey, string][]).map(([k, lbl]) => (
+              <button key={k} onClick={() => setSortKey({ key: k, dir: "desc" })}
                 className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
-                  sortKey === k
+                  sortKey?.key === k
                     ? "border-green-600 bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 }`}>
@@ -291,7 +294,7 @@ export default function StatistikaPage() {
           )}
           {uporedbaData.length > 0 && <ProsjeciTraka z={zbir(uporedbaData)} naslov="Prosjek tima" />}
           {uporedbaData.length > 0 && (
-            <UporedbaTabela data={uporedbaData} sortKey={sortKey} year={year} mjesec={upoMjesec} />
+            <UporedbaTabela data={uporedbaData} sort={sortKey} onSort={setSortKey} year={year} mjesec={upoMjesec} />
           )}
         </div>
       )}
@@ -319,6 +322,10 @@ export default function StatistikaPage() {
 
 function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta: PVrsta; year: number }) {
   const cfg = VRSTA_CFG[vrsta];
+  const [sort, setSort] = useState<SortStanje<string>>(null);
+  const ukupnoReda = (row: PrisutnostRow) => Object.values(row.podaci).reduce((s, v) => s + (v[vrsta] ?? 0), 0);
+  const redovi = sortiraj(data, sort, (row, k) =>
+    k === "ime" ? row.ime : k === "ukupno" ? ukupnoReda(row) : row.podaci[Number(k)]?.[vrsta] ?? 0);
   const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() + 1 : 12;
   const totalsPerMonth = MJ_SHORT.map((_, mi) =>
     data.reduce((s, row) => s + (row.podaci[mi + 1]?.[vrsta] ?? 0), 0)
@@ -329,16 +336,19 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-            <th className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px]">Projektant</th>
+            <SortTh label="Projektant" col="ime" tekst stanje={sort} onChange={setSort}
+              className="sticky left-0 z-10 bg-gray-50 dark:bg-gray-800 text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[160px]" />
             {MJ_SHORT.map((m, i) => (
-              <th key={m} className={`px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 min-w-[52px] ${i + 1 === currentMonth ? "underline underline-offset-4" : ""}`}>{m}</th>
+              <SortTh key={m} label={m} col={String(i + 1)} stanje={sort} onChange={setSort}
+                className={`px-3 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 min-w-[52px] ${i + 1 === currentMonth ? "underline underline-offset-4" : ""}`} />
             ))}
-            <th className="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300 min-w-[60px]">∑</th>
+            <SortTh label="∑" col="ukupno" stanje={sort} onChange={setSort}
+              className="px-4 py-3 text-center font-bold text-gray-700 dark:text-gray-300 min-w-[60px]" />
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-          {data.map((row) => {
-            const total = Object.values(row.podaci).reduce((s, v) => s + (v[vrsta] ?? 0), 0);
+          {redovi.map((row) => {
+            const total = ukupnoReda(row);
             return (
               <tr key={row.radnikId} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
                 <td className="sticky left-0 z-10 bg-white dark:bg-gray-900 px-4 py-2.5 font-medium text-gray-800 dark:text-gray-200 truncate max-w-[180px]">{row.ime}</td>
@@ -375,7 +385,13 @@ function PrisutnostTabela({ data, vrsta, year }: { data: PrisutnostRow[]; vrsta:
 
 // ── Učinak tabela ────────────────────────────────────────────────────────────
 
-function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
+function UcinakTabela({ data: podaci, year }: { data: UcinakMjesec[]; year: number }) {
+  const [sort, setSort] = useState<SortStanje<UcinakSort>>(null);
+  const data = sortiraj(podaci, sort, (m, k) => {
+    const pr = prosjeci(m);
+    return k === "mjesec" ? m.mjesec : k === "ha" ? m.ha : k === "stabala" ? m.stabala : k === "km" ? m.km
+      : k === "haDan" ? pr.haDan : k === "stHa" ? pr.stHa : pr.kmDan;
+  });
   const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() + 1 : 12;
   const totalHa = data.reduce((s, m) => s + m.ha, 0);
   const totalStabala = data.reduce((s, m) => s + m.stabala, 0);
@@ -389,13 +405,13 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
       <table className="min-w-full text-sm">
         <thead>
           <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-            <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[130px]">Mjesec</th>
-            <th className="px-4 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[90px]">Ha</th>
-            <th className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[90px]">Stabala</th>
-            <th className="px-4 py-3 text-right font-semibold text-amber-700 dark:text-amber-400 min-w-[90px]">Km vlaka</th>
-            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>
-            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / ha</th>
-            <th className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>
+            <SortTh label="Mjesec" col="mjesec" tekst stanje={sort} onChange={setSort} className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[130px]" />
+            <SortTh label="Ha" col="ha" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[90px]" />
+            <SortTh label="Stabala" col="stabala" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[90px]" />
+            <SortTh label="Km vlaka" col="km" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-amber-700 dark:text-amber-400 min-w-[90px]" />
+            <SortTh label="ha / dan" col="haDan" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />
+            <SortTh label="st. / ha" col="stHa" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />
+            <SortTh label="km / dan" col="kmDan" stanje={sort} onChange={setSort} className="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />
             <th className="px-4 py-3 min-w-[140px]" />
           </tr>
         </thead>
@@ -451,12 +467,14 @@ function UcinakTabela({ data, year }: { data: UcinakMjesec[]; year: number }) {
 
 // ── Usporedba tabela ─────────────────────────────────────────────────────────
 
-function UporedbaTabela({ data, sortKey, year, mjesec }: {
-  data: UporedbaRed[]; sortKey: SortKey; year: number; mjesec: number;
+function UporedbaTabela({ data, sort, onSort, year, mjesec }: {
+  data: UporedbaRed[]; sort: SortStanje<SortKey>; onSort: (s: SortStanje<SortKey>) => void; year: number; mjesec: number;
 }) {
-  const vr = (r: UporedbaRed) =>
-    sortKey === "haDan" ? prosjeci(r).haDan : sortKey === "kmDan" ? prosjeci(r).kmDan : r[sortKey];
-  const sorted   = [...data].sort((a, b) => vr(b) - vr(a));
+  const vr = (r: UporedbaRed, k: SortKey) => {
+    const pr = prosjeci(r);
+    return k === "haDan" ? pr.haDan : k === "stDan" ? pr.stDan : k === "kmDan" ? pr.kmDan : r[k];
+  };
+  const sorted   = sortiraj(data, sort, vr);
   const tim      = prosjeci(zbir(data));
   const maxHa    = Math.max(...sorted.map((r) => r.ha), 0.01);
   const maxSt    = Math.max(...sorted.map((r) => r.stabala), 1);
@@ -469,8 +487,9 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
   const totalKm  = sorted.reduce((s, r) => s + r.km, 0);
   const periodLabel = mjesec === 0 ? `${year}. godina` : `${MJ_FULL[mjesec - 1]} ${year}`;
 
+  // medalje samo kad je poredak od najvećeg po nekoj koloni
   const medal = (idx: number, val: number) =>
-    val <= 0 ? null : idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null;
+    sort?.dir !== "desc" || val <= 0 ? null : idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : null;
 
   return (
     <div className="space-y-2">
@@ -481,18 +500,18 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
             <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
               <th className="px-3 py-3 text-center font-semibold text-gray-500 dark:text-gray-400 w-10">#</th>
               <th className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[150px]">Projektant</th>
-              {hasHa && <th className="px-4 py-3 font-semibold text-emerald-700 dark:text-emerald-400 min-w-[160px]">Ha</th>}
-              {hasSt && <th className="px-4 py-3 font-semibold text-green-700 dark:text-green-400 min-w-[160px]">Stabala</th>}
-              {hasKm && <th className="px-4 py-3 font-semibold text-amber-700 dark:text-amber-400 min-w-[160px]">Km vlaka</th>}
-              {hasHa && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>}
-              {hasSt && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / dan</th>}
-              {hasKm && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>}
+              {hasHa && <SortTh label="Ha" col="ha" stanje={sort} onChange={onSort} className="px-4 py-3 font-semibold text-emerald-700 dark:text-emerald-400 min-w-[160px]" />}
+              {hasSt && <SortTh label="Stabala" col="stabala" stanje={sort} onChange={onSort} className="px-4 py-3 font-semibold text-green-700 dark:text-green-400 min-w-[160px]" />}
+              {hasKm && <SortTh label="Km vlaka" col="km" stanje={sort} onChange={onSort} className="px-4 py-3 font-semibold text-amber-700 dark:text-amber-400 min-w-[160px]" />}
+              {hasHa && <SortTh label="ha / dan" col="haDan" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
+              {hasSt && <SortTh label="st. / dan" col="stDan" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
+              {hasKm && <SortTh label="km / dan" col="kmDan" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {sorted.map((row, idx) => {
               const isEmpty = row.ha === 0 && row.stabala === 0 && row.km === 0;
-              const m = medal(idx, vr(row));
+              const m = sort ? medal(idx, vr(row, sort.key)) : null;
               const pr = prosjeci(row);
               return (
                 <tr key={row.radnikId} className={`transition-colors ${isEmpty ? "opacity-50" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"}`}>
@@ -580,29 +599,16 @@ function UporedbaTabela({ data, sortKey, year, mjesec }: {
 
 // ── Po odjelima tabela ───────────────────────────────────────────────────────
 
-function sortOdjeli(data: OdjelStatistika[], key: OdjeliSort): OdjelStatistika[] {
-  return [...data].sort((a, b) => {
-    if (key === "gj") return `${a.gj}/${a.broj}`.localeCompare(`${b.gj}/${b.broj}`);
-    if (key === "ha")      return b.totalHa - a.totalHa;
-    if (key === "stabala") return b.totalStabala - a.totalStabala;
-    return b.totalKm - a.totalKm;
-  });
-}
-
-function SortTh({ label, col, active, onSort }: { label: string; col: OdjeliSort; active: boolean; onSort: (c: OdjeliSort) => void }) {
-  return (
-    <th onClick={() => onSort(col)} className={`px-3 py-3 text-right font-semibold cursor-pointer select-none transition-colors min-w-[80px] ${
-      active ? "text-green-700 dark:text-green-400 underline underline-offset-2" : "text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-    }`}>
-      {label}{active ? " ↓" : ""}
-    </th>
-  );
-}
-
 function OdjeliTabela({ data, ukupnoDani, year, mjesec, sort, onSort }: {
-  data: OdjelStatistika[]; ukupnoDani: RadniDani; year: number; mjesec: number; sort: OdjeliSort; onSort: (s: OdjeliSort) => void;
+  data: OdjelStatistika[]; ukupnoDani: RadniDani; year: number; mjesec: number; sort: SortStanje<OdjeliSort>; onSort: (s: SortStanje<OdjeliSort>) => void;
 }) {
-  const sorted = sortOdjeli(data, sort);
+  const sorted = sortiraj(data, sort, (o, k) =>
+    k === "gj" ? `${o.gj}/${o.broj}`
+    : k === "ha" ? o.totalHa : k === "stabala" ? o.totalStabala : k === "km" ? o.totalKm
+    : k === "haDan" ? podijeli(o.totalHa, o.dozDana)
+    : k === "stHa" ? podijeli(o.totalStabala, o.totalHa)
+    : k === "kmDan" ? podijeli(o.totalKm, o.vlDana)
+    : o.projektanti.map((p) => p.ime).join(", "));
   const totalHa = data.reduce((s, o) => s + o.totalHa, 0);
   const totalSt = data.reduce((s, o) => s + o.totalStabala, 0);
   const totalKm = data.reduce((s, o) => s + o.totalKm, 0);
@@ -620,18 +626,14 @@ function OdjeliTabela({ data, ukupnoDani, year, mjesec, sort, onSort }: {
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-50 dark:bg-gray-800/60 border-b border-gray-200 dark:border-gray-700">
-              <th onClick={() => onSort("gj")} className={`text-left px-4 py-3 font-semibold cursor-pointer select-none min-w-[120px] transition-colors ${
-                sort === "gj" ? "text-green-700 dark:text-green-400 underline underline-offset-2" : "text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-              }`}>
-                GJ / Odj.{sort === "gj" ? " ↓" : ""}
-              </th>
-              {hasHa && <SortTh label="Ha" col="ha" active={sort === "ha"} onSort={onSort} />}
-              {hasSt && <SortTh label="Stabala" col="stabala" active={sort === "stabala"} onSort={onSort} />}
-              {hasKm && <SortTh label="Km vlaka" col="km" active={sort === "km"} onSort={onSort} />}
-              {hasHa && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">ha / dan</th>}
-              {hasSt && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">st. / ha</th>}
-              {hasKm && <th className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">km / dan</th>}
-              <th className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 min-w-[160px]">Projektanti</th>
+              <SortTh label="GJ / Odj." col="gj" tekst stanje={sort} onChange={onSort} className="text-left px-4 py-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" />
+              {hasHa && <SortTh label="Ha" col="ha" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-emerald-700 dark:text-emerald-400 min-w-[80px]" />}
+              {hasSt && <SortTh label="Stabala" col="stabala" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-green-700 dark:text-green-400 min-w-[80px]" />}
+              {hasKm && <SortTh label="Km vlaka" col="km" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-amber-700 dark:text-amber-400 min-w-[80px]" />}
+              {hasHa && <SortTh label="ha / dan" col="haDan" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
+              {hasSt && <SortTh label="st. / ha" col="stHa" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
+              {hasKm && <SortTh label="km / dan" col="kmDan" stanje={sort} onChange={onSort} className="px-3 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap" />}
+              <SortTh label="Projektanti" col="projektanti" tekst stanje={sort} onChange={onSort} className="text-left px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 min-w-[160px]" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
