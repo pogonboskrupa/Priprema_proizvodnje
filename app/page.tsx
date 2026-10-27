@@ -13,7 +13,7 @@ import { mesecLabel, fmtDateLong, fmtDateShort, localDateStr } from "@/lib/forma
 import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
 import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { vrsta } from "@/lib/vrste";
@@ -81,23 +81,29 @@ export default function Home() {
   const linkovi = nav.all.filter((l) => l.href !== "/");
   const { doDana } = prosliMjesecDoDanas(danasD);
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
+  const sat = danasD.getHours();
+  const pozdrav = sat < 10 ? "Dobro jutro" : sat < 18 ? "Dobar dan" : "Dobra večer";
+  const granicaKasni = prethodniRadniDan(danasD);
+  const kasniBroj = !isWorker && zadnji && projektanti.length > 0
+    ? projektanti.filter((k) => (zadnji[k.id]?.datum ?? "") < granicaKasni).length
+    : null;
 
   const sekcijaRezime = (
     <section aria-labelledby="rezime-naslov">
       <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
       {rezime ? (
         <>
-          <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-px rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-gray-200 dark:bg-gray-800`}>
-            <Stat label="Doznaka" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
+          <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-3`}>
+            <Stat label="Doznaka" icon="tree" tint="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
               delta={prosli && <Delta cur={rezime.ha} prev={prosli.ha} />} />
-            <Stat label="Stabala" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
+            <Stat label="Stabala" icon="chart" tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
               delta={prosli && <Delta cur={rezime.stabala} prev={prosli.stabala} dec={0} />} />
-            <Stat label="Vlake" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
+            <Stat label="Vlake" icon="map" tint="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
               delta={prosli && <Delta cur={rezime.km} prev={prosli.km} />} />
             {isWorker && <>
-              <Stat label="Radni dani" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
+              <Stat label="Radni dani" icon="calendar" tint="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
                 delta={prosli && <Delta cur={rezime.radniDani} prev={prosli.radniDani} dec={0} />} />
-              <Stat label="Odsustva" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
+              <Stat label="Odsustva" icon="user" tint="bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
                 tone="text-sky-700 dark:text-sky-400" note={`GO ${rezime.godisnji} · bol. ${rezime.bolovanje}`}
                 className="col-span-2 lg:col-span-1" />
             </>}
@@ -110,7 +116,7 @@ export default function Home() {
         </>
       ) : (
         <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-3`} aria-hidden>
-          {Array.from({ length: isWorker ? 5 : 3 }, (_, i) => <div key={i} className="h-[112px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
+          {Array.from({ length: isWorker ? 5 : 3 }, (_, i) => <div key={i} className="h-[120px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
         </div>
       )}
     </section>
@@ -134,14 +140,18 @@ export default function Home() {
   const sekcijaBrzi = (
     <section aria-labelledby="stranice-naslov">
       <SectionTitle id="stranice-naslov" title="Brzi pristup" />
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
         {linkovi.map((l) => (
-          <Link key={l.href} href={l.href} title={l.desc}
-            className="group flex items-center gap-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5 hover:border-green-600/60 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
-            <span className="w-8 h-8 flex-shrink-0 rounded-lg bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center">
-              <Icon name={l.icon} className="w-4 h-4" />
+          <Link key={l.href + l.label} href={l.href}
+            className="group flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-3.5 py-3 hover:border-green-600/60 hover:shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600">
+            <span className="w-9 h-9 flex-shrink-0 rounded-xl bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300 flex items-center justify-center group-hover:bg-green-100 dark:group-hover:bg-green-900/60 transition-colors">
+              <Icon name={l.icon} className="w-[18px] h-[18px]" />
             </span>
-            <span className="min-w-0 text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{l.label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{l.label}</span>
+              <span className="block text-[11px] leading-snug text-gray-500 dark:text-gray-400 truncate">{l.desc}</span>
+            </span>
+            <Icon name="arrow" className="w-3.5 h-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
           </Link>
         ))}
       </div>
@@ -150,11 +160,29 @@ export default function Home() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Početna</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          <span className="capitalize">{fmtDateLong(localDateStr(danasD))}</span> · {uloga}
-        </p>
+      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-700 via-green-800 to-green-950 text-white shadow-sm ring-1 ring-green-950/20">
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-14 h-56 w-56 rounded-full bg-white/10" />
+        <div aria-hidden className="pointer-events-none absolute right-28 -bottom-20 h-44 w-44 rounded-full bg-white/5" />
+        <div className="relative flex flex-wrap items-end gap-x-6 gap-y-4 px-5 py-5 sm:px-7 sm:py-6">
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-green-200/90">{fmtDateLong(localDateStr(danasD))}</p>
+            <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{pozdrav}, {session.fullName || session.ime}</h1>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-green-50 ring-1 ring-white/15">{uloga}</span>
+              {kasniBroj !== null && (
+                kasniBroj === 0
+                  ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-medium text-emerald-50 ring-1 ring-emerald-300/30">✓ Svi projektanti ažurni</span>
+                  : <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 px-2.5 py-1 text-xs font-medium text-amber-50 ring-1 ring-amber-300/30">{kasniBroj} {kasniBroj === 1 ? "projektant kasni" : "projektanata kasni"} s unosom</span>
+              )}
+            </div>
+          </div>
+          <Link href={nav.cta.href}
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-green-800 shadow-sm transition hover:bg-green-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-green-800">
+            <Icon name={nav.cta.icon} className="h-4 w-4" />
+            {nav.cta.label}
+            <Icon name="arrow" className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </header>
 
       {greska && (
@@ -181,8 +209,9 @@ export default function Home() {
 
 function SectionTitle({ id, title, meta, action }: { id: string; title: string; meta?: string; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-baseline gap-2">
-      <h2 id={id} className="flex items-baseline gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
+    <div className="mb-3 flex items-center gap-2.5">
+      <span aria-hidden className="h-4 w-1 rounded-full bg-green-600 dark:bg-green-500" />
+      <h2 id={id} className="flex items-baseline gap-2 text-[15px] font-bold text-gray-800 dark:text-gray-100">
         {title}
         {meta && <span className="text-xs font-normal text-gray-400 dark:text-gray-500 first-letter:uppercase">{meta}</span>}
       </h2>
@@ -199,17 +228,20 @@ function DetaljnoLink({ href, children }: { href: string; children: ReactNode })
   );
 }
 
-function Stat({ label, value, unit, tone, note, delta, className = "" }: {
-  label: string; value: string; unit: string; tone: string; note?: string; delta?: ReactNode; className?: string;
+function Stat({ label, value, unit, tone, tint, icon, note, delta, className = "" }: {
+  label: string; value: string; unit: string; tone: string; tint: string; icon: IconName; note?: string; delta?: ReactNode; className?: string;
 }) {
   return (
-    <div className={`bg-white dark:bg-gray-900 p-4 ${className}`}>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</div>
-      <div className={`mt-1 text-2xl font-bold tabular-nums ${tone}`}>
+    <div className={`rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 sm:p-4 shadow-sm ${className}`}>
+      <div className="flex items-center gap-2">
+        <span className={`hidden sm:flex h-7 w-7 items-center justify-center rounded-lg ${tint}`}><Icon name={icon} className="h-4 w-4" /></span>
+        <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</span>
+      </div>
+      <div className={`mt-2.5 text-2xl sm:text-3xl font-bold tabular-nums leading-none ${tone}`}>
         {value}<span className="ml-1 text-sm font-medium text-gray-400 dark:text-gray-500">{unit}</span>
       </div>
-      {note && <div className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{note}</div>}
-      {delta && <div className="mt-0.5 text-[11px] font-medium tabular-nums">{delta}</div>}
+      {note && <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">{note}</div>}
+      {delta && <div className="mt-1.5 text-[11px] font-medium tabular-nums">{delta}</div>}
     </div>
   );
 }
@@ -253,6 +285,8 @@ function prethodniRadniDan(danas: Date): string {
 
 const DANA_UNAZAD = 60;
 
+const inicijali = (k: Korisnik) => (k.fullName || k.ime).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
 function ZadnjiDanTim({ zadnji, projektanti }: { zadnji: Record<string, ZadnjiDan> | null; projektanti: Korisnik[] }) {
   if (!zadnji || projektanti.length === 0) return null;
   const danas = new Date();
@@ -272,17 +306,20 @@ function ZadnjiDanTim({ zadnji, projektanti }: { zadnji: Record<string, ZadnjiDa
           const z = zadnji[k.id];
           const zakasnio = kasni(k);
           return (
-            <div key={k.id} className={`rounded-xl border px-3 py-2.5 flex flex-col gap-1.5 ${
+            <div key={k.id} className={`rounded-2xl border px-3 py-3 flex flex-col gap-2 shadow-sm ${
               zakasnio
                 ? "border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
                 : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
             }`}>
-              <div className="flex items-baseline gap-2 min-w-0">
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span aria-hidden className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                  zakasnio ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200" : "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
+                }`}>{inicijali(k)}</span>
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</span>
                 {z && (
                   <span className={`ml-auto flex-shrink-0 text-xs tabular-nums ${
                     zakasnio ? "font-semibold text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"
-                  }`}>{danLabel(z.datum, danas)}</span>
+                  }`}>{zakasnio && "⏱ "}{danLabel(z.datum, danas)}</span>
                 )}
               </div>
               {z ? (
@@ -321,11 +358,14 @@ function MojZadnjiDan({ zadnji }: { zadnji: Record<string, ZadnjiDan> | null }) 
   );
 }
 
-function ProgressBar({ pct }: { pct: number }) {
+const bojaTrake = (pct: number) =>
+  pct >= 100 ? "bg-green-700 dark:bg-green-500" : pct >= 75 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-orange-400";
+
+function ProgressBar({ pct, visina = "h-2" }: { pct: number; visina?: string }) {
   return (
-    <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden"
+    <div className={`${visina} w-full rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden`}
       role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full rounded-full bg-green-600 dark:bg-green-500" style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className={`h-full rounded-full transition-all duration-500 ${bojaTrake(pct)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
     </div>
   );
 }
@@ -341,7 +381,7 @@ function MojPlan({ red, godina }: { red?: PlanProjektantRed; godina: number }) {
   return (
     <section aria-labelledby="plan-naslov">
       <SectionTitle id="plan-naslov" title="Moj plan doznake" meta={String(godina)} />
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-3 shadow-sm">
         {red.planHa > 0 ? (
           <>
             <div className="flex items-baseline gap-2 flex-wrap">
@@ -376,7 +416,7 @@ function PlanTima({ redovi, godina }: { redovi: PlanProjektantRed[]; godina: num
     <section aria-labelledby="plan-naslov">
       <SectionTitle id="plan-naslov" title="Plan doznake" meta={String(godina)}
         action={<DetaljnoLink href="/realizacija">Realizacija</DetaljnoLink>} />
-      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
+      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800 shadow-sm">
         <div className="p-4 space-y-2">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className="text-2xl font-bold tabular-nums text-green-700 dark:text-green-400">{fmtBroj(odradjeno)}</span>
@@ -398,7 +438,7 @@ function PlanTima({ redovi, godina }: { redovi: PlanProjektantRed[]; godina: num
                     {fmtBroj(r.odradjeno)}{r.planHa > 0 ? ` / ${fmtBroj(r.planHa, 1)} ha · ${Math.round(p)}%` : " ha · bez plana"}
                   </span>
                 </div>
-                {r.planHa > 0 && <ProgressBar pct={p} />}
+                {r.planHa > 0 && <ProgressBar pct={p} visina="h-1.5" />}
               </li>
             );
           })}
@@ -457,12 +497,12 @@ function ObavijestGO({ korisnik, periodGodina }: {
 function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
   return (
     <Link href={`/odjel/?id=${encodeURIComponent(odjel.odjelId)}`}
-      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2 hover:border-green-600/60 hover:shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
+      className="group rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3 flex flex-col gap-2 shadow-sm hover:border-green-600/60 hover:shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600"
       aria-label={`Pregled odjela ${odjel.gj} / ${odjel.broj}`}>
       <div className="flex items-start gap-1 min-w-0">
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-snug">{odjel.gj}</div>
-          <div className="font-semibold text-sm text-gray-800 dark:text-gray-100 leading-snug">Odj. {odjel.broj}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 truncate leading-snug">{odjel.gj}</div>
+          <div className="text-xl font-extrabold font-mono tabular-nums leading-tight text-gray-900 dark:text-gray-50">{odjel.broj}</div>
         </div>
         <Icon name="arrow" className="mt-0.5 w-3.5 h-3.5 flex-shrink-0 text-gray-300 dark:text-gray-600 group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors" />
       </div>
@@ -473,7 +513,7 @@ function OdjelCard({ odjel }: { odjel: OdjelMjesecRezime }) {
         })}
       </div>
       <div className="text-[11px] text-gray-500 dark:text-gray-400 space-y-0.5 tabular-nums">
-        {odjel.ha > 0 && <div>{fmtBroj(odjel.ha)} ha</div>}
+        {odjel.ha > 0 && <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{fmtBroj(odjel.ha)} ha</div>}
         {odjel.stabala > 0 && <div>{fmtBroj(odjel.stabala, 0)} st</div>}
         {odjel.km > 0 && <div>{fmtBroj(odjel.km)} km</div>}
         <div className="text-gray-400 dark:text-gray-500">{odjel.dani} {odjel.dani === 1 ? "dan" : "dana"} rada</div>
