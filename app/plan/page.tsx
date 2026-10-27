@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { getOdjeli, updateOdjelGodina } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,51 @@ function groupByGj(odjeli: Odjel[]): GjGroup[] {
   return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([gj, odjeli]) => ({ gj, odjeli, color: GJ_PALETTE[idx++ % GJ_PALETTE.length] }));
+}
+
+type Zbir = { ha: number; planCet: number; planLis: number; realCet: number; realLis: number };
+
+function zbir(os: readonly Odjel[]): Zbir {
+  const z: Zbir = { ha: 0, planCet: 0, planLis: 0, realCet: 0, realLis: 0 };
+  for (const o of os) {
+    z.ha += Number(o.povrsina) || 0;
+    z.planCet += o.plan_cet || 0;
+    z.planLis += o.plan_lis || 0;
+    z.realCet += o.real_cet || 0;
+    z.realLis += o.real_lis || 0;
+  }
+  return z;
+}
+
+const fmtM3 = (n: number) => (n > 0 ? n.toLocaleString("bs-BA") : "–");
+
+/** Red sa zbirom po svim kolonama: za jednu GJ ili (glavni) za cijelu šumariju */
+function UkupnoRed({ z, naslov, podnaslov, boja, glavni = false }: {
+  z: Zbir; naslov: string; podnaslov?: string; boja?: typeof GJ_PALETTE[number]; glavni?: boolean;
+}) {
+  const plan = z.planCet + z.planLis;
+  const real = z.realCet + z.realLis;
+  const p = plan > 0 ? Math.min((real / plan) * 100, 100) : 0;
+  const num: CSSProperties = { textAlign: "right", fontVariantNumeric: "tabular-nums" };
+  const akcent = glavni ? "var(--th-text)" : boja!.accent;
+  return (
+    <tr
+      className={glavni ? "grand-total" : "gj-total"}
+      style={glavni ? undefined : { background: boja!.header, borderLeft: `3px solid ${boja!.accent}` }}
+    >
+      <td style={{ borderRight: `2px solid ${akcent}`, whiteSpace: "normal", lineHeight: 1.2 }}>
+        <div style={{ textTransform: "uppercase", letterSpacing: ".04em", fontSize: glavni ? 13 : 12, color: akcent }}>Ukupno</div>
+        {podnaslov && <div style={{ fontSize: 10, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".03em" }}>{podnaslov}</div>}
+      </td>
+      <td style={num}>{z.ha.toFixed(2)}</td>
+      <td style={num}>{fmtM3(z.planCet)}</td>
+      <td style={num}>{fmtM3(z.planLis)}</td>
+      <td style={{ ...num, color: akcent }}>{fmtM3(z.realCet)}</td>
+      <td style={{ ...num, color: akcent }}>{fmtM3(z.realLis)}</td>
+      <td><Progress value={p} color={glavni ? "#2d6a4f" : boja!.accent} /></td>
+      <td aria-label={naslov} />
+    </tr>
+  );
 }
 
 function Progress({ value, color }: { value: number; color: string }) {
@@ -179,6 +224,8 @@ export default function PlanPage() {
         .plan-wrap tr:last-child td { border-bottom: none; }
         .plan-wrap tr.data-row:hover td { background: var(--row-hover); }
         .plan-wrap .gj-header td { border-bottom: none; padding: 12px 14px 10px; }
+        .plan-wrap .gj-total td { border-top: 1px solid var(--border); border-bottom: none; padding: 10px 14px; font-weight: 700; font-size: 13px; }
+        .plan-wrap .grand-total td { background: var(--th-bg); border-top: 2px solid var(--th-text); border-bottom: none; padding: 13px 14px; font-weight: 800; font-size: 14px; }
         .plan-wrap input[type="text"] {
           border: 1px solid var(--input-border);
           background: var(--input-bg);
@@ -261,7 +308,7 @@ export default function PlanPage() {
             <table>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", width: 52 }}>Br.</th>
+                  <th style={{ textAlign: "left", minWidth: 84, borderRight: "2px solid var(--th-text)" }}>Odjel</th>
                   <th style={{ textAlign: "right" }}>Ha</th>
                   <th style={{ textAlign: "right" }}>Plan čet. m³</th>
                   <th style={{ textAlign: "right" }}>Plan liš. m³</th>
@@ -319,8 +366,8 @@ export default function PlanPage() {
 
                       return (
                         <tr key={o.id} className="data-row" style={{ borderLeft: `3px solid ${color.border}` }}>
-                          <td>
-                            <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 13, color: "var(--text)" }}>{o.broj}</span>
+                          <td style={{ borderRight: `2px solid ${color.accent}` }}>
+                            <span style={{ fontFamily: "monospace", fontWeight: 800, fontSize: 17, color: "var(--text)" }}>{o.broj}</span>
                           </td>
                           {isEditing ? (
                             <>
@@ -353,9 +400,16 @@ export default function PlanPage() {
                         </tr>
                       );
                     }),
+                    // Ukupno za GJ
+                    <UkupnoRed key={`ukupno-${gj}`} z={zbir(gjOdjeli)} naslov={`Ukupno GJ ${gj}`} podnaslov={`GJ ${gj}`} boja={color} />,
                   ];
                 })}
               </tbody>
+              {groups.length > 0 && (
+                <tfoot>
+                  <UkupnoRed z={zbir(odjeli)} naslov="Ukupno šumarija" podnaslov="šumarija" glavni />
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
