@@ -4,7 +4,7 @@ import { monthName, monthYearLabel } from "@/lib/format";
 import { fmtBroj } from "@/lib/sihtarica";
 import { jePrviMjesecEvidencije } from "@/lib/godine";
 import { useRadPoProjektantima } from "@/hooks/useRadPoProjektantima";
-import { mjesecniRedovi, radniDaniMjeseca, type MjesecniRed } from "@/lib/mjesecni";
+import { mjesecniRedovi, type MjesecniRed } from "@/lib/mjesecni";
 import { PapirList, PeriodTraka, tdPapir as td, type Orijentacija } from "@/components/sihtarica/PapirIzvjestaj";
 import { useIzvjestajPostavke } from "@/hooks/useIzvjestajPostavke";
 import { poredaj, imeUIzvjestaju, zvanjeUIzvjestaju, type IzvjestajPostavke } from "@/lib/izvjestaj-postavke";
@@ -45,7 +45,6 @@ export function MjesecniIzvjestaj() {
   const { podaci, loading, err } = useRadPoProjektantima(od, do_);
   const { postavke } = useIzvjestajPostavke();
 
-  const radniDani = radniDaniMjeseca(mj.year, mj.month).length;
   const redovi = useMemo(
     () => (podaci ? mjesecniRedovi(poredaj(podaci.korisnici, postavke.redoslijed), podaci.unosi, mj.year, mj.month) : []),
     [podaci, mj, postavke.redoslijed],
@@ -67,7 +66,7 @@ export function MjesecniIzvjestaj() {
         onWord={async () => {
           const [{ mjesecniDocx }, { preuzmiFajl }] = await Promise.all([import("@/lib/word-izvjestaj"), import("@/lib/export")]);
           const blob = await mjesecniDocx({
-            redovi, radniDani, postavke, orijentacija,
+            redovi, postavke, orijentacija,
             naslov: [`MJESEČNI IZVJEŠTAJ O RADU ZA MJESEC – ${monthName(mj.month).toUpperCase()}`, `${mj.year}. GODINE`],
           });
           preuzmiFajl(blob, `Mjesecni_izvjestaj_${mj.year}-${String(mj.month).padStart(2, "0")}.docx`);
@@ -80,15 +79,14 @@ export function MjesecniIzvjestaj() {
         naslov={<>MJESEČNI IZVJEŠTAJ O RADU ZA MJESEC – {monthName(mj.month).toUpperCase()}<br />{mj.year}. GODINE</>}
         prijeTabele={postavke.sekcija && <div className="mt-4 ml-24">{postavke.sekcija}</div>}
       >
-        <MjesecnaTabela redovi={redovi} radniDani={radniDani} postavke={postavke} prazno={!loading && !!podaci && redovi.length === 0} />
+        <MjesecnaTabela redovi={redovi} postavke={postavke} prazno={!loading && !!podaci && redovi.length === 0} />
       </PapirList>
     </div>
   );
 }
 
-export function MjesecnaTabela({ redovi, radniDani, postavke, prazno }: {
+export function MjesecnaTabela({ redovi, postavke, prazno }: {
   redovi: readonly MjesecniRed[];
-  radniDani: number;
   postavke: IzvjestajPostavke;
   prazno: boolean;
 }) {
@@ -116,7 +114,7 @@ export function MjesecnaTabela({ redovi, radniDani, postavke, prazno }: {
               <span className={postavke.imeBold ? "font-bold" : ""}>{imeUIzvjestaju(r.korisnik, postavke)}</span>
               {zvanjeUIzvjestaju(r.korisnik, postavke) && <div>{zvanjeUIzvjestaju(r.korisnik, postavke)}</div>}
             </td>
-            <td className={td}>{radniDani}</td>
+            <td className={td}>{broj(r.radniDani, 0)}</td>
             <td className={td}>{broj(r.go)}</td>
             <td className={td}>{broj(r.clan76)}</td>
             <td className={td}>{broj(r.placeno)}</td>

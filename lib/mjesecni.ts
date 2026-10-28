@@ -4,6 +4,8 @@ import { praznik } from "@/lib/praznici";
 
 export interface MjesecniRed {
   korisnik: Korisnik;
+  /** Teren + kancelarija + plaćeno odsustvo */
+  radniDani: number;
   go: number;
   clan76: number;
   placeno: number;
@@ -56,7 +58,7 @@ export function mjesecniRedovi(korisnici: readonly Korisnik[], unosi: readonly U
   return korisnici.map((korisnik) => {
     const dani = poRadniku.get(korisnik.id) ?? new Map<string, UnosRada[]>();
     const red: MjesecniRed = {
-      korisnik, go: 0, clan76: 0, placeno: 0, bolovanje: 0, teren: 0, kancelarija: 0,
+      korisnik, radniDani: 0, go: 0, clan76: 0, placeno: 0, bolovanje: 0, teren: 0, kancelarija: 0,
       praznici: prazniciRadni.filter((d) => !dani.has(d)).length,
       stabala: 0, ha: 0, km: 0,
     };
@@ -72,6 +74,7 @@ export function mjesecniRedovi(korisnici: readonly Korisnik[], unosi: readonly U
         }
       }
     }
+    red.radniDani = red.teren + red.kancelarija + red.placeno;
     return red;
   });
 }

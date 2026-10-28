@@ -89,12 +89,11 @@ const broj = (n: number, dec = 2) => (n ? fmtBroj(n, dec) : "");
 
 export async function mjesecniDocx(args: {
   redovi: readonly MjesecniRed[];
-  radniDani: number;
   naslov: readonly string[];
   postavke: IzvjestajPostavke;
   orijentacija: WordOrijentacija;
 }): Promise<Blob> {
-  const { redovi, radniDani, naslov, postavke: p, orijentacija: o } = args;
+  const { redovi, naslov, postavke: p, orijentacija: o } = args;
   const NASLOVI = ["RB", "IME I PREZIME", "RADNI DANI", "GO", "ČL.76", "plaćeno odsustvo", "PRAZ.", "BOLOV.", "TEREN", "KANC.", "BROJ STABALA", "POV ha", "VLAKA km"];
   const sirine = kolone(o, [4, null, 6.5, 5, 6.2, 8, 6.2, 7, 6.5, 6.5, 8.5, 6, 7]);
   const tabela = new Table({
@@ -111,7 +110,7 @@ export async function mjesecniDocx(args: {
         children: [
           celija([String(i + 1)]),
           celija([imeUIzvjestaju(r.korisnik, p), zvanjeUIzvjestaju(r.korisnik, p)].filter(Boolean), { lijevo: true, boldPrvi: p.imeBold }),
-          celija([String(radniDani)]),
+          celija([broj(r.radniDani, 0)]),
           celija([broj(r.go)]), celija([broj(r.clan76)]), celija([broj(r.placeno)]), celija([broj(r.praznici)]),
           celija([broj(r.bolovanje)]), celija([broj(r.teren)]), celija([broj(r.kancelarija)]),
           celija([broj(r.stabala, 0)]), celija([broj(r.ha)]), celija([broj(r.km)]),
