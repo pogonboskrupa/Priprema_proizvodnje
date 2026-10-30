@@ -10,7 +10,7 @@ import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
 import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
-import { ApkPreuzimanje } from "@/components/ApkPreuzimanje";
+import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
 import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel } from "@/lib/sumarija";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
@@ -410,7 +410,7 @@ export default function PostavkePage() {
             </button>
           </div>
         </div>
-        <ApkPreuzimanje />
+        <AplikacijaKartica />
         </div>
       )}
 
