@@ -386,13 +386,16 @@ export default function PostavkePage() {
                 </label>
                 <input
                   id={`pin-${f}`}
-                  autoComplete={i === 0 ? "current-password" : "new-password"}
-                  type="password"
+                  // maskirano tekstualno polje (ne type=password): preglednik ne nudi spremanje lozinke
+                  autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  type="text"
                   inputMode="numeric"
                   maxLength={4}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 [-webkit-text-security:disc]"
                   value={pinForm[f as "old" | "new1" | "new2"]}
-                  onChange={(e) => setPinForm({ ...pinForm, [f]: e.target.value })}
+                  onChange={(e) => setPinForm({ ...pinForm, [f]: e.target.value.replace(/\D/g, "") })}
                   placeholder="••••"
                 />
               </div>
