@@ -25,7 +25,7 @@ import {
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog, VrstaRada } from './types';
 import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
-import { saZadanim, type IzvjestajPostavke } from './izvjestaj-postavke';
+import { saZadanim, zadanePostavke, ZADANE_POSTAVKE, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
 import { aktivniOpseg, uOpsegu, sumarijaOd, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
 
@@ -365,13 +365,22 @@ export function pratiZakljucavanje(cb: (z: ZakljucanoDo) => void): () => void {
 
 const IZVJ_DOC = 'izvjestaji';
 
+/** Zadano zaglavlje aktivne šumarije (iz njenog naziva); zadana šumarija i "Sve šumarije" imaju tekst za Bosansku Krupu */
+export async function getZadanePostavke(): Promise<IzvjestajPostavke> {
+  const opseg = aktivniOpseg();
+  if (!opseg || opseg === DEFAULT_SUMARIJA_ID) return ZADANE_POSTAVKE;
+  const naziv = (await getSumarije().catch(() => [])).find((s) => s.id === opseg)?.naziv;
+  return zadanePostavke(naziv);
+}
+
 export function pratiIzvjestajPostavke(cb: (p: IzvjestajPostavke) => void): () => void {
   let unsub: (() => void) | null = null;
   let stopped = false;
-  authReady().then(() => {
+  authReady().then(async () => {
+    const zadane = await getZadanePostavke();
     if (stopped) return;
     unsub = onSnapshot(doc(db, 'postavke', postavkeDocId(IZVJ_DOC)),
-      (s) => cb(saZadanim(s.data())),
+      (s) => cb(saZadanim(s.data(), zadane)),
       () => { /* bez mreže ostaju zadnje poznate postavke */ });
   });
   return () => { stopped = true; unsub?.(); };

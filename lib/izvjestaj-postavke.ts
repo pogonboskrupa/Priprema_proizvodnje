@@ -28,10 +28,27 @@ export const ZADANE_POSTAVKE: IzvjestajPostavke = {
   projektanti: {},
 };
 
+/**
+ * Zadano zaglavlje za šumariju s tim nazivom; bez naziva (zadana šumarija) ostaje tekst za Bosansku Krupu.
+ * "Pogon gospodarenja Cazin" → firma CAZIN, "Pogon gospodarenja za općinu Cazin", "Sekcija Cazin"; primalac se upisuje ručno.
+ */
+export function zadanePostavke(naziv?: string | null): IzvjestajPostavke {
+  const n = naziv?.trim();
+  if (!n) return ZADANE_POSTAVKE;
+  const mjesto = n.replace(/^(Pogon gospodarenja|Šumarija)\s+/i, "").trim() || n;
+  const pogon = /^Pogon gospodarenja/i.test(n);
+  return {
+    ...ZADANE_POSTAVKE,
+    firma: [ZADANE_POSTAVKE.firma[0], mjesto.toUpperCase(), ZADANE_POSTAVKE.firma[2], pogon ? `Pogon gospodarenja za općinu ${mjesto}` : n],
+    primalac: "",
+    sekcija: `Sekcija ${mjesto}`,
+  };
+}
+
 const str = (v: unknown, zadano: string) => (typeof v === "string" ? v : zadano);
 
 /** Dokument iz baze može biti star ili djelimičan — svako polje pada na zadanu vrijednost */
-export function saZadanim(raw: Record<string, unknown> | null | undefined): IzvjestajPostavke {
+export function saZadanim(raw: Record<string, unknown> | null | undefined, zadane: IzvjestajPostavke = ZADANE_POSTAVKE): IzvjestajPostavke {
   const r = raw ?? {};
   const projektanti: Record<string, ProjektantUIzvjestaju> = {};
   if (r.projektanti && typeof r.projektanti === "object") {
@@ -41,10 +58,10 @@ export function saZadanim(raw: Record<string, unknown> | null | undefined): Izvj
     }
   }
   return {
-    firma: Array.isArray(r.firma) ? r.firma.filter((l): l is string => typeof l === "string") : ZADANE_POSTAVKE.firma,
-    primalac: str(r.primalac, ZADANE_POSTAVKE.primalac),
-    sekcija: str(r.sekcija, ZADANE_POSTAVKE.sekcija),
-    potpis: str(r.potpis, ZADANE_POSTAVKE.potpis),
+    firma: Array.isArray(r.firma) ? r.firma.filter((l): l is string => typeof l === "string") : zadane.firma,
+    primalac: str(r.primalac, zadane.primalac),
+    sekcija: str(r.sekcija, zadane.sekcija),
+    potpis: str(r.potpis, zadane.potpis),
     imeBold: r.imeBold === true,
     redoslijed: Array.isArray(r.redoslijed) ? r.redoslijed.filter((id): id is string => typeof id === "string") : [],
     projektanti,

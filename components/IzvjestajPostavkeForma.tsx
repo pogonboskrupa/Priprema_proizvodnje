@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getKorisnici, setIzvjestajPostavke } from "@/lib/db";
 import type { Korisnik } from "@/lib/types";
 import { useIzvjestajPostavke } from "@/hooks/useIzvjestajPostavke";
-import { poredaj, ZADANE_POSTAVKE, type IzvjestajPostavke, type ProjektantUIzvjestaju } from "@/lib/izvjestaj-postavke";
+import { poredaj, type IzvjestajPostavke, type ProjektantUIzvjestaju } from "@/lib/izvjestaj-postavke";
 
 const inputCls = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
 const labelCls = "block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1";
@@ -11,12 +11,12 @@ const btnStrelica = "w-8 h-8 flex items-center justify-center rounded-md border 
 
 /** Postavke samo za sedmični i mjesečni izvještaj u Šihtarici */
 export function IzvjestajPostavkeForma() {
-  const { postavke, ucitano } = useIzvjestajPostavke();
+  const { postavke, zadane, ucitano } = useIzvjestajPostavke();
   if (!ucitano) return <div className="py-10 text-center text-sm text-gray-400">Učitavam postavke…</div>;
-  return <Forma pocetne={postavke} />;
+  return <Forma pocetne={postavke} zadane={zadane} />;
 }
 
-function Forma({ pocetne }: { pocetne: IzvjestajPostavke }) {
+function Forma({ pocetne, zadane }: { pocetne: IzvjestajPostavke; zadane: IzvjestajPostavke }) {
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [draft, setDraft] = useState<IzvjestajPostavke>(pocetne);
   const [firmaTekst, setFirmaTekst] = useState(pocetne.firma.join("\n"));
@@ -68,8 +68,8 @@ function Forma({ pocetne }: { pocetne: IzvjestajPostavke }) {
   }
 
   const zaglavljePromijenjeno =
-    firmaTekst !== ZADANE_POSTAVKE.firma.join("\n") || draft.primalac !== ZADANE_POSTAVKE.primalac ||
-    draft.sekcija !== ZADANE_POSTAVKE.sekcija || draft.potpis !== ZADANE_POSTAVKE.potpis;
+    firmaTekst !== zadane.firma.join("\n") || draft.primalac !== zadane.primalac ||
+    draft.sekcija !== zadane.sekcija || draft.potpis !== zadane.potpis;
 
   return (
     <div className="space-y-6">
@@ -84,8 +84,8 @@ function Forma({ pocetne }: { pocetne: IzvjestajPostavke }) {
           {zaglavljePromijenjeno && (
             <button type="button" className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline"
               onClick={() => {
-                setFirmaTekst(ZADANE_POSTAVKE.firma.join("\n"));
-                setDraft((d) => ({ ...d, primalac: ZADANE_POSTAVKE.primalac, sekcija: ZADANE_POSTAVKE.sekcija, potpis: ZADANE_POSTAVKE.potpis }));
+                setFirmaTekst(zadane.firma.join("\n"));
+                setDraft((d) => ({ ...d, primalac: zadane.primalac, sekcija: zadane.sekcija, potpis: zadane.potpis }));
               }}>
               Vrati zadani tekst
             </button>
