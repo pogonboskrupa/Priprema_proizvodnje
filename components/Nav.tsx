@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { db, collection, query, onUnosiChanges } from "@/lib/firebase";
 import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
@@ -365,7 +365,7 @@ function SumarijaTraka() {
   if (!session || !jeSuperAdmin(session)) return null;
   return (
     <div className="border-t border-white/10 bg-green-900/60">
-      <div className="max-w-7xl mx-auto px-4 h-9 flex items-center gap-2">
+      <div className="max-w-[1400px] mx-auto px-4 h-9 flex items-center gap-2">
         <label htmlFor="izbor-sumarije" className="text-xs font-medium text-white/70">Šumarija</label>
         <select id="izbor-sumarije" value={sumarijaId ?? ""} onChange={(e) => setSumarija(e.target.value || null)}
           className="min-w-0 max-w-[14rem] truncate rounded-md bg-white/10 px-2 py-1 text-xs sm:text-sm text-white ring-1 ring-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
@@ -377,8 +377,46 @@ function SumarijaTraka() {
   );
 }
 
+function pratiSirinu(cb: () => void) {
+  window.addEventListener("resize", cb);
+  return () => window.removeEventListener("resize", cb);
+}
+
+/** Širina prozora; do hidratacije koristi se 1280 */
+function useSirinaEkrana(): number {
+  return useSyncExternalStore(pratiSirinu, () => window.innerWidth, () => 1280);
+}
+
+const SIRINA_SADRZAJA = 1400;
+
+/**
+ * Koliko linkova stane u gornju traku uz logo i korisnički meni; ostali idu u "Više".
+ * Širine su procjena po dužini naziva (text-xs), uz rezervu, pa dugo ime korisnika ne može preklopiti linkove.
+ */
+function koliko(stavke: readonly NavItem[], prozor: number, imeKorisnika: string): number {
+  const sadrzaj = Math.min(prozor, SIRINA_SADRZAJA) - 32;
+  const logo = 34 + (prozor >= 1280 ? 90 : 0);
+  // avatar + ime (najviše 140px) + strelica i razmaci; ispod 640px ime se ne prikazuje
+  const korisnik = prozor >= 640 ? 76 + Math.min(imeKorisnika.length * 7.2, 140) : 60;
+  const razmaci = 3 * 12 + 1;
+  const slobodno = sadrzaj - logo - korisnik - razmaci - 16;
+  const sirinaLinka = (l: NavItem) => l.label.length * 5.9 + 26;
+  const ukupno = stavke.reduce((z, l) => z + sirinaLinka(l), 0);
+  if (ukupno <= slobodno) return stavke.length;
+  const VISE = 64;
+  let zbir = VISE;
+  let n = 0;
+  for (const l of stavke) {
+    if (zbir + sirinaLinka(l) > slobodno) break;
+    zbir += sirinaLinka(l);
+    n++;
+  }
+  return Math.max(n, 1);
+}
+
 export default function Nav() {
   const path = usePathname();
+  const sirina = useSirinaEkrana();
   const status = useConnectionStatus();
   const { session } = useAuth();
   const toast = useNewEntryNotifier();
@@ -389,6 +427,9 @@ export default function Nav() {
   const more = nav.all.filter((l) => !nav.primary.includes(l));
   const current = nav.all.find((l) => isActive(path, l.href));
   const desktopAll = nav.all;
+  const vidljivo = koliko(desktopAll, sirina, session.fullName || session.ime);
+  const uTrakli = desktopAll.slice(0, vidljivo);
+  const uVise = desktopAll.slice(vidljivo);
 
   return (
     <>
@@ -399,21 +440,17 @@ export default function Nav() {
         </div>
       )}
       <nav className="bg-green-800 text-white shadow-md sticky top-0 z-50 print:hidden" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-        <div className="max-w-7xl mx-auto px-4 flex items-center gap-3 h-14">
+        <div className="max-w-[1400px] mx-auto px-4 flex items-center gap-3 h-14">
           <Logo />
 
           {/* Mobitel: naziv trenutne stranice; linkovi su u donjoj traci */}
           <span className="md:hidden flex-1 min-w-0 truncate text-[15px] font-semibold">{current?.label ?? (path.startsWith("/odjel/") ? "Pregled odjela" : "")}</span>
 
           <span className="hidden md:block w-px h-6 bg-white/15 flex-shrink-0" aria-hidden />
-          {/* xl+: sve stavke */}
-          <div className="hidden xl:flex items-center gap-0.5 flex-1 min-w-0">
-            {desktopAll.map((l) => <TopLink key={l.href} item={l} path={path} />)}
-          </div>
-          {/* md–xl: glavne stavke + Više */}
-          <div className="hidden md:flex xl:hidden items-center gap-0.5 flex-1 min-w-0">
-            {nav.primary.map((l) => <TopLink key={l.href} item={l} path={path} />)}
-            <TopMore items={desktopAll.filter((l) => !nav.primary.includes(l))} path={path} />
+          {/* md+: onoliko linkova koliko stane, ostalo u "Više" */}
+          <div className="hidden md:flex items-center gap-0.5 flex-1 min-w-0">
+            {uTrakli.map((l) => <TopLink key={l.href} item={l} path={path} />)}
+            {uVise.length > 0 && <TopMore items={uVise} path={path} />}
           </div>
 
           <UserMenu status={status} />
