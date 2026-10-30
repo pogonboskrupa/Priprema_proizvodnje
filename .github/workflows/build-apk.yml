@@ -46,7 +46,7 @@ jobs:
       - name: Čitaj verziju iz version.ts
         id: version
         run: |
-          VER=$(grep "VERSION" lib/version.ts | grep -oP "'\K[^']+")
+          VER=$(grep -oP "VERSION = '\K[^']+" lib/version.ts)
           echo "version=$VER" >> $GITHUB_OUTPUT
 
       - name: Pripremi keystore iz GitHub Secret
