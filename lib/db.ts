@@ -27,6 +27,7 @@ import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
 import { saZadanim, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
+import { aktivniOpseg, uOpsegu, sumarijaOd, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -42,20 +43,28 @@ async function queryUnosi(constraints: Parameters<typeof queryCol>[1]) {
 }
 
 async function normalizujProjektante(raw: Record<string, unknown>[]) {
-  const inzinjeri = await getAll('inzinjeri');
+  const [inzinjeri, users] = await Promise.all([getAll('inzinjeri'), aktivniOpseg() === null ? Promise.resolve([]) : getAll('users')]);
   const owner = new Map<string, string>();
   for (const i of inzinjeri) if (i.korisnikId) owner.set(i.id as string, i.korisnikId as string);
-  if (!owner.size) return raw;
-  return raw.map((u) => {
-    const k = owner.get(u.inzinjerId as string);
-    return k ? { ...u, inzinjerId: k } : u;
-  });
+  const mapirano = owner.size
+    ? raw.map((u) => {
+        const k = owner.get(u.inzinjerId as string);
+        return k ? { ...u, inzinjerId: k } : u;
+      })
+    : raw;
+  // unosi pripadaju šumariji svog projektanta; nepoznat projektant se ne skriva
+  const izvanOpsega = new Set(users.filter((k) => !uOpsegu([k]).length).map((k) => k.id as string));
+  return izvanOpsega.size ? mapirano.filter((u) => !izvanOpsega.has(u.inzinjerId as string)) : mapirano;
 }
+
+// Svi ekrani čitaju korisnike i odjele kroz ove funkcije — samo aktivna šumarija
+export const korisniciOpseg = async () => uOpsegu(await getAll('users'));
+const odjeliOpseg = async () => uOpsegu(await getAll('odjeli'));
 
 // ── Korisnici ─────────────────────────────────────────────────────────────────
 
 export async function getKorisnici(opts: { ukljuciArhivirane?: boolean } = {}): Promise<Korisnik[]> {
-  const raw = await getAllFresh('users');
+  const raw = uOpsegu(await getAllFresh('users'));
   return (raw as unknown as Korisnik[])
     .filter((k) => opts.ukljuciArhivirane || !k.arhiviran)
     .sort((a, b) => a.ime.localeCompare(b.ime));
@@ -156,12 +165,41 @@ export async function dodijeliRjesenje(odjelId: string, korisnikId: string | nul
   });
 }
 
+// ── Šumarije ──────────────────────────────────────────────────────────────────
+// Zadana šumarija postoji i bez dokumenta; dokument nastaje tek pri preimenovanju.
+
+export async function getSumarije(opts: { ukljuciArhivirane?: boolean } = {}): Promise<Sumarija[]> {
+  const raw = (await getAll('sumarije')) as unknown as Sumarija[];
+  const lista = raw.some((x) => x.id === DEFAULT_SUMARIJA_ID)
+    ? raw
+    : [{ id: DEFAULT_SUMARIJA_ID, naziv: DEFAULT_SUMARIJA_NAZIV }, ...raw];
+  return lista
+    .filter((x) => opts.ukljuciArhivirane || !x.arhivirana)
+    .sort((a, b) => (a.id === DEFAULT_SUMARIJA_ID ? -1 : b.id === DEFAULT_SUMARIJA_ID ? 1 : a.naziv.localeCompare(b.naziv, 'bs')));
+}
+
+export async function createSumarija(naziv: string): Promise<Sumarija> {
+  const raw = await create('sumarije', { naziv: naziv.trim() });
+  return raw as unknown as Sumarija;
+}
+
+export async function updateSumarija(id: string, data: { naziv?: string; arhivirana?: boolean }): Promise<void> {
+  // setDocById s merge: radi i za zadanu šumariju koja još nema dokument
+  await setDocById('sumarije', id, data as Record<string, unknown>, { merge: true });
+}
+
+/** Korisnici (admin i projektanti) šumarije, uključujući arhivirane — neovisno o aktivnom opsegu */
+export async function getKorisniciSumarije(sumarijaId: string): Promise<Korisnik[]> {
+  const raw = (await getAllFresh('users')) as unknown as Korisnik[];
+  return raw.filter((k) => sumarijaOd(k) === sumarijaId && !(k.role === 'admin' && !k.sumarijaId));
+}
+
 // ── Odjeli ────────────────────────────────────────────────────────────────────
 
 export async function getOdjeli(opts: { ukljuciArhivirane?: boolean; saBrojem?: boolean } = {}): Promise<Odjel[]> {
   // brojanje prolazi kroz sve unose — samo stranica Odjeli ga traži
   const [odjeliRaw, inzinjeriRaw, unosiRaw] = await Promise.all([
-    getAll('odjeli'),
+    odjeliOpseg(),
     opts.saBrojem ? getAll('inzinjeri') : Promise.resolve([]),
     opts.saBrojem ? queryUnosi([]) : Promise.resolve([]),
   ]);
@@ -194,7 +232,8 @@ export async function createOdjel(data: {
   broj: string;
   povrsina: number;
 }): Promise<Odjel> {
-  const raw = await create('odjeli', data as Record<string, unknown>);
+  const sumarijaId = aktivniOpseg();
+  const raw = await create('odjeli', { ...data, ...(sumarijaId && { sumarijaId }) } as Record<string, unknown>);
   return raw as unknown as Odjel;
 }
 
@@ -220,7 +259,7 @@ export async function arhivirajOdjel(id: string, arhiviran: boolean): Promise<vo
 export async function getInzinjeriByKorisnikId(korisnikId: string): Promise<Inzinjer[]> {
   const [inzinjeriRaw, odjeliRaw] = await Promise.all([
     queryCol('inzinjeri', [where('korisnikId', '==', korisnikId)]),
-    getAll('odjeli'),
+    odjeliOpseg(),
   ]);
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
   return inzinjeriRaw.map((i) => ({
@@ -249,9 +288,9 @@ export async function getGodisnjePlanPoProjektantu(year: number): Promise<PlanPr
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAllFresh('users'),
+    getAllFresh('users').then(uOpsegu),
     getAll('inzinjeri'),
-    getAll('odjeli'),
+    odjeliOpseg(),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
@@ -302,12 +341,12 @@ export async function setPlanHa(korisnikId: string, year: number, planHa: number
 const ZAKLJ_DOC = 'zakljucavanje';
 
 export async function getZakljucanoDo(): Promise<ZakljucanoDo> {
-  const raw = await getById('postavke', ZAKLJ_DOC).catch(() => null);
+  const raw = await getById('postavke', postavkeDocId(ZAKLJ_DOC)).catch(() => null);
   return (raw?.zakljucanoDo as string | null | undefined) ?? null;
 }
 
 export async function setZakljucanoDo(zakljucanoDo: ZakljucanoDo, korisnikId: string): Promise<void> {
-  await setDocById('postavke', ZAKLJ_DOC, { zakljucanoDo, zakljucaoId: korisnikId });
+  await setDocById('postavke', postavkeDocId(ZAKLJ_DOC), { zakljucanoDo, zakljucaoId: korisnikId });
 }
 
 /** Uživo: promjena na drugom uređaju odmah zaključa/otključa ekran */
@@ -316,7 +355,7 @@ export function pratiZakljucavanje(cb: (z: ZakljucanoDo) => void): () => void {
   let stopped = false;
   authReady().then(() => {
     if (stopped) return;
-    unsub = onSnapshot(doc(db, 'postavke', ZAKLJ_DOC),
+    unsub = onSnapshot(doc(db, 'postavke', postavkeDocId(ZAKLJ_DOC)),
       (s) => cb((s.data()?.zakljucanoDo as string | null | undefined) ?? null),
       () => { /* bez mreže ostaje zadnje poznato stanje */ });
   });
@@ -332,7 +371,7 @@ export function pratiIzvjestajPostavke(cb: (p: IzvjestajPostavke) => void): () =
   let stopped = false;
   authReady().then(() => {
     if (stopped) return;
-    unsub = onSnapshot(doc(db, 'postavke', IZVJ_DOC),
+    unsub = onSnapshot(doc(db, 'postavke', postavkeDocId(IZVJ_DOC)),
       (s) => cb(saZadanim(s.data())),
       () => { /* bez mreže ostaju zadnje poznate postavke */ });
   });
@@ -340,7 +379,7 @@ export function pratiIzvjestajPostavke(cb: (p: IzvjestajPostavke) => void): () =
 }
 
 export async function setIzvjestajPostavke(p: IzvjestajPostavke): Promise<void> {
-  await setDocById('postavke', IZVJ_DOC, { ...p });
+  await setDocById('postavke', postavkeDocId(IZVJ_DOC), { ...p });
 }
 
 // Zadnja linija odbrane: ekrani sakrivaju dugmad, ali svaki upis prolazi ovdje
@@ -362,8 +401,8 @@ export async function getUnosi(): Promise<UnosRada[]> {
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
     queryUnosi( [orderBy('datum', 'desc')]),
     getAll('inzinjeri'),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
   ]);
 
   const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
@@ -454,8 +493,8 @@ export async function getUnosiZaDan(dateStr: string): Promise<UnosRada[]> {
       orderBy('datum', 'asc'),
     ]),
     getAll('inzinjeri'),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
   ]);
 
   const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
@@ -488,7 +527,7 @@ export async function getZadnjiDanPoProjektantu(ids?: readonly string[], danaUna
 
   const [unosiRaw, odjeliRaw] = await Promise.all([
     queryUnosi(rasponDatuma(od, do_)),
-    getAll('odjeli'),
+    odjeliOpseg(),
   ]);
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
 
@@ -569,8 +608,8 @@ export async function getUnosiZaMjesec(year: number, month: number, { svi = fals
   const [unosiRaw, inzinjeriRaw, odjeliRaw, korisnaciRaw] = await Promise.all([
     svi ? queryColFresh('unosi', raspon).then(normalizujProjektante) : queryUnosi(raspon),
     getAll('inzinjeri'),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
   ]);
 
   const inzMap = Object.fromEntries(inzinjeriRaw.map((i) => [i.id as string, i]));
@@ -602,7 +641,7 @@ export async function getOdjelPregled(odjelId: string): Promise<OdjelPregledData
   const [raw, odjelRaw, usersRaw] = await Promise.all([
     queryColFresh('unosi', [where('odjelId', '==', odjelId)]),
     getById('odjeli', odjelId).catch(() => null),
-    getAll('users'),
+    korisniciOpseg(),
   ]);
   const korMap = Object.fromEntries(usersRaw.map((k) => [k.id as string, k as unknown as Korisnik]));
   const unosi = (await normalizujProjektante(raw)).map((u) => ({
@@ -636,7 +675,7 @@ export async function getMojiOdjeliData(): Promise<{
   odjeli: Odjel[];
   korisnici: Korisnik[];
 }> {
-  const [odjeliRaw, korisnaciRaw] = await Promise.all([getAll('odjeli'), getAll('users')]);
+  const [odjeliRaw, korisnaciRaw] = await Promise.all([odjeliOpseg(), korisniciOpseg()]);
   const odjeli = (odjeliRaw as unknown as Odjel[]).sort(cmpOdjel);
   return { odjeli, korisnici: korisnaciRaw as unknown as Korisnik[] };
 }
@@ -695,8 +734,8 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('users'),
-    getAll('odjeli'),
+    korisniciOpseg(),
+    odjeliOpseg(),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o]));
@@ -735,8 +774,8 @@ export async function getSedmicnaTabela(refDate?: Date): Promise<{
 export async function getRadPoProjektantima(od: Date, do_: Date): Promise<{ korisnici: Korisnik[]; unosi: UnosRada[] }> {
   const [raw, usersRaw, odjeliRaw] = await Promise.all([
     queryColFresh('unosi', rasponDatuma(od, do_)),
-    getAll('users'),
-    getAll('odjeli'),
+    korisniciOpseg(),
+    odjeliOpseg(),
   ]);
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
   const unosi = (await normalizujProjektante(raw)).map((u) => ({
@@ -792,8 +831,8 @@ export async function getIzvjestaj(
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
     tip === 'odjel'
       ? queryUnosi( [where('datum', '<=', Timestamp.fromDate(do_))])
       : Promise.resolve([]),
@@ -957,7 +996,7 @@ export async function getRezimePoOdjelima(od: Date, do_: Date, ids?: readonly st
   const idSet = ids ? new Set(ids) : null;
   const [unosiRaw, odjeliRaw] = await Promise.all([
     queryUnosi(rasponDatuma(od, do_)),
-    getAll('odjeli'),
+    odjeliOpseg(),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
@@ -1012,7 +1051,7 @@ export async function getStatistikaPrisutnosti(year: number): Promise<Prisutnost
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('users'),
+    korisniciOpseg(),
   ]);
 
   const acc: Record<string, Record<number, { teren: number; kancelarija: number; godisnji: number; bolovanje: number }>> = {};
@@ -1117,8 +1156,8 @@ export async function getStatistikaPoOdjelima(year: number, month?: number): Pro
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));
@@ -1180,7 +1219,7 @@ export async function getUporedbaUcinka(year: number, month?: number): Promise<U
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('users'),
+    korisniciOpseg(),
   ]);
 
   const acc: Record<string, UcinakAcc> = {};
@@ -1232,8 +1271,8 @@ export async function getDetaljanPregledPoOdjelima(year: number): Promise<Detalj
       where('datum', '>=', Timestamp.fromDate(od)),
       where('datum', '<=', Timestamp.fromDate(do_)),
     ]),
-    getAll('odjeli'),
-    getAll('users'),
+    odjeliOpseg(),
+    korisniciOpseg(),
   ]);
 
   const odMap = Object.fromEntries(odjeliRaw.map((o) => [o.id as string, o as unknown as Odjel]));

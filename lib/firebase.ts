@@ -207,7 +207,7 @@ export function configureUnosiScope(userId: string, sviPodaci: boolean) {
 }
 
 if (typeof window !== 'undefined') {
-  for (const col of ['odjeli', 'users', 'inzinjeri', 'postavke']) {
+  for (const col of ['odjeli', 'users', 'inzinjeri', 'postavke', 'sumarije']) {
     syncReady.set(col, _authReady.then(() => listen(collection(db, col), { keep: true }).ready));
   }
 }

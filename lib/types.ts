@@ -15,6 +15,8 @@ export interface Korisnik {
   sihter?: boolean;
   /** Vidi sedmični i mjesečni izvještaj svih projektanata (kao admin) */
   izvjestaji?: boolean;
+  /** Šumarija; admin bez šumarije je super admin (vidi sve) */
+  sumarijaId?: string;
   avatar: string;
   odjeliIds: string[];
   odjeliRjesenjaIds?: string[];
@@ -40,6 +42,7 @@ export interface OdjelGodina {
 export interface Odjel {
   id: string;
   gj: string;   // gospodarska jedinica
+  sumarijaId?: string;
   broj: string;
   povrsina: number;
   /** Stara polja bez godine — čitaj kroz odjelZaGodinu() */

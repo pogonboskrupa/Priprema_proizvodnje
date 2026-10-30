@@ -81,7 +81,8 @@ function StatusToggle({
 }
 
 export default function OdjeliPage() {
-  const { session, loading: authLoading } = useAuth();
+  const { session, loading: authLoading, sumarijaId } = useAuth();
+  const bezSumarije = "Izaberi šumariju u zaglavlju prije dodavanja odjela.";
   const router = useRouter();
   const [sviOdjeli, setSviOdjeli] = useState<Odjel[]>([]);
   const [showArhiva, setShowArhiva] = useState(false);
@@ -197,6 +198,7 @@ export default function OdjeliPage() {
   // ── Pojedinačni submit ─────────────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!editId && sumarijaId === null) { setErr(bezSumarije); return; }
     const povrsina = validPovrsina(form.povrsina);
     if (povrsina === null) return;
     const dup = duplikatPoruka(form.gj, form.broj, editId);
@@ -219,6 +221,7 @@ export default function OdjeliPage() {
   // ── Grupni submit ──────────────────────────────────────────────────────────
   async function handleBulkSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (sumarijaId === null) { setErr(bezSumarije); return; }
     if (!bulkGj.trim()) return;
     const valid = bulkRows.filter((r) => r.broj.trim() && r.povrsina.trim());
     if (!valid.length) return;

@@ -2,18 +2,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
+import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi, getSumarije } from "@/lib/db";
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
 import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
+import { SumarijePostavke } from "@/components/SumarijePostavke";
+import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, type Sumarija } from "@/lib/sumarija";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
-type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi";
+type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi" | "sumarije";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
 
@@ -108,10 +110,15 @@ function ProfilZaglavlje({ ime, fullName, title, role, operater, sihter, izvjest
 }
 
 export default function PostavkePage() {
-  const { session, loading, refresh } = useAuth();
+  const { session, loading, refresh, sumarijaId } = useAuth();
   const router = useRouter();
 
   const isAdmin = session?.role === "admin";
+  const isSuper = jeSuperAdmin(session);
+  // izvještaji i zaključavanje su postavke jedne šumarije — super admin je prvo bira
+  const treba = isSuper && sumarijaId === null;
+  const [sumarije, setSumarije] = useState<Sumarija[]>([]);
+  const [addSumarija, setAddSumarija] = useState(DEFAULT_SUMARIJA_ID);
   const isOperater = !!session?.operater;
   const canSeeUnosi = isAdmin || isOperater;
 
@@ -144,7 +151,8 @@ export default function PostavkePage() {
     if (!session) return;
     loadMe(session.userId);
     if (isAdmin) loadKorisnici();
-  }, [session]);
+    if (isSuper) getSumarije().then(setSumarije).catch(() => {});
+  }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab !== "unosi" || !canSeeUnosi) return;
@@ -209,7 +217,8 @@ export default function PostavkePage() {
   const addKorisnik = () => guarded(async () => {
     const ime = addForm.ime.trim().toUpperCase();
     if (!ime) { toast("Upiši korisničko ime!"); return; }
-    if (korisnici.some((k) => k.ime.toUpperCase() === ime)) {
+    // prijava traži jedinstveno ime u cijeloj aplikaciji, a lista je ograničena na šumariju
+    if (await getKorisnikByIme(ime)) {
       toast("Korisnik s tim imenom već postoji (možda u arhivi)!"); return;
     }
     const pin = generatePin();
@@ -219,6 +228,7 @@ export default function PostavkePage() {
       title: addForm.title,
       pin,
       role: "worker",
+      sumarijaId: sumarijaId ?? addSumarija,
       avatar: "",
       odjeliIds: [],
     });
@@ -278,6 +288,7 @@ export default function PostavkePage() {
   const tabs: { id: Tab; label: string }[] = [
     { id: "profil", label: "Profil" },
     ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }, { id: "izvjestaji" as Tab, label: "Izvještaji" }, { id: "zakljucavanje" as Tab, label: "Zaključavanje" }] : []),
+    ...(isSuper ? [{ id: "sumarije" as Tab, label: "Šumarije" }] : []),
     ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
   ];
 
@@ -463,6 +474,15 @@ export default function PostavkePage() {
                   />
                 </div>
               </div>
+              {sumarijaId === null && (
+                <div className="sm:w-1/3">
+                  <label htmlFor="add-sumarija" className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Šumarija</label>
+                  <select id="add-sumarija" value={addSumarija} onChange={(e) => setAddSumarija(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                    {sumarije.map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="flex gap-2">
                 <button onClick={addKorisnik} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
                   Dodaj
@@ -481,12 +501,13 @@ export default function PostavkePage() {
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Korisnik</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
+                  {isSuper && <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Šumarija</th>}
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnji online</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {korisnici.filter((k) => !k.arhiviran).sort((a, b) => (b.lastOnlineAt ?? b.lastLoginAt ?? "").localeCompare(a.lastOnlineAt ?? a.lastLoginAt ?? "")).map((k) => (
+                {korisnici.filter((k) => !k.arhiviran && (isSuper || !jeSuperAdmin(k))).sort((a, b) => (b.lastOnlineAt ?? b.lastLoginAt ?? "").localeCompare(a.lastOnlineAt ?? a.lastLoginAt ?? "")).map((k) => (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
@@ -497,6 +518,19 @@ export default function PostavkePage() {
                         {k.role}
                       </span>
                     </td>
+                    {isSuper && (
+                      <td className="px-4 py-3">
+                        {jeSuperAdmin(k) ? (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Sve šumarije</span>
+                        ) : (
+                          <select aria-label={`Šumarija korisnika ${k.ime}`} value={sumarijaOd(k)}
+                            onChange={(e) => guarded(async () => { await updateKorisnik(k.id, { sumarijaId: e.target.value }); loadKorisnici(); })}
+                            className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                            {sumarije.map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+                          </select>
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                       {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}
                     </td>
@@ -587,8 +621,14 @@ export default function PostavkePage() {
         </div>
       )}
 
-      {tab === "izvjestaji" && isAdmin && <IzvjestajPostavkeForma />}
-      {tab === "zakljucavanje" && isAdmin && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
+      {(tab === "izvjestaji" || tab === "zakljucavanje") && isAdmin && treba && (
+        <p className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+          Ove postavke su zasebne za svaku šumariju. Izaberi šumariju u zaglavlju.
+        </p>
+      )}
+      {tab === "izvjestaji" && isAdmin && !treba && <IzvjestajPostavkeForma />}
+      {tab === "zakljucavanje" && isAdmin && !treba && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
+      {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
       {tab === "unosi" && canSeeUnosi && (

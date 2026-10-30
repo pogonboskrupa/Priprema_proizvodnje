@@ -10,6 +10,7 @@ export interface Session {
   operater?: boolean;
   sihter?: boolean;
   izvjestaji?: boolean;
+  sumarijaId?: string;
   avatar: string;
 }
 
