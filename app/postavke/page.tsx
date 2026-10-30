@@ -13,6 +13,7 @@ import { SumarijePostavke } from "@/components/SumarijePostavke";
 import { DodajProjektante } from "@/components/DodajProjektante";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
 import { UrediKorisnika } from "@/components/UrediKorisnika";
+import { ZadnjePrijave } from "@/components/ZadnjePrijave";
 import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
 import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
@@ -20,7 +21,7 @@ import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr, fmtLastOnline } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
-type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi" | "sumarije";
+type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi" | "sumarije" | "prijave";
 
 const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Petak", "Subota"];
 
@@ -259,6 +260,7 @@ export default function PostavkePage() {
     ...(isAdmin ? [{ id: "korisnici" as Tab, label: "Korisnici" }, { id: "izvjestaji" as Tab, label: "Izvještaji" }, { id: "zakljucavanje" as Tab, label: "Zaključavanje" }] : []),
     ...(isSuper ? [{ id: "sumarije" as Tab, label: "Šumarije" }] : []),
     ...(canSeeUnosi ? [{ id: "unosi" as Tab, label: "Zadnji unosi" }] : []),
+    ...(vidiPrijave ? [{ id: "prijave" as Tab, label: "Zadnje prijave" }] : []),
   ];
 
   return (
@@ -585,6 +587,7 @@ export default function PostavkePage() {
       )}
       {tab === "izvjestaji" && isAdmin && !treba && <IzvjestajPostavkeForma />}
       {tab === "zakljucavanje" && isAdmin && !treba && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
+      {tab === "prijave" && vidiPrijave && <ZadnjePrijave />}
       {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} onResetPin={resetPin} onArhiviraj={handleArhiviraj} onVrati={vratiIzArhive} onUredi={setUredi} verzija={sumTick} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
