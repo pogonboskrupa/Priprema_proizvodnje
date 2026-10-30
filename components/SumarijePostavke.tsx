@@ -2,8 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createKorisnik, createSumarija, getKorisnikByIme, getSumarije, getSviKorisnici, updateKorisnik, updateSumarija } from "@/lib/db";
 import { generatePin } from "@/lib/auth";
-import { fmtLastOnline } from "@/lib/format";
-import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu, type GrupaKorisnika, type Sumarija } from "@/lib/sumarija";
+import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, type GrupaKorisnika, type Sumarija } from "@/lib/sumarija";
 import type { Korisnik } from "@/lib/types";
 import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
@@ -193,7 +192,6 @@ function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
     <tr className={`border-t border-gray-100 dark:border-gray-800 ${k.arhiviran ? "opacity-60" : ""} ${vodeci ? "bg-green-50/70 dark:bg-green-950/30" : ""}`}>
       <td className={`px-3 py-2 font-medium text-gray-800 dark:text-gray-100 border-l-4 ${vodeci ? "border-green-600" : "border-transparent"}`}>
         {k.fullName || "–"}{k.arhiviran && <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">arhiviran</span>}
-        {vidiZadnjuPrijavu(k) && <div className="text-[11px] font-normal text-gray-400 dark:text-gray-500">Zadnja prijava: {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</div>}
       </td>
       <td className="px-3 py-2 font-mono text-xs">{k.ime}</td>
       <td className="px-3 py-2">

@@ -95,6 +95,6 @@ export function grupisiPoSumarijama<T extends { role?: unknown; sumarijaId?: unk
   });
 }
 
-/** Zadnja prijava/online se prikazuje samo za vodećeg projektanta zadane šumarije (Bosanska Krupa) */
+/** Samo vodeći projektant zadane šumarije (PG Bosanska Krupa) vidi kad su se korisnici zadnji put prijavili; prima onoga ko gleda */
 export const vidiZadnjuPrijavu = (k: { role?: unknown; sumarijaId?: unknown } | null | undefined): boolean =>
   k?.role === "admin" && k.sumarijaId === DEFAULT_SUMARIJA_ID;

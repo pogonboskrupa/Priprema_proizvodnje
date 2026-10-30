@@ -103,6 +103,8 @@ export default function PostavkePage() {
 
   const isAdmin = session?.role === "admin";
   const isSuper = jeSuperAdmin(session);
+  // samo vodeći projektant PG Bosanska Krupa vidi zadnje prijave korisnika
+  const vidiPrijave = vidiZadnjuPrijavu(session);
   // izvještaji i zaključavanje su postavke jedne šumarije — super admin je prvo bira
   const treba = isSuper && sumarijaId === null;
   const sumarije = useSumarije();
@@ -320,7 +322,7 @@ export default function PostavkePage() {
           sihter={!!session.sihter}
           izvjestaji={!!session.izvjestaji}
           zadnjaPrijava={me?.lastLoginAt}
-          prikaziPrijavu={vidiZadnjuPrijavu(session)}
+          prikaziPrijavu={vidiPrijave}
         />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Profil */}
@@ -450,6 +452,7 @@ export default function PostavkePage() {
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
                   {isSuper && <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Šumarija</th>}
+                  {vidiPrijave && <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnja prijava</th>}
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -459,7 +462,6 @@ export default function PostavkePage() {
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
                       {k.fullName || "–"}
-                      {vidiZadnjuPrijavu(k) && <div className="text-[11px] text-gray-400 dark:text-gray-500">Zadnja prijava: {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</div>}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -480,6 +482,9 @@ export default function PostavkePage() {
                           </select>
                         )}
                       </td>
+                    )}
+                    {vidiPrijave && (
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</td>
                     )}
                     <td className="px-4 py-3 text-right">
                       {k.role === "worker" && (
