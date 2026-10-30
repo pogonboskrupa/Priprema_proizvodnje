@@ -38,7 +38,7 @@ jobs:
       - run: npm ci
 
       - name: Sync Capacitor
-        run: npx cap sync android --no-open
+        run: npx cap sync android
 
       - name: Čitaj verziju iz version.ts
         id: version
