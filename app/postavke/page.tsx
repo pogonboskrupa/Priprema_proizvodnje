@@ -12,7 +12,7 @@ import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
 import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
-import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
+import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr, fmtLastOnline } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -471,7 +471,7 @@ export default function PostavkePage() {
                   <label htmlFor="add-sumarija" className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Šumarija</label>
                   <select id="add-sumarija" value={addSumarija} onChange={(e) => setAddSumarija(e.target.value)}
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                    {sumarije.map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+                    {sumarije.map((s) => <option key={s.id} value={s.id}>{kratkiNaziv(s.naziv)}</option>)}
                   </select>
                 </div>
               )}
@@ -509,7 +509,7 @@ export default function PostavkePage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         k.role === "admin" ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                       }`}>
-                        {ulogaLabel(k, sumarije)}
+                        {ulogaLabel(k, sumarije, true)}
                       </span>
                     </td>
                     {isSuper && (
@@ -520,7 +520,7 @@ export default function PostavkePage() {
                           <select aria-label={`Šumarija korisnika ${k.ime}`} value={sumarijaOd(k)}
                             onChange={(e) => guarded(async () => { await updateKorisnik(k.id, { sumarijaId: e.target.value }); loadKorisnici(); })}
                             className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                            {sumarije.map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+                            {sumarije.map((s) => <option key={s.id} value={s.id}>{kratkiNaziv(s.naziv)}</option>)}
                           </select>
                         )}
                       </td>

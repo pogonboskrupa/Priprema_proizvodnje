@@ -9,7 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { navFor, isActive, type NavItem } from "@/lib/nav";
 import { korisniciOpseg } from "@/lib/db";
 import { useSumarije } from "@/hooks/useSumarije";
-import { aktivniOpseg, jeSuperAdmin, ulogaLabel } from "@/lib/sumarija";
+import { aktivniOpseg, jeSuperAdmin, kratkiNaziv, ulogaLabel } from "@/lib/sumarija";
 import { Icon } from "@/components/Icon";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -102,7 +102,8 @@ function UserMenu({ status }: { status: Status }) {
 
   const displayName = session.fullName || session.ime;
   const isAdmin = session.role === "admin";
-  const nazivSumarije = jeSuperAdmin(session) ? null : sumarije.find((x) => x.id === sumarijaId)?.naziv;
+  const puniNaziv = jeSuperAdmin(session) ? null : sumarije.find((x) => x.id === sumarijaId)?.naziv;
+  const nazivSumarije = puniNaziv && kratkiNaziv(puniNaziv);
 
   const statusLabel =
     status === "online" ? "Firebase · Online" :
@@ -154,7 +155,7 @@ function UserMenu({ status }: { status: Status }) {
                     ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
                     : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
                 }`}>
-                  ● {ulogaLabel(session, sumarije)}
+                  ● {ulogaLabel(session, sumarije, true)}
                 </span>
               </div>
             </div>
@@ -369,7 +370,7 @@ function SumarijaTraka() {
         <select id="izbor-sumarije" value={sumarijaId ?? ""} onChange={(e) => setSumarija(e.target.value || null)}
           className="min-w-0 max-w-[14rem] truncate rounded-md bg-white/10 px-2 py-1 text-xs sm:text-sm text-white ring-1 ring-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
           <option value="" className="text-gray-900">Sve šumarije</option>
-          {lista.map((s) => <option key={s.id} value={s.id} className="text-gray-900">{s.naziv}</option>)}
+          {lista.map((s) => <option key={s.id} value={s.id} className="text-gray-900">{kratkiNaziv(s.naziv)}</option>)}
         </select>
       </div>
     </div>

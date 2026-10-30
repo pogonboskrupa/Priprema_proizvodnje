@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createKorisnik, createSumarija, getKorisnikByIme, getSumarije, getSviKorisnici, updateKorisnik, updateSumarija } from "@/lib/db";
 import { generatePin } from "@/lib/auth";
 import { fmtLastOnline } from "@/lib/format";
-import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, ulogaLabel, vidiZadnjuPrijavu, type GrupaKorisnika, type Sumarija } from "@/lib/sumarija";
+import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu, type GrupaKorisnika, type Sumarija } from "@/lib/sumarija";
 import type { Korisnik } from "@/lib/types";
 import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
@@ -159,7 +159,7 @@ function vrijednostSorta(k: Korisnik, key: SortKey, sumarije: readonly Sumarija[
   switch (key) {
     case "ime": return k.fullName || k.ime;
     case "korisnik": return k.ime;
-    case "uloga": return ulogaLabel(k, sumarije);
+    case "uloga": return ulogaLabel(k, sumarije, true);
   }
 }
 
@@ -194,7 +194,7 @@ function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
       </td>
       <td className="px-3 py-2 font-mono text-xs">{k.ime}</td>
       <td className="px-3 py-2">
-        <div className={`text-xs ${vodeci ? "font-semibold text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-200"}`}>{ulogaLabel(k, sumarije)}</div>
+        <div className={`text-xs ${vodeci ? "font-semibold text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-200"}`}>{ulogaLabel(k, sumarije, true)}</div>
         {k.role === "worker" && (k.operater || k.sihter || k.izvjestaji) && (
           <div className="mt-0.5 flex gap-1">
             {k.operater && <Oznaka tekst="Operater" boja="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" />}
@@ -207,7 +207,7 @@ function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
         <select aria-label={`Premjesti ${k.ime} u šumariju`} value={sumarijaOd(k)} disabled={zauzeto}
           onChange={(e) => radi(() => updateKorisnik(k.id, { sumarijaId: e.target.value }).then(() => undefined))}
           className="mr-3 max-w-[9rem] border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-          {sumarije.filter((s) => !s.arhivirana || s.id === sumarijaOd(k)).map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+          {sumarije.filter((s) => !s.arhivirana || s.id === sumarijaOd(k)).map((s) => <option key={s.id} value={s.id}>{kratkiNaziv(s.naziv)}</option>)}
         </select>
         <button onClick={() => onResetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">Reset PIN</button>
         {vodeci && (
@@ -472,7 +472,7 @@ function DodajRadnike({ sumarija, akcije, onGotovo }: {
       try {
         const pin = generatePin();
         await createKorisnik({ ime: r.ime, fullName: r.fullName || r.ime, title: "", pin, role: "worker", sumarijaId: sumarija.id, avatar: "", odjeliIds: [] });
-        gotovi.push({ ime: r.ime, fullName: r.fullName || r.ime, pin, sumarija: sumarija.naziv });
+        gotovi.push({ ime: r.ime, fullName: r.fullName || r.ime, pin, sumarija: kratkiNaziv(sumarija.naziv) });
       } catch {
         neuspjeli.push(r.i);
       }
