@@ -7,6 +7,7 @@ import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, kra
 import type { Korisnik } from "@/lib/types";
 import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
+import { DodajProjektante } from "@/components/DodajProjektante";
 
 const polje = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
 const dugme = "bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-800 disabled:opacity-50";
@@ -404,7 +405,8 @@ function SumarijaKartica({ sumarija, sumarije, radnici, ukupno, akcije, onPin, o
           <button onClick={() => setDodaje((v) => !v)} className={`${dugme} ml-auto`}>{dodaje ? "Zatvori" : "+ Dodaj radnike"}</button>
         </div>
         {dodaje && (
-          <DodajRadnike sumarija={sumarija} akcije={akcije}
+          <DodajProjektante sumarija={sumarija} toast={toast}
+            onDodano={() => radi(async () => {})}
             onGotovo={(redovi) => onSpisak(`Radnici dodani u šumariju ${sumarija.naziv}`, redovi)} />
         )}
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -412,111 +414,5 @@ function SumarijaKartica({ sumarija, sumarije, radnici, ukupno, akcije, onPin, o
         </div>
       </div>
     </section>
-  );
-}
-
-interface RedUnosa { ime: string; fullName: string }
-const prazanRed = (): RedUnosa => ({ ime: "", fullName: "" });
-
-/** Spisak radnika: tabela s dva stupca (korisničko ime, puno ime); višelinijsko lijepljenje popunjava redove */
-function DodajRadnike({ sumarija, akcije, onGotovo }: {
-  sumarija: Sumarija;
-  akcije: Akcije;
-  onGotovo: (redovi: PinRed[]) => void;
-}) {
-  const { zauzeto, radi, toast } = akcije;
-  const [redovi, setRedovi] = useState<RedUnosa[]>(() => [prazanRed(), prazanRed(), prazanRed()]);
-  const [greske, setGreske] = useState<Record<number, string>>({});
-
-  const postavi = (i: number, dio: Partial<RedUnosa>) =>
-    setRedovi((r) => r.map((x, j) => (j === i ? { ...x, ...dio } : x)));
-
-  /** true = zalijepljen spisak je obrađen, preglednik ne smije umetnuti tekst u polje */
-  function zalijepi(od: number, tekst: string): boolean {
-    const linije = tekst.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (linije.length < 2 && !/[\t;]/.test(tekst)) return false;
-    const novi = linije.map((l) => {
-      const [ime, ...ostalo] = l.split(/\t|;/);
-      return { ime: ime.trim(), fullName: ostalo.join(" ").trim() };
-    });
-    setRedovi((r) => [...r.slice(0, od), ...novi, ...r.slice(od + novi.length)]);
-    setGreske({});
-    return true;
-  }
-
-  const popunjeni = redovi.filter((r) => r.ime.trim() || r.fullName.trim()).length;
-
-  const dodaj = () => radi(async () => {
-    const unos = redovi
-      .map((r, i) => ({ i, ime: r.ime.trim().toUpperCase(), fullName: r.fullName.trim() }))
-      .filter((r) => r.ime || r.fullName);
-    if (!unos.length) { toast("Upiši bar jednog radnika."); return; }
-
-    const err: Record<number, string> = {};
-    const vidjeni = new Set<string>();
-    for (const r of unos) {
-      if (!r.ime) err[r.i] = "Upiši korisničko ime.";
-      else if (vidjeni.has(r.ime)) err[r.i] = "Ime se ponavlja u spisku.";
-      vidjeni.add(r.ime);
-    }
-    // prijava traži jedinstveno ime u cijeloj aplikaciji, pa se provjerava i arhiva
-    await Promise.all(unos.filter((r) => r.ime && !err[r.i]).map(async (r) => {
-      if (await getKorisnikByIme(r.ime)) err[r.i] = "Korisničko ime je zauzeto (možda u arhivi).";
-    }));
-    setGreske(err);
-    if (Object.keys(err).length) { toast("Ispravi označene redove."); return; }
-
-    const gotovi: PinRed[] = [];
-    const neuspjeli: number[] = [];
-    for (const r of unos) {
-      try {
-        const pin = generatePin();
-        await createKorisnik({ ime: r.ime, fullName: r.fullName || r.ime, title: "", pin, role: "worker", sumarijaId: sumarija.id, avatar: "", odjeliIds: [] });
-        gotovi.push({ ime: r.ime, fullName: r.fullName || r.ime, pin, sumarija: kratkiNaziv(sumarija.naziv) });
-      } catch {
-        neuspjeli.push(r.i);
-      }
-    }
-    if (gotovi.length) onGotovo(gotovi);
-    if (neuspjeli.length) {
-      setRedovi(neuspjeli.map((i) => redovi[i]));
-      setGreske(Object.fromEntries(neuspjeli.map((_, k) => [k, "Greška pri snimanju — pokušaj ponovo."])));
-      toast(`Dodano ${gotovi.length}, neuspjelo ${neuspjeli.length}.`);
-    } else {
-      setRedovi([prazanRed(), prazanRed(), prazanRed()]);
-      setGreske({});
-    }
-  });
-
-  return (
-    <div className="rounded-lg border border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20 p-3 space-y-2">
-      <p className="text-xs text-gray-600 dark:text-gray-300">
-        Upiši korisničko ime i puno ime, ili zalijepi spisak iz Excela (dva stupca). PIN se dodjeljuje automatski.
-      </p>
-      <div className="space-y-1.5">
-        {redovi.map((r, i) => (
-          <div key={i}>
-            <div className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
-              <input aria-label={`Korisničko ime, red ${i + 1}`} className={polje} placeholder="Korisničko ime" maxLength={30} value={r.ime}
-                onChange={(e) => postavi(i, { ime: e.target.value })}
-                onPaste={(e) => { if (zalijepi(i, e.clipboardData.getData("text"))) e.preventDefault(); }} />
-              <input aria-label={`Puno ime i prezime, red ${i + 1}`} className={polje} placeholder="Puno ime i prezime" maxLength={60} value={r.fullName}
-                onChange={(e) => postavi(i, { fullName: e.target.value })}
-                onPaste={(e) => { if (zalijepi(i, e.clipboardData.getData("text"))) e.preventDefault(); }} />
-              <button type="button" aria-label={`Ukloni red ${i + 1}`} disabled={redovi.length === 1}
-                onClick={() => { setRedovi((x) => x.filter((_, j) => j !== i)); setGreske({}); }}
-                className="px-2 text-gray-400 hover:text-red-600 disabled:opacity-30">✕</button>
-            </div>
-            {greske[i] && <p role="alert" className="mt-0.5 text-xs text-red-600 dark:text-red-400">{greske[i]}</p>}
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" onClick={() => setRedovi((r) => [...r, prazanRed()])} className="text-xs font-medium text-green-700 dark:text-green-400 hover:underline">+ red</button>
-        <button disabled={zauzeto || popunjeni === 0} onClick={dodaj} className={`${dugme} ml-auto`}>
-          Dodaj {popunjeni > 0 ? popunjeni : ""} {popunjeni === 1 ? "radnika" : "radnika"}
-        </button>
-      </div>
-    </div>
   );
 }

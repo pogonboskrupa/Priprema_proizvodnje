@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
+import { getKorisnici, getKorisnik, getKorisnikByIme, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -10,6 +10,8 @@ import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
 import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
+import { DodajProjektante } from "@/components/DodajProjektante";
+import { PinSpisak, type PinRed } from "@/components/PinSpisak";
 import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
 import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
@@ -114,7 +116,7 @@ export default function PostavkePage() {
   const [me, setMe] = useState<Korisnik | null>(null);
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
-  const [addForm, setAddForm] = useState({ ime: "", fullName: "", title: "" });
+  const [pinSpisak, setPinSpisak] = useState<PinRed[] | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
@@ -200,30 +202,6 @@ export default function PostavkePage() {
     setPinMsg("PIN promijenjen ✓");
     setTimeout(() => setPinMsg(""), 3000);
   }
-
-  const addKorisnik = () => guarded(async () => {
-    const ime = addForm.ime.trim().toUpperCase();
-    if (!ime) { toast("Upiši korisničko ime!"); return; }
-    // prijava traži jedinstveno ime u cijeloj aplikaciji, a lista je ograničena na šumariju
-    if (await getKorisnikByIme(ime)) {
-      toast("Korisnik s tim imenom već postoji (možda u arhivi)!"); return;
-    }
-    const pin = generatePin();
-    await createKorisnik({
-      ime,
-      fullName: addForm.fullName || addForm.ime,
-      title: addForm.title,
-      pin,
-      role: "worker",
-      sumarijaId: sumarijaId ?? addSumarija,
-      avatar: "",
-      odjeliIds: [],
-    });
-    setAddForm({ ime: "", fullName: "", title: "" });
-    setShowAdd(false);
-    loadKorisnici();
-    setPinNotice({ ime, pin, novi: true });
-  });
 
   function resetPin(k: Korisnik) {
     setConfirmState({
@@ -431,58 +409,34 @@ export default function PostavkePage() {
               onClick={() => setShowAdd((v) => !v)}
               className="bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-800"
             >
-              + Novi projektant
+              {showAdd ? "Zatvori" : "+ Dodaj projektante"}
             </button>
           </div>
 
+          {pinSpisak && (
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <PinSpisak redovi={pinSpisak} naslov="Dodani projektanti" onZatvori={() => setPinSpisak(null)} toast={toast} />
+            </div>
+          )}
+
           {showAdd && (
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Korisničko ime (za prijavu)</label>
-                  <input
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={addForm.ime}
-                    onChange={(e) => setAddForm({ ...addForm, ime: e.target.value })}
-                    maxLength={30}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Puno ime i prezime</label>
-                  <input
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={addForm.fullName}
-                    onChange={(e) => setAddForm({ ...addForm, fullName: e.target.value })}
-                    maxLength={60}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Radno mjesto</label>
-                  <input
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    value={addForm.title}
-                    onChange={(e) => setAddForm({ ...addForm, title: e.target.value })}
-                    maxLength={60}
-                  />
-                </div>
-              </div>
               {sumarijaId === null && (
-                <div className="sm:w-1/3">
-                  <label htmlFor="add-sumarija" className="block text-xs text-gray-600 dark:text-gray-300 mb-1">Šumarija</label>
+                <div className="sm:w-1/2">
+                  <label htmlFor="add-sumarija" className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Šumarija u koju se dodaju projektanti</label>
                   <select id="add-sumarija" value={addSumarija} onChange={(e) => setAddSumarija(e.target.value)}
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                     {sumarije.map((s) => <option key={s.id} value={s.id}>{kratkiNaziv(s.naziv)}</option>)}
                   </select>
                 </div>
               )}
-              <div className="flex gap-2">
-                <button onClick={addKorisnik} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
-                  Dodaj
-                </button>
-                <button onClick={() => setShowAdd(false)} className="border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                  Odustani
-                </button>
-              </div>
+              <DodajProjektante
+                key={sumarijaId ?? addSumarija}
+                sumarija={{ id: sumarijaId ?? addSumarija, naziv: sumarije.find((x) => x.id === (sumarijaId ?? addSumarija))?.naziv ?? "" }}
+                toast={toast}
+                onDodano={loadKorisnici}
+                onGotovo={(redovi) => { setPinSpisak(redovi); setShowAdd(false); }}
+              />
             </div>
           )}
 
