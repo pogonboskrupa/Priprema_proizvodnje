@@ -66,3 +66,25 @@ export function ulogaLabel(
   }
   return k.operater ? "Projektant · operater" : "Projektant";
 }
+
+export interface GrupaKorisnika<T> {
+  sumarija: Sumarija;
+  /** Admini šumarije (vodeći projektanti) */
+  vodeci: T[];
+  radnici: T[];
+}
+
+/** Razdvaja korisnike po šumarijama, redoslijedom u kojem su šumarije proslijeđene */
+export function grupisiPoSumarijama<T extends { role?: unknown; sumarijaId?: unknown }>(
+  korisnici: readonly T[],
+  sumarije: readonly Sumarija[],
+): GrupaKorisnika<T>[] {
+  return sumarije.map((sumarija) => {
+    const clanovi = korisnici.filter((k) => sumarijaOd(k) === sumarija.id);
+    return {
+      sumarija,
+      vodeci: clanovi.filter((k) => k.role === "admin"),
+      radnici: clanovi.filter((k) => k.role !== "admin"),
+    };
+  });
+}

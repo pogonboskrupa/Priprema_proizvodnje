@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createKorisnik, createSumarija, getKorisnikByIme, getSumarije, getSviKorisnici, updateKorisnik, updateSumarija } from "@/lib/db";
 import { generatePin } from "@/lib/auth";
 import { fmtLastOnline } from "@/lib/format";
-import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel, type Sumarija } from "@/lib/sumarija";
+import { DEFAULT_SUMARIJA_ID, grupisiPoSumarijama, jeSuperAdmin, sumarijaOd, ulogaLabel, type GrupaKorisnika, type Sumarija } from "@/lib/sumarija";
 import type { Korisnik } from "@/lib/types";
 import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
@@ -15,7 +15,7 @@ const th = "text-left px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray
 
 type Radi = (a: () => Promise<void>) => Promise<void>;
 type Pogled = "po" | "svi";
-type SortKey = "ime" | "korisnik" | "sumarija" | "uloga" | "online";
+type SortKey = "ime" | "korisnik" | "uloga" | "online";
 
 interface Akcije {
   zauzeto: boolean;
@@ -133,7 +133,7 @@ export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrat
 
       {pogled === "svi" ? (
         <div className={`${kartica} overflow-hidden`}>
-          <RadniciTabela redovi={filtrirani} sumarije={sumarije} saSumarijom akcije={akcije} prazno="Nema radnika za prikaz." />
+          <SviRadniciTabela grupe={grupisiPoSumarijama(filtrirani, sumarije)} sumarije={sumarije} akcije={akcije} skrijPrazne={trazi.trim() !== ""} />
         </div>
       ) : (
         sumarije.map((s) => (
@@ -159,72 +159,127 @@ function vrijednostSorta(k: Korisnik, key: SortKey, sumarije: readonly Sumarija[
   switch (key) {
     case "ime": return k.fullName || k.ime;
     case "korisnik": return k.ime;
-    case "sumarija": return sumarije.find((s) => s.id === sumarijaOd(k))?.naziv ?? "";
     case "uloga": return ulogaLabel(k, sumarije);
     case "online": return k.lastOnlineAt ?? k.lastLoginAt ?? "";
   }
 }
 
-/** Tabela radnika s klikabilnim zaglavljima; koristi je i pogled "Svi radnici" i svaka šumarija */
-function RadniciTabela({ redovi, sumarije, saSumarijom = false, akcije, prazno }: {
+const poImenu = (a: Korisnik, b: Korisnik) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime, "bs");
+
+function TabelaZaglavlje({ sort, onChange }: { sort: SortStanje<SortKey>; onChange: (s: SortStanje<SortKey>) => void }) {
+  return (
+    <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <tr>
+        <SortTh label="Radnik" col="ime" tekst stanje={sort} onChange={onChange} className={th} />
+        <SortTh label="Korisničko ime" col="korisnik" tekst stanje={sort} onChange={onChange} className={th} />
+        <SortTh label="Uloga" col="uloga" tekst stanje={sort} onChange={onChange} className={th} />
+        <SortTh label="Zadnji online" col="online" stanje={sort} onChange={onChange} className={th} />
+        <th className={th}></th>
+      </tr>
+    </thead>
+  );
+}
+
+/** Jedan red tabele; vodeći projektant je istaknut i može izgubiti ulogu */
+function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
+  k: Korisnik;
+  sumarije: readonly Sumarija[];
+  akcije: Akcije;
+  vodeci?: boolean;
+}) {
+  const { zauzeto, radi, onResetPin, onArhiviraj, onVrati } = akcije;
+  return (
+    <tr className={`border-t border-gray-100 dark:border-gray-800 ${k.arhiviran ? "opacity-60" : ""} ${vodeci ? "bg-green-50/70 dark:bg-green-950/30" : ""}`}>
+      <td className={`px-3 py-2 font-medium text-gray-800 dark:text-gray-100 border-l-4 ${vodeci ? "border-green-600" : "border-transparent"}`}>
+        {k.fullName || "–"}{k.arhiviran && <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">arhiviran</span>}
+      </td>
+      <td className="px-3 py-2 font-mono text-xs">{k.ime}</td>
+      <td className="px-3 py-2">
+        <div className={`text-xs ${vodeci ? "font-semibold text-green-800 dark:text-green-300" : "text-gray-700 dark:text-gray-200"}`}>{ulogaLabel(k, sumarije)}</div>
+        {k.role === "worker" && (k.operater || k.sihter || k.izvjestaji) && (
+          <div className="mt-0.5 flex gap-1">
+            {k.operater && <Oznaka tekst="Operater" boja="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" />}
+            {k.sihter && <Oznaka tekst="Šihter" boja="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300" />}
+            {k.izvjestaji && <Oznaka tekst="Izvještaji" boja="bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300" />}
+          </div>
+        )}
+      </td>
+      <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</td>
+      <td className="px-3 py-2 text-right whitespace-nowrap">
+        <select aria-label={`Premjesti ${k.ime} u šumariju`} value={sumarijaOd(k)} disabled={zauzeto}
+          onChange={(e) => radi(() => updateKorisnik(k.id, { sumarijaId: e.target.value }).then(() => undefined))}
+          className="mr-3 max-w-[9rem] border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+          {sumarije.filter((s) => !s.arhivirana || s.id === sumarijaOd(k)).map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
+        </select>
+        <button onClick={() => onResetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">Reset PIN</button>
+        {vodeci && (
+          <button disabled={zauzeto} onClick={() => radi(() => updateKorisnik(k.id, { role: "worker" }).then(() => undefined))}
+            className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">Ukloni ulogu</button>
+        )}
+        {k.arhiviran
+          ? <button onClick={() => onVrati(k)} className="text-green-700 dark:text-green-400 hover:underline text-xs">Vrati</button>
+          : <button onClick={() => onArhiviraj(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs">Arhiviraj</button>}
+      </td>
+    </tr>
+  );
+}
+
+/** Tabela radnika jedne šumarije s klikabilnim zaglavljima */
+function RadniciTabela({ redovi, sumarije, akcije, prazno }: {
   redovi: readonly Korisnik[];
   sumarije: readonly Sumarija[];
-  saSumarijom?: boolean;
   akcije: Akcije;
   prazno: string;
 }) {
   const [sort, setSort] = useState<SortStanje<SortKey>>({ key: "ime", dir: "asc" });
   const poredani = sortiraj(redovi, sort, (k, key) => vrijednostSorta(k, key, sumarije));
-  const { zauzeto, radi, onResetPin, onArhiviraj, onVrati } = akcije;
-  const kolone = saSumarijom ? 6 : 5;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[640px]">
+        <TabelaZaglavlje sort={sort} onChange={setSort} />
+        <tbody>
+          {poredani.map((k) => <RadnikRed key={k.id} k={k} sumarije={sumarije} akcije={akcije} />)}
+          {poredani.length === 0 && <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-500 dark:text-gray-400">{prazno}</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Svi radnici: odjeljak za svaku šumariju, prvi red je vodeći projektant; sortiranje važi za radnike unutar odjeljka */
+function SviRadniciTabela({ grupe, sumarije, akcije, skrijPrazne }: {
+  grupe: readonly GrupaKorisnika<Korisnik>[];
+  sumarije: readonly Sumarija[];
+  akcije: Akcije;
+  /** Pretraga je aktivna: odjeljci bez rezultata se ne prikazuju */
+  skrijPrazne: boolean;
+}) {
+  const [sort, setSort] = useState<SortStanje<SortKey>>({ key: "ime", dir: "asc" });
+  const vidljive = grupe.filter((g) => !skrijPrazne || g.vodeci.length + g.radnici.length > 0);
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm min-w-[640px]">
-        <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          <tr>
-            <SortTh label="Radnik" col="ime" tekst stanje={sort} onChange={setSort} className={th} />
-            <SortTh label="Korisničko ime" col="korisnik" tekst stanje={sort} onChange={setSort} className={th} />
-            {saSumarijom && <SortTh label="Šumarija" col="sumarija" tekst stanje={sort} onChange={setSort} className={th} />}
-            <SortTh label="Uloga" col="uloga" tekst stanje={sort} onChange={setSort} className={th} />
-            <SortTh label="Zadnji online" col="online" stanje={sort} onChange={setSort} className={th} />
-            <th className={th}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {poredani.map((k) => (
-            <tr key={k.id} className={`border-t border-gray-100 dark:border-gray-800 ${k.arhiviran ? "opacity-60" : ""}`}>
-              <td className="px-3 py-2 font-medium text-gray-800 dark:text-gray-100">
-                {k.fullName || "–"}{k.arhiviran && <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-400">arhiviran</span>}
-              </td>
-              <td className="px-3 py-2 font-mono text-xs">{k.ime}</td>
-              {saSumarijom && <td className="px-3 py-2 text-xs text-gray-700 dark:text-gray-200">{sumarije.find((x) => x.id === sumarijaOd(k))?.naziv}</td>}
-              <td className="px-3 py-2">
-                <div className="text-xs text-gray-700 dark:text-gray-200">{ulogaLabel(k, sumarije)}</div>
-                {k.role === "worker" && (k.operater || k.sihter || k.izvjestaji) && (
-                  <div className="mt-0.5 flex gap-1">
-                    {k.operater && <Oznaka tekst="Operater" boja="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" />}
-                    {k.sihter && <Oznaka tekst="Šihter" boja="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300" />}
-                    {k.izvjestaji && <Oznaka tekst="Izvještaji" boja="bg-teal-100 dark:bg-teal-900 text-teal-700 dark:text-teal-300" />}
-                  </div>
-                )}
-              </td>
-              <td className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</td>
-              <td className="px-3 py-2 text-right whitespace-nowrap">
-                <select aria-label={`Premjesti ${k.ime} u šumariju`} value={sumarijaOd(k)} disabled={zauzeto}
-                  onChange={(e) => radi(() => updateKorisnik(k.id, { sumarijaId: e.target.value }).then(() => undefined))}
-                  className="mr-3 max-w-[9rem] border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                  {sumarije.filter((s) => !s.arhivirana || s.id === sumarijaOd(k)).map((s) => <option key={s.id} value={s.id}>{s.naziv}</option>)}
-                </select>
-                <button onClick={() => onResetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">Reset PIN</button>
-                {k.arhiviran
-                  ? <button onClick={() => onVrati(k)} className="text-green-700 dark:text-green-400 hover:underline text-xs">Vrati</button>
-                  : <button onClick={() => onArhiviraj(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs">Arhiviraj</button>}
-              </td>
+        <TabelaZaglavlje sort={sort} onChange={setSort} />
+        {vidljive.map(({ sumarija, vodeci, radnici }) => (
+          <tbody key={sumarija.id}>
+            <tr className="border-t-2 border-green-700/30 bg-green-100/70 dark:bg-green-950/50">
+              <th colSpan={5} scope="colgroup" className="px-3 py-2 text-left">
+                <span className="text-sm font-bold text-green-900 dark:text-green-200">{sumarija.naziv}</span>
+                <span className="ml-3 text-xs font-normal text-green-800/80 dark:text-green-300/70 tabular-nums">
+                  {vodeci.length === 0 ? "vodeći projektant nije postavljen" : `${vodeci.length} ${vodeci.length === 1 ? "vodeći projektant" : "vodeća projektanta"}`}
+                  {" · "}{radnici.length} {radnici.length === 1 ? "radnik" : "radnika"}
+                </span>
+              </th>
             </tr>
-          ))}
-          {poredani.length === 0 && <tr><td colSpan={kolone} className="px-3 py-6 text-center text-sm text-gray-500 dark:text-gray-400">{prazno}</td></tr>}
-        </tbody>
+            {[...vodeci].sort(poImenu).map((k) => <RadnikRed key={k.id} k={k} sumarije={sumarije} akcije={akcije} vodeci />)}
+            {sortiraj(radnici, sort, (k, key) => vrijednostSorta(k, key, sumarije)).map((k) => <RadnikRed key={k.id} k={k} sumarije={sumarije} akcije={akcije} />)}
+            {vodeci.length + radnici.length === 0 && (
+              <tr><td colSpan={5} className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Nema radnika u ovoj šumariji.</td></tr>
+            )}
+          </tbody>
+        ))}
+        {vidljive.length === 0 && <tbody><tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Nema radnika za prikaz.</td></tr></tbody>}
       </table>
     </div>
   );
