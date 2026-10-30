@@ -37,8 +37,11 @@ jobs:
 
       - run: npm ci
 
+      # git ne prati prazan folder, a cap sync u njega upisuje capacitor.config.json
       - name: Sync Capacitor
-        run: npx cap sync android
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx cap sync android
 
       - name: Čitaj verziju iz version.ts
         id: version
