@@ -27,7 +27,7 @@ import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
 import { saZadanim, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
-import { aktivniOpseg, uOpsegu, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
+import { aktivniOpseg, uOpsegu, sumarijaOd, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -642,6 +642,9 @@ export async function getOdjelPregled(odjelId: string): Promise<OdjelPregledData
     getById('odjeli', odjelId).catch(() => null),
     korisniciOpseg(),
   ]);
+  // odjel druge šumarije (npr. otvoren direktnim linkom) se ne prikazuje
+  const opseg = aktivniOpseg();
+  if (odjelRaw && opseg !== null && sumarijaOd(odjelRaw) !== opseg) return { odjel: null, unosi: [] };
   const korMap = Object.fromEntries(usersRaw.map((k) => [k.id as string, k as unknown as Korisnik]));
   const unosi = (await normalizujProjektante(raw)).map((u) => ({
     ...(u as unknown as UnosRada),
