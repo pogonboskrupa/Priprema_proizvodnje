@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi, getSumarije } from "@/lib/db";
+import { getKorisnici, getKorisnik, getKorisnikByIme, createKorisnik, updateKorisnik, arhivirajKorisnika, getUnosi } from "@/lib/db";
 import { saveSession, isRemembered, generatePin } from "@/lib/auth";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -10,9 +10,10 @@ import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { ZakljucavanjeMjeseci } from "@/components/ZakljucavanjeMjeseci";
 import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
-import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, type Sumarija } from "@/lib/sumarija";
+import { useSumarije } from "@/hooks/useSumarije";
+import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel } from "@/lib/sumarija";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
-import { localDateStr } from "@/lib/format";
+import { localDateStr, fmtLastOnline } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
 import { danAktivnosti, grupisiPoDanuAktivnosti, jeIzmijenjen, podijeliUnose, type DioUnosa } from "@/lib/zadnji-unosi";
 type Tab = "profil" | "korisnici" | "izvjestaji" | "zakljucavanje" | "unosi" | "sumarije";
@@ -22,25 +23,6 @@ const DANI = ["Nedjelja", "Ponedjeljak", "Utorak", "Srijeda", "Četvrtak", "Peta
 function fmtDan(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return `${DANI[d.getDay()]}, ${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}.`;
-}
-
-function fmtLastOnline(iso: string | undefined): string {
-  if (!iso) return "–";
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  const diffD = Math.floor(diffMs / 86_400_000);
-  const sameDay = d.toDateString() === now.toDateString();
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-  const wasYesterday = d.toDateString() === yesterday.toDateString();
-  const time = d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" });
-  if (diffMin < 1) return "Upravo";
-  if (diffMin < 60) return `${diffMin} min`;
-  if (sameDay) return `Danas ${time}`;
-  if (wasYesterday) return `Jučer ${time}`;
-  if (diffD < 7) return `${diffD} dana · ${time}`;
-  return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 const ZADNJI_DANA = 30;
@@ -74,12 +56,12 @@ function inicijali(ime: string): string {
   return ime.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
-function ProfilZaglavlje({ ime, fullName, title, role, operater, sihter, izvjestaji, zadnjaPrijava }: {
-  ime: string; fullName: string; title: string; role: Korisnik["role"];
+function ProfilZaglavlje({ ime, fullName, title, uloga, operater, sihter, izvjestaji, zadnjaPrijava }: {
+  ime: string; fullName: string; title: string; uloga: string;
   operater: boolean; sihter: boolean; izvjestaji: boolean; zadnjaPrijava?: string;
 }) {
   const ovlasti = [
-    role === "admin" ? "Administrator" : "Projektant",
+    uloga,
     operater && "Operater",
     sihter && "Šihter",
     izvjestaji && "Izvještaji",
@@ -117,7 +99,9 @@ export default function PostavkePage() {
   const isSuper = jeSuperAdmin(session);
   // izvještaji i zaključavanje su postavke jedne šumarije — super admin je prvo bira
   const treba = isSuper && sumarijaId === null;
-  const [sumarije, setSumarije] = useState<Sumarija[]>([]);
+  const sumarije = useSumarije();
+  // povećava se kad se korisnici promijene, da kartica Šumarije ponovo učita radnike
+  const [sumTick, setSumTick] = useState(0);
   const [addSumarija, setAddSumarija] = useState(DEFAULT_SUMARIJA_ID);
   const isOperater = !!session?.operater;
   const canSeeUnosi = isAdmin || isOperater;
@@ -131,7 +115,7 @@ export default function PostavkePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
-  const [pinNotice, setPinNotice] = useState<{ ime: string; pin: string; novi: boolean } | null>(null);
+  const [pinNotice, setPinNotice] = useState<{ ime: string; pin: string; novi: boolean; uloga?: string } | null>(null);
   const [showArhiva, setShowArhiva] = useState(false);
   const [confirmState, setConfirmState] = useState<{ msg: string; okLabel?: string; okColor?: "red" | "amber"; onOk: () => void } | null>(null);
 
@@ -151,7 +135,6 @@ export default function PostavkePage() {
     if (!session) return;
     loadMe(session.userId);
     if (isAdmin) loadKorisnici();
-    if (isSuper) getSumarije().then(setSumarije).catch(() => {});
   }, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -178,6 +161,7 @@ export default function PostavkePage() {
   async function loadKorisnici() {
     try {
       setKorisnici(await getKorisnici({ ukljuciArhivirane: true }));
+      setSumTick((t) => t + 1);
     } catch {
       toast("Greška pri učitavanju korisnika. Provjeri internet.");
     }
@@ -328,7 +312,7 @@ export default function PostavkePage() {
       {pinNotice && (
         <div className="mb-4 rounded-lg px-4 py-3 border bg-amber-50 dark:bg-amber-950 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 flex items-center gap-4 flex-wrap">
           <div className="text-sm">
-            {pinNotice.novi ? "Projektant" : "Novi PIN za"} <b className="font-mono">{pinNotice.ime}</b>{pinNotice.novi ? " dodan. PIN:" : ":"}
+            {pinNotice.novi ? (pinNotice.uloga ?? "Projektant") : "Novi PIN za"} <b className="font-mono">{pinNotice.ime}</b>{pinNotice.novi ? " dodan. PIN:" : ":"}
             <span className="ml-2 font-mono text-2xl font-bold tracking-[0.3em] align-middle">{pinNotice.pin}</span>
             <div className="text-xs mt-1 opacity-80">Zapiši i javi PIN korisniku — nakon zatvaranja više se ne prikazuje.</div>
           </div>
@@ -348,7 +332,7 @@ export default function PostavkePage() {
           ime={session.ime}
           fullName={profForm.fullName || session.fullName}
           title={profForm.title}
-          role={session.role}
+          uloga={isAdmin ? ulogaLabel(session, sumarije) : "Projektant"}
           operater={!!session.operater}
           sihter={!!session.sihter}
           izvjestaji={!!session.izvjestaji}
@@ -515,7 +499,7 @@ export default function PostavkePage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         k.role === "admin" ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                       }`}>
-                        {k.role}
+                        {ulogaLabel(k, sumarije)}
                       </span>
                     </td>
                     {isSuper && (
@@ -628,7 +612,7 @@ export default function PostavkePage() {
       )}
       {tab === "izvjestaji" && isAdmin && !treba && <IzvjestajPostavkeForma />}
       {tab === "zakljucavanje" && isAdmin && !treba && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
-      {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} />}
+      {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} onResetPin={resetPin} onArhiviraj={handleArhiviraj} onVrati={vratiIzArhive} verzija={sumTick} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
       {tab === "unosi" && canSeeUnosi && (

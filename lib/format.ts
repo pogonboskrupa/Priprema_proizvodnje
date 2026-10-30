@@ -65,3 +65,22 @@ export function cmpOdjel(a: { gj?: unknown; broj?: unknown }, b: { gj?: unknown;
   return String(a.gj).localeCompare(String(b.gj), "bs", { numeric: true })
     || String(a.broj).localeCompare(String(b.broj), "bs", { numeric: true });
 }
+
+export function fmtLastOnline(iso: string | undefined): string {
+  if (!iso) return "–";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffD = Math.floor(diffMs / 86_400_000);
+  const sameDay = d.toDateString() === now.toDateString();
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  const wasYesterday = d.toDateString() === yesterday.toDateString();
+  const time = d.toLocaleTimeString("bs-BA", { hour: "2-digit", minute: "2-digit" });
+  if (diffMin < 1) return "Upravo";
+  if (diffMin < 60) return `${diffMin} min`;
+  if (sameDay) return `Danas ${time}`;
+  if (wasYesterday) return `Jučer ${time}`;
+  if (diffD < 7) return `${diffD} dana · ${time}`;
+  return d.toLocaleDateString("bs-BA", { day: "2-digit", month: "2-digit", year: "numeric" });
+}

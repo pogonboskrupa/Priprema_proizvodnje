@@ -7,8 +7,9 @@ import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
 import { useAuth } from "@/context/AuthContext";
 import { navFor, isActive, type NavItem } from "@/lib/nav";
-import { getSumarije, korisniciOpseg } from "@/lib/db";
-import { aktivniOpseg, jeSuperAdmin, type Sumarija } from "@/lib/sumarija";
+import { korisniciOpseg } from "@/lib/db";
+import { useSumarije } from "@/hooks/useSumarije";
+import { aktivniOpseg, jeSuperAdmin, ulogaLabel } from "@/lib/sumarija";
 import { Icon } from "@/components/Icon";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -148,12 +149,12 @@ function UserMenu({ status }: { status: Status }) {
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-50 truncate leading-tight">
                   {displayName}
                 </p>
-                <span className={`inline-flex items-center gap-1 mt-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                <span className={`inline-flex items-center gap-1 mt-0.5 text-[10px] font-semibold px-2 py-0.5 rounded-full leading-tight ${
                   isAdmin
                     ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300"
                     : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
                 }`}>
-                  {isAdmin ? "● Admin" : session.operater ? "● Operater" : "● Projektant"}
+                  ● {ulogaLabel(session, sumarije)}
                 </span>
               </div>
             </div>
@@ -356,29 +357,21 @@ function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; p
   );
 }
 
-function useSumarije(): Sumarija[] {
-  const [lista, setLista] = useState<Sumarija[]>([]);
-  useEffect(() => {
-    let otkazano = false;
-    getSumarije().then((s) => { if (!otkazano) setLista(s); }).catch(() => {});
-    return () => { otkazano = true; };
-  }, []);
-  return lista;
-}
-
-/** Samo super admin bira šumariju; ostali vide naziv svoje u korisničkom meniju */
-function SumarijaIzbor() {
+/** Traka ispod glavne trake: samo Šef sektora bira šumariju; ostali vide naziv svoje u korisničkom meniju */
+function SumarijaTraka() {
   const { session, sumarijaId, setSumarija } = useAuth();
   const lista = useSumarije();
   if (!session || !jeSuperAdmin(session)) return null;
   return (
-    <div className="flex-shrink-0">
-      <label htmlFor="izbor-sumarije" className="sr-only">Šumarija</label>
-      <select id="izbor-sumarije" value={sumarijaId ?? ""} onChange={(e) => setSumarija(e.target.value || null)}
-        className="max-w-[8.5rem] sm:max-w-[12rem] truncate rounded-lg bg-white/10 px-2 py-1.5 text-xs sm:text-sm text-white ring-1 ring-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
-        <option value="" className="text-gray-900">Sve šumarije</option>
-        {lista.map((s) => <option key={s.id} value={s.id} className="text-gray-900">{s.naziv}</option>)}
-      </select>
+    <div className="border-t border-white/10 bg-green-900/60">
+      <div className="max-w-7xl mx-auto px-4 h-9 flex items-center gap-2">
+        <label htmlFor="izbor-sumarije" className="text-xs font-medium text-white/70">Šumarija</label>
+        <select id="izbor-sumarije" value={sumarijaId ?? ""} onChange={(e) => setSumarija(e.target.value || null)}
+          className="min-w-0 max-w-[14rem] truncate rounded-md bg-white/10 px-2 py-1 text-xs sm:text-sm text-white ring-1 ring-white/20 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+          <option value="" className="text-gray-900">Sve šumarije</option>
+          {lista.map((s) => <option key={s.id} value={s.id} className="text-gray-900">{s.naziv}</option>)}
+        </select>
+      </div>
     </div>
   );
 }
@@ -395,8 +388,6 @@ export default function Nav() {
   const more = nav.all.filter((l) => !nav.primary.includes(l));
   const current = nav.all.find((l) => isActive(path, l.href));
   const desktopAll = nav.all;
-  // izbornik šumarije zauzima mjesto, pa super admin dobija pun meni tek na najširem ekranu
-  const super_ = jeSuperAdmin(session);
 
   return (
     <>
@@ -415,18 +406,18 @@ export default function Nav() {
 
           <span className="hidden md:block w-px h-6 bg-white/15 flex-shrink-0" aria-hidden />
           {/* xl+: sve stavke */}
-          <div className={`hidden ${super_ ? "2xl:flex" : "xl:flex"} items-center gap-0.5 flex-1 min-w-0`}>
+          <div className="hidden xl:flex items-center gap-0.5 flex-1 min-w-0">
             {desktopAll.map((l) => <TopLink key={l.href} item={l} path={path} />)}
           </div>
           {/* md–xl: glavne stavke + Više */}
-          <div className={`hidden md:flex ${super_ ? "2xl:hidden" : "xl:hidden"} items-center gap-0.5 flex-1 min-w-0`}>
+          <div className="hidden md:flex xl:hidden items-center gap-0.5 flex-1 min-w-0">
             {nav.primary.map((l) => <TopLink key={l.href} item={l} path={path} />)}
             <TopMore items={desktopAll.filter((l) => !nav.primary.includes(l))} path={path} />
           </div>
 
-          <SumarijaIzbor />
           <UserMenu status={status} />
         </div>
+        <SumarijaTraka />
       </nav>
       <BottomBar items={nav.primary} more={more} path={path} />
     </>

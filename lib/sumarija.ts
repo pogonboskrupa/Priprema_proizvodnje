@@ -53,3 +53,16 @@ export function spremiIzbor(id: string | null) {
 export function opsegZaSesiju(ses: { role?: unknown; sumarijaId?: unknown }): string | null {
   return jeSuperAdmin(ses) ? procitajIzbor() : sumarijaOd(ses);
 }
+
+/** Naziv uloge u aplikaciji: Šef sektora (vidi sve) / Vodeći projektant {šumarija} / Projektant */
+export function ulogaLabel(
+  k: { role?: unknown; operater?: boolean; sumarijaId?: unknown },
+  sumarije: readonly Sumarija[],
+): string {
+  if (jeSuperAdmin(k)) return "Šef sektora";
+  if (k.role === "admin") {
+    const naziv = sumarije.find((s) => s.id === sumarijaOd(k))?.naziv;
+    return naziv ? `Vodeći projektant ${naziv}` : "Vodeći projektant";
+  }
+  return k.operater ? "Projektant · operater" : "Projektant";
+}

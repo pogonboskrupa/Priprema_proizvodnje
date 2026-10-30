@@ -27,7 +27,7 @@ import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
 import { saZadanim, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
-import { aktivniOpseg, uOpsegu, sumarijaOd, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
+import { aktivniOpseg, uOpsegu, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -188,10 +188,9 @@ export async function updateSumarija(id: string, data: { naziv?: string; arhivir
   await setDocById('sumarije', id, data as Record<string, unknown>, { merge: true });
 }
 
-/** Korisnici (admin i projektanti) šumarije, uključujući arhivirane — neovisno o aktivnom opsegu */
-export async function getKorisniciSumarije(sumarijaId: string): Promise<Korisnik[]> {
-  const raw = (await getAllFresh('users')) as unknown as Korisnik[];
-  return raw.filter((k) => sumarijaOd(k) === sumarijaId && !(k.role === 'admin' && !k.sumarijaId));
+/** Svi korisnici, uključujući arhivirane i neovisno o aktivnom opsegu — samo za upravljanje šumarijama */
+export async function getSviKorisnici(): Promise<Korisnik[]> {
+  return (await getAllFresh('users')) as unknown as Korisnik[];
 }
 
 // ── Odjeli ────────────────────────────────────────────────────────────────────

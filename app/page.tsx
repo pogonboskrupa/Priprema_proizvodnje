@@ -13,6 +13,8 @@ import { mesecLabel, fmtDateLong, fmtDateShort, localDateStr } from "@/lib/forma
 import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
 import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
+import { useSumarije } from "@/hooks/useSumarije";
+import { ulogaLabel } from "@/lib/sumarija";
 import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -33,6 +35,7 @@ export default function Home() {
   const [mjesecUnosi, setMjesecUnosi] = useState<UnosRada[] | null>(null);
   const [goUnosi, setGoUnosi] = useState<UnosRada[] | null>(null);
   const [greska, setGreska] = useState(false);
+  const sumarije = useSumarije();
   const isWorker = session?.role === "worker";
   const [refreshTick, setRefreshTick] = useState(0);
   useUnosiRefresh(() => setRefreshTick((t) => t + 1));
@@ -82,7 +85,7 @@ export default function Home() {
   const danasD = new Date();
   const mesec = mesecLabel(danasD);
   const nav = navFor(session);
-  const uloga = session.role === "admin" ? "Administrator" : session.operater ? "Projektant · operater" : "Projektant";
+  const uloga = ulogaLabel(session, sumarije);
   const linkovi = nav.all.filter((l) => l.href !== "/");
   const { doDana } = prosliMjesecDoDanas(danasD);
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
