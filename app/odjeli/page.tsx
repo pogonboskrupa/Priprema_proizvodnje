@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useEffect, useState } from "react";
 import { getOdjeli, createOdjel, updateOdjel, arhivirajOdjel, getKorisnici, dodijeliRjesenje } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
@@ -128,7 +129,7 @@ export default function OdjeliPage() {
 
   if (authLoading || !session) return null;
 
-  const projektanti = korisnici.filter((k) => k.role === "worker" && !k.arhiviran);
+  const projektanti = korisnici.filter((k) => jeProjektant(k) && !k.arhiviran);
   const imeKorisnika = (k: Korisnik) => k.fullName || k.ime;
   // rješenje za izvedbeni projekat: jedan projektant po odjelu
   const vlasnikRjesenja = new Map<string, Korisnik>();

@@ -27,7 +27,7 @@ import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
 import { saZadanim, zadanePostavke, ZADANE_POSTAVKE, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
-import { aktivniOpseg, uOpsegu, sumarijaOd, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
+import { aktivniOpseg, uOpsegu, sumarijaOd, jeProjektant, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
 
 // ── Unosi: normalizacija ID-a projektanta ────────────────────────────────────
 // Stariji unosi su vezani za inzinjeri.id; svi ekrani filtriraju po korisnik.id,
@@ -72,7 +72,7 @@ export async function getKorisnici(opts: { ukljuciArhivirane?: boolean } = {}): 
 
 // Arhivirani projektant ostaje u izvještajima samo za periode u kojima ima unose
 function isReportWorker(k: Korisnik, hasData: boolean): boolean {
-  return k.role === 'worker' && (!k.arhiviran || hasData);
+  return jeProjektant(k) && (!k.arhiviran || hasData);
 }
 
 export async function getKorisnik(id: string): Promise<Korisnik | null> {

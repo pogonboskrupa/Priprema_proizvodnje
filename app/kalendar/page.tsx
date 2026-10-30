@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { getUnosiZaMjesec, getKorisnici, getOdjeli, getPomocniRadnici, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
@@ -325,7 +326,7 @@ export default function KalendarPage() {
 
   useEffect(() => {
     if (!session) return;
-    if (!isWorker || isSihter) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter((w) => w.role === "worker"))).catch(() => {});
+    if (!isWorker || isSihter) getKorisnici({ ukljuciArhivirane: true }).then((k) => setWorkers(k.filter(jeProjektant))).catch(() => {});
     if (canEdit) getOdjeli().then(setOdjeli).catch(() => {});
   }, [session, isWorker, canEdit]);
 

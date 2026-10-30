@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useEffect, useState, useMemo, useRef } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
@@ -223,7 +224,7 @@ export default function UnosUcinkaPage() {
     Promise.all([getOdjeli(), getKorisnici(), getUnosi()]).then(([od, kor, allUn]) => {
       setAllUnosi(allUn);
       const workers = kor
-        .filter((k) => k.role === "worker")
+        .filter(jeProjektant)
         .sort((a, b) => displayKorisnik(a).localeCompare(displayKorisnik(b)));
       setOdjeli(od);
       setKorisnici(workers);

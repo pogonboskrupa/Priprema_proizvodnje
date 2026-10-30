@@ -14,7 +14,7 @@ import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
 import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
 import { useSumarije } from "@/hooks/useSumarije";
-import { ulogaLabel } from "@/lib/sumarija";
+import { ulogaLabel, jeProjektant } from "@/lib/sumarija";
 import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -75,7 +75,7 @@ export default function Home() {
     });
     getKorisnik(session.userId).then(kad(setKorisnik)).catch(pad);
     if (!isWorker) {
-      getKorisnici().then((k) => kad(setProjektanti)(k.filter((x) => x.role === "worker"))).catch(pad);
+      getKorisnici().then((k) => kad(setProjektanti)(k.filter(jeProjektant))).catch(pad);
     }
     return () => { cancelled = true; };
   }, [session, isWorker, refreshTick]);

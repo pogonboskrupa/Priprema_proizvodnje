@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -170,7 +171,7 @@ export default function StatistikaPage() {
 
   useEffect(() => {
     if (!session) return;
-    getKorisnici({ ukljuciArhivirane: true }).then((k) => setRadnici(k.filter((x) => x.role === "worker"))).catch(() => {});
+    getKorisnici({ ukljuciArhivirane: true }).then((k) => setRadnici(k.filter(jeProjektant))).catch(() => {});
   }, [session]);
 
   useEffect(() => {

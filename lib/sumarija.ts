@@ -98,3 +98,7 @@ export function grupisiPoSumarijama<T extends { role?: unknown; sumarijaId?: unk
 /** Samo vodeći projektant zadane šumarije (PG Bosanska Krupa) vidi kad su se korisnici zadnji put prijavili; prima onoga ko gleda */
 export const vidiZadnjuPrijavu = (k: { role?: unknown; sumarijaId?: unknown } | null | undefined): boolean =>
   k?.role === "admin" && k.sumarijaId === DEFAULT_SUMARIJA_ID;
+
+/** Evidenciju rada vode projektanti i vodeći projektanti šumarija (admin s šumarijom); Šef sektora ne */
+export const jeProjektant = (k: { role?: unknown; sumarijaId?: unknown } | null | undefined): boolean =>
+  k?.role === "worker" || (k?.role === "admin" && !!k.sumarijaId);

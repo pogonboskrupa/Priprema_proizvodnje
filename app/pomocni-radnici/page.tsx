@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -100,7 +101,7 @@ export default function PomocniRadniciPage() {
   }, [view]);
 
   const aktivni = useMemo(() => radnici.filter((r) => r.aktivan), [radnici]);
-  const projektanti = useMemo(() => korisnici.filter((k) => !k.arhiviran && k.role === "worker"), [korisnici]);
+  const projektanti = useMemo(() => korisnici.filter((k) => !k.arhiviran && jeProjektant(k)), [korisnici]);
   const projMap = useMemo(() => new Map(korisnici.map((k) => [k.id, k.fullName || k.ime])), [korisnici]);
   const projektantIme = useCallback((id: string | null | undefined) => (id ? projMap.get(id) ?? null : null), [projMap]);
   const kalendar = useMemo(() => daniUMjesecu(mjesec.year, mjesec.month), [mjesec]);

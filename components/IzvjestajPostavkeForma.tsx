@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useEffect, useMemo, useState } from "react";
 import { getKorisnici, setIzvjestajPostavke } from "@/lib/db";
 import type { Korisnik } from "@/lib/types";
@@ -25,7 +26,7 @@ function Forma({ pocetne, zadane }: { pocetne: IzvjestajPostavke; zadane: Izvjes
 
   useEffect(() => {
     getKorisnici()
-      .then((ks) => setKorisnici(ks.filter((k) => k.role === "worker" && !k.arhiviran)))
+      .then((ks) => setKorisnici(ks.filter((k) => jeProjektant(k) && !k.arhiviran)))
       .catch(() => setMsg({ text: "Greška pri učitavanju projektanata.", error: true }));
   }, []);
 

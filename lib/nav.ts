@@ -37,7 +37,15 @@ export interface RoleNav {
   cta: NavItem;
 }
 
-export function navFor(ses: Pick<Session, "role" | "operater" | "sihter"> | null): RoleNav {
+export function navFor(ses: Pick<Session, "role" | "operater" | "sihter" | "sumarijaId"> | null): RoleNav {
+  // vodeći projektant šumarije (admin s šumarijom) vodi i vlastitu evidenciju rada
+  if (ses?.role === "admin" && ses.sumarijaId) {
+    return {
+      all: [I.pocetna, I.unos, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],
+      primary: [I.pocetna, I.unos, I.unosUcinka, I.sihtarica],
+      cta: I.unos,
+    };
+  }
   if (ses?.role === "admin") {
     return {
       all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],

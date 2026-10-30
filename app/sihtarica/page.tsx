@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -63,7 +64,8 @@ export default function SihtaricaPage() {
   const { zakljucan } = useZakljucavanje();
   const mjesecZakljucan = zakljucan(`${mjesec.year}-${String(mjesec.month).padStart(2, "0")}-01`);
 
-  const selectedId = canPick ? pickedId || korisnici[0]?.id || "" : session?.userId ?? "";
+  // vodeći projektant po zadanom vidi vlastitu šihtaricu
+  const selectedId = canPick ? pickedId || (jeProjektant(session) ? session?.userId : "") || korisnici[0]?.id || "" : session?.userId ?? "";
   const viewKey = `${selectedId}|${mjesec.year}-${mjesec.month}`;
   const loading = loadedKey !== viewKey;
 
@@ -81,7 +83,7 @@ export default function SihtaricaPage() {
     if (!session) return;
     getOdjeli().then(setOdjeli).catch(() => toast("Greška pri učitavanju odjela.", true));
     const req = canPick
-      ? getKorisnici().then((ks) => ks.filter((k) => k.role === "worker"))
+      ? getKorisnici().then((ks) => ks.filter(jeProjektant))
       : getKorisnik(session.userId).then((k) => (k ? [k] : []));
     req
       .then(setKorisnici)

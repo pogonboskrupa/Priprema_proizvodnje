@@ -1,4 +1,5 @@
 "use client";
+import { jeProjektant } from "@/lib/sumarija";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { useEffect, useState } from "react";
 import { getOdjeli, getKorisnici, getUnosi, createUnos, deleteUnos } from "@/lib/db";
@@ -40,7 +41,8 @@ function displayProjectant(u: UnosRada): string {
 export default function UnosPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const isWorker = session?.role === "worker";
+  // projektant i vodeći projektant šumarije unose samo vlastiti rad; ostali biraju projektanta
+  const isWorker = session?.role === "worker" || (session?.role === "admin" && !!session.sumarijaId);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
@@ -102,7 +104,7 @@ export default function UnosPage() {
     try {
       const [od, kor, un] = await Promise.all([getOdjeli(), getKorisnici(), getUnosi()]);
       setOdjeli(od);
-      setKorisnici(kor.filter((k) => k.role === "worker"));
+      setKorisnici(kor.filter(jeProjektant));
       setUnosi(un);
     } catch {
       setMsg("Greška pri učitavanju podataka. Provjeri internet i osvježi stranicu.");
