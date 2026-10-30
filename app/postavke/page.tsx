@@ -12,6 +12,7 @@ import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
 import { DodajProjektante } from "@/components/DodajProjektante";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
+import { UrediKorisnika } from "@/components/UrediKorisnika";
 import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
 import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, kratkiNaziv, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
@@ -117,6 +118,7 @@ export default function PostavkePage() {
   const [profForm, setProfForm] = useState({ fullName: "", title: "" });
   const [pinForm, setPinForm] = useState({ old: "", new1: "", new2: "" });
   const [pinSpisak, setPinSpisak] = useState<PinRed[] | null>(null);
+  const [uredi, setUredi] = useState<Korisnik | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [msg, setMsg] = useState("");
   const [pinMsg, setPinMsg] = useState("");
@@ -526,6 +528,11 @@ export default function PostavkePage() {
                           </button>
                         </>
                       )}
+                      {(isSuper || k.role === "worker" || k.id === session.userId) && (
+                        <button onClick={() => setUredi(k)} className="text-green-700 dark:text-green-400 hover:underline text-xs mr-3">
+                          Uredi
+                        </button>
+                      )}
                       <button onClick={() => resetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">
                         Reset PIN
                       </button>
@@ -573,7 +580,7 @@ export default function PostavkePage() {
       )}
       {tab === "izvjestaji" && isAdmin && !treba && <IzvjestajPostavkeForma />}
       {tab === "zakljucavanje" && isAdmin && !treba && <ZakljucavanjeMjeseci korisnikId={session.userId} />}
-      {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} onResetPin={resetPin} onArhiviraj={handleArhiviraj} onVrati={vratiIzArhive} verzija={sumTick} />}
+      {tab === "sumarije" && isSuper && <SumarijePostavke onPin={setPinNotice} toast={toast} onResetPin={resetPin} onArhiviraj={handleArhiviraj} onVrati={vratiIzArhive} onUredi={setUredi} verzija={sumTick} />}
 
       {/* ── TAB: Zadnji unosi ───────────────────────────────────── */}
       {tab === "unosi" && canSeeUnosi && (
@@ -626,6 +633,16 @@ export default function PostavkePage() {
             </div>
           )}
         </div>
+      )}
+
+      {uredi && (
+        <UrediKorisnika korisnik={uredi} onZatvori={() => setUredi(null)}
+          onSnimljeno={(poruka, novoIme) => {
+            toast(poruka);
+            loadKorisnici();
+            // admin je promijenio vlastito ime: osvježi sesiju da se odmah vidi
+            if (uredi.id === session.userId) { saveSession({ ...session, ime: novoIme }, isRemembered()); refresh(); }
+          }} />
       )}
 
       {confirmState && (

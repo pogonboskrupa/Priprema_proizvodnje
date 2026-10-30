@@ -25,15 +25,17 @@ interface Akcije {
   onResetPin: (k: Korisnik) => void;
   onArhiviraj: (k: Korisnik) => void;
   onVrati: (k: Korisnik) => void;
+  onUredi: (k: Korisnik) => void;
 }
 
 /** Samo Šef sektora: šumarije, vodeći projektant i radnici svake šumarije */
-export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrati, verzija }: {
+export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrati, onUredi, verzija }: {
   onPin: (n: { ime: string; pin: string; novi: boolean; uloga?: string }) => void;
   toast: (m: string) => void;
   onResetPin: (k: Korisnik) => void;
   onArhiviraj: (k: Korisnik) => void;
   onVrati: (k: Korisnik) => void;
+  onUredi: (k: Korisnik) => void;
   /** Roditelj povećava kad se korisnici promijene izvan ove kartice (reset PIN, arhiviranje) */
   verzija: number;
 }) {
@@ -90,7 +92,7 @@ export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrat
     setNovaSumarija("");
   });
 
-  const akcije: Akcije = { zauzeto, radi, toast, onResetPin, onArhiviraj, onVrati };
+  const akcije: Akcije = { zauzeto, radi, toast, onResetPin, onArhiviraj, onVrati, onUredi };
 
   return (
     <div className="space-y-4">
@@ -186,7 +188,7 @@ function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
   akcije: Akcije;
   vodeci?: boolean;
 }) {
-  const { zauzeto, radi, onResetPin, onArhiviraj, onVrati } = akcije;
+  const { zauzeto, radi, onResetPin, onArhiviraj, onVrati, onUredi } = akcije;
   return (
     <tr className={`border-t border-gray-100 dark:border-gray-800 ${k.arhiviran ? "opacity-60" : ""} ${vodeci ? "bg-green-50/70 dark:bg-green-950/30" : ""}`}>
       <td className={`px-3 py-2 font-medium text-gray-800 dark:text-gray-100 border-l-4 ${vodeci ? "border-green-600" : "border-transparent"}`}>
@@ -210,6 +212,7 @@ function RadnikRed({ k, sumarije, akcije, vodeci = false }: {
           className="mr-3 max-w-[9rem] border border-gray-300 dark:border-gray-600 rounded-lg px-1.5 py-1 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
           {sumarije.filter((s) => !s.arhivirana || s.id === sumarijaOd(k)).map((s) => <option key={s.id} value={s.id}>{kratkiNaziv(s.naziv)}</option>)}
         </select>
+        <button onClick={() => onUredi(k)} className="text-green-700 dark:text-green-400 hover:underline text-xs mr-3">Uredi</button>
         <button onClick={() => onResetPin(k)} className="text-amber-600 dark:text-amber-400 hover:underline text-xs mr-3">Reset PIN</button>
         {vodeci && (
           <button disabled={zauzeto} onClick={() => radi(() => updateKorisnik(k.id, { role: "worker" }).then(() => undefined))}
@@ -360,6 +363,7 @@ function SumarijaKartica({ sumarija, sumarije, radnici, ukupno, akcije, onPin, o
                 <span className="font-medium">{a.fullName || a.ime}</span>
                 <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{a.ime}</span>
                 <span className="ml-auto flex items-center gap-3">
+                  <button disabled={zauzeto} className="text-xs text-green-700 dark:text-green-400 hover:underline" onClick={() => akcije.onUredi(a)}>Uredi</button>
                   <button disabled={zauzeto} className="text-xs text-amber-600 dark:text-amber-400 hover:underline" onClick={() => akcije.onResetPin(a)}>Reset PIN</button>
                   <button disabled={zauzeto} className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
                     onClick={() => radi(() => updateKorisnik(a.id, { role: "worker" }).then(() => undefined))}>
