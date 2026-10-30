@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       # SDK je već na runneru; zadani paket "tools" više ne postoji pa sdkmanager pada
