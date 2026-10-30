@@ -386,8 +386,6 @@ export default function KalendarPage() {
 
   useUnosiRefresh(() => { if (session) reload().catch(() => {}); });
 
-  if (authLoading || !session) return null;
-
   function prevMonth() {
     if (jePrviMjesecEvidencije(year, month)) return;
     if (month === 1) { setYear((y) => y - 1); setMonth(12); }
@@ -482,6 +480,9 @@ export default function KalendarPage() {
   const pomjeriPm = (delta: number) => {
     setPmMjesec((m) => { const d = new Date(m.year, m.month - 1 + delta, 1); return { year: d.getFullYear(), month: d.getMonth() + 1 }; });
   };
+
+  // nakon svih hookova: rani return prije njih rušio je stranicu pri direktnom učitavanju/osvježavanju
+  if (authLoading || !session) return null;
 
   return (
     <div>
