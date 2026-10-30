@@ -12,7 +12,7 @@ import { IzvjestajPostavkeForma } from "@/components/IzvjestajPostavkeForma";
 import { SumarijePostavke } from "@/components/SumarijePostavke";
 import { AplikacijaKartica } from "@/components/AplikacijaKartica";
 import { useSumarije } from "@/hooks/useSumarije";
-import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel } from "@/lib/sumarija";
+import { DEFAULT_SUMARIJA_ID, jeSuperAdmin, sumarijaOd, ulogaLabel, vidiZadnjuPrijavu } from "@/lib/sumarija";
 import { vrsta as vrstaStyle } from "@/lib/vrste";
 import { localDateStr, fmtLastOnline } from "@/lib/format";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -57,9 +57,9 @@ function inicijali(ime: string): string {
   return ime.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
 
-function ProfilZaglavlje({ ime, fullName, title, uloga, operater, sihter, izvjestaji, zadnjaPrijava }: {
+function ProfilZaglavlje({ ime, fullName, title, uloga, operater, sihter, izvjestaji, zadnjaPrijava, prikaziPrijavu }: {
   ime: string; fullName: string; title: string; uloga: string;
-  operater: boolean; sihter: boolean; izvjestaji: boolean; zadnjaPrijava?: string;
+  operater: boolean; sihter: boolean; izvjestaji: boolean; zadnjaPrijava?: string; prikaziPrijavu: boolean;
 }) {
   const ovlasti = [
     uloga,
@@ -83,10 +83,12 @@ function ProfilZaglavlje({ ime, fullName, title, uloga, operater, sihter, izvjes
             ))}
           </div>
         </div>
-        <div className="ml-auto text-right text-xs text-green-100/80">
-          <div className="uppercase tracking-wider text-[10px] text-green-200/80">Zadnja prijava</div>
-          <div className="mt-0.5 text-sm font-semibold text-white tabular-nums">{fmtLastOnline(zadnjaPrijava)}</div>
-        </div>
+        {prikaziPrijavu && (
+          <div className="ml-auto text-right text-xs text-green-100/80">
+            <div className="uppercase tracking-wider text-[10px] text-green-200/80">Zadnja prijava</div>
+            <div className="mt-0.5 text-sm font-semibold text-white tabular-nums">{fmtLastOnline(zadnjaPrijava)}</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -338,6 +340,7 @@ export default function PostavkePage() {
           sihter={!!session.sihter}
           izvjestaji={!!session.izvjestaji}
           zadnjaPrijava={me?.lastLoginAt}
+          prikaziPrijavu={vidiZadnjuPrijavu(session)}
         />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Profil */}
@@ -491,15 +494,17 @@ export default function PostavkePage() {
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Puno ime</th>
                   <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Uloga</th>
                   {isSuper && <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Šumarija</th>}
-                  <th className="text-left px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">Zadnji online</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
-                {korisnici.filter((k) => !k.arhiviran && (isSuper || !jeSuperAdmin(k))).sort((a, b) => (b.lastOnlineAt ?? b.lastLoginAt ?? "").localeCompare(a.lastOnlineAt ?? a.lastLoginAt ?? "")).map((k) => (
+                {korisnici.filter((k) => !k.arhiviran && (isSuper || !jeSuperAdmin(k))).sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime, "bs")).map((k) => (
                   <tr key={k.id} className="border-t border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 font-medium font-mono">{k.ime}</td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{k.fullName || "–"}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      {k.fullName || "–"}
+                      {vidiZadnjuPrijavu(k) && <div className="text-[11px] text-gray-400 dark:text-gray-500">Zadnja prijava: {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}</div>}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         k.role === "admin" ? "bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
@@ -520,9 +525,6 @@ export default function PostavkePage() {
                         )}
                       </td>
                     )}
-                    <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                      {fmtLastOnline(k.lastOnlineAt ?? k.lastLoginAt)}
-                    </td>
                     <td className="px-4 py-3 text-right">
                       {k.role === "worker" && (
                         <>
