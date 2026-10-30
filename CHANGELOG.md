@@ -7,9 +7,21 @@ Verzioniranje: `MAJOR.MINOR.PATCH`
 
 Patch ide od 1.0.0 → 1.0.1 → ... → 1.0.9 → 1.1.0 (minor).
 
-Gdje promijeniti verziju: `docs/index.html`, konstanta `VERSION` na vrhu `<script>` bloka.
+Nakon 9 u zadnjem broju raste srednji (1.6.9 → 1.7.0), a nakon 1.9.9 ide 2.0.0.
+
+Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
+
+## [1.6.0] — 2026-10-30
+
+Nova numeracija: ranije verzije su prešle 9 u zadnjem broju (1.5.154); od ove verzije se strogo prati pravilo gore.
+
+### Uključuje
+- **Šumarije:** Šef sektora (vidi sve), Vodeći projektant po šumariji, radnici i pomoćni radnici po šumariji, zasebne postavke izvještaja i zaključavanja
+- **Postavke:** kartica Aplikacija (verzija, provjera i ažuriranje, preuzimanje APK-a)
+- **Login:** unos PIN-a tipkovnicom i mišem, bez nuđenja spremanja lozinke
+- **APK:** automatski build i GitHub Release (`priprema-proizvodnje.apk`)
 
 ## [1.0.0] — 2026-09-21
 
