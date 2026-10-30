@@ -105,6 +105,8 @@ export interface PomocniRadnik {
   aktivan: boolean;
   /** ID korisnika (projektanta) s kojim radnik radi */
   projektantId?: string | null;
+  /** Šumarija; bez polja = zadana (Bosanska Krupa) */
+  sumarijaId?: string;
   createdAt: string;
   updatedAt: string;
 }

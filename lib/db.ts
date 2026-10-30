@@ -1357,7 +1357,7 @@ export async function getDetaljanPregledPoOdjelima(year: number): Promise<Detalj
 // ── Pomoćni radnici ───────────────────────────────────────────────────────────
 
 export async function getPomocniRadnici(): Promise<PomocniRadnik[]> {
-  const raw = await getAllFresh('pomocniRadnici');
+  const raw = uOpsegu(await getAllFresh('pomocniRadnici'));
   return (raw as unknown as PomocniRadnik[])
     .sort((a, b) => (a.prezime + a.ime).localeCompare(b.prezime + b.ime));
 }
@@ -1365,7 +1365,8 @@ export async function getPomocniRadnici(): Promise<PomocniRadnik[]> {
 export async function createPomocniRadnik(
   data: Pick<PomocniRadnik, 'ime' | 'prezime'> & { aktivan?: boolean; projektantId?: string | null }
 ): Promise<PomocniRadnik> {
-  const raw = await create('pomocniRadnici', { ...data, aktivan: data.aktivan ?? true } as Record<string, unknown>);
+  const sumarijaId = aktivniOpseg();
+  const raw = await create('pomocniRadnici', { ...data, aktivan: data.aktivan ?? true, ...(sumarijaId && { sumarijaId }) } as Record<string, unknown>);
   return raw as unknown as PomocniRadnik;
 }
 

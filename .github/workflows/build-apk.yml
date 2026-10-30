@@ -25,7 +25,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # SDK je već na runneru; zadani paket "tools" više ne postoji pa sdkmanager pada
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - uses: actions/setup-node@v4
         with:
@@ -63,10 +66,13 @@ jobs:
             -Pandroid.injected.signing.key.alias=$KEY_ALIAS \
             -Pandroid.injected.signing.key.password=$KEY_PASS
 
+      # Verzionirano ime za arhivu + fiksno ime koje koristi link za preuzimanje u aplikaciji
       - name: Preimenuj APK
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk \
              android/app/build/outputs/apk/release/priprema-proizvodnje-v${{ steps.version.outputs.version }}.apk
+          cp android/app/build/outputs/apk/release/app-release.apk \
+             android/app/build/outputs/apk/release/priprema-proizvodnje.apk
 
       - name: Kreiraj GitHub Release
         uses: softprops/action-gh-release@v2
@@ -84,5 +90,6 @@ jobs:
             > App učitava live verziju sa GitHub Pages. Potrebna internet konekcija pri prvom otvaranju.
           files: |
             android/app/build/outputs/apk/release/priprema-proizvodnje-v${{ steps.version.outputs.version }}.apk
+            android/app/build/outputs/apk/release/priprema-proizvodnje.apk
           make_latest: true
           fail_on_unmatched_files: true

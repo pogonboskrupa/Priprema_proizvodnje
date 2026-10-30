@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { createPomocniRadnik, updatePomocniRadnik } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
 import type { Korisnik, PomocniRadnik } from "@/lib/types";
 import { POMOCNI, rezimeSihte, inicijali, punoIme, type DaniSihte, type DanMjeseca } from "@/lib/pomocni";
 import { Icon } from "@/components/Icon";
@@ -23,6 +24,7 @@ const btnGhost = "px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dar
 function imeProjektanta(k: Korisnik) { return k.fullName || k.ime; }
 
 export function Evidencija({ radnici, projektanti, sihte, kalendar, danas, onRefresh, onOtvori, toast }: Props) {
+  const { sumarijaId } = useAuth();
   const [q, setQ] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [novi, setNovi] = useState({ ime: "", prezime: "", projektantId: "" });
@@ -76,6 +78,8 @@ export function Evidencija({ radnici, projektanti, sihte, kalendar, danas, onRef
   const dodaj = () => {
     const ime = novi.ime.trim(), prezime = novi.prezime.trim();
     if (!ime || !prezime) return;
+    // pomoćni radnici su zasebni po šumariji; Šef sektora mora izabrati jednu
+    if (sumarijaId === null) { toast("Izaberi šumariju u traci iznad prije dodavanja radnika.", true); return; }
     run(async () => {
       await createPomocniRadnik({ ime, prezime, projektantId: novi.projektantId || null });
       setNovi({ ime: "", prezime: "", projektantId: novi.projektantId });
