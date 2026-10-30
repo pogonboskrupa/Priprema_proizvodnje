@@ -7,11 +7,15 @@ import type { Korisnik } from "@/lib/types";
 import { SortTh, sortiraj, type SortStanje } from "@/components/SortTh";
 import { PinSpisak, type PinRed } from "@/components/PinSpisak";
 import { DodajProjektante } from "@/components/DodajProjektante";
+import { mjestoIzNaziva } from "@/lib/izvjestaj-postavke";
 
 const polje = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
 const dugme = "bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-800 disabled:opacity-50";
 const kartica = "bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm";
 const th = "text-left px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300";
+
+/** Samo Bosanska Krupa je "Pogon gospodarenja"; sve ostale općine su "Šumarija {općina}" */
+const nazivNoveSumarije = (unos: string): string => (unos.trim() ? `Šumarija ${mjestoIzNaziva(unos)}` : "");
 
 type Radi = (a: () => Promise<void>) => Promise<void>;
 type Pogled = "po" | "svi";
@@ -84,7 +88,7 @@ export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrat
   }, [radnici, trazi, arhivirani]);
 
   const dodajSumariju = () => radi(async () => {
-    const naziv = novaSumarija.trim();
+    const naziv = nazivNoveSumarije(novaSumarija);
     if (!naziv) { toast("Upiši naziv šumarije!"); return; }
     if (sumarije.some((s) => s.naziv.toLowerCase() === naziv.toLowerCase())) { toast("Šumarija s tim nazivom već postoji."); return; }
     await createSumarija(naziv);
@@ -101,9 +105,10 @@ export function SumarijePostavke({ onPin, toast, onResetPin, onArhiviraj, onVrat
         <h2 className="font-semibold text-gray-700 dark:text-gray-200">Nova šumarija</h2>
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); dodajSumariju(); }}>
           <label htmlFor="nova-sumarija" className="sr-only">Naziv šumarije</label>
-          <input id="nova-sumarija" className={polje} value={novaSumarija} onChange={(e) => setNovaSumarija(e.target.value)} maxLength={60} placeholder="Naziv šumarije" />
+          <input id="nova-sumarija" className={polje} value={novaSumarija} onChange={(e) => setNovaSumarija(e.target.value)} maxLength={60} placeholder="Općina, npr. Cazin" />
           <button type="submit" disabled={zauzeto} className={`${dugme} whitespace-nowrap`}>Dodaj</button>
         </form>
+        {novaSumarija.trim() && <p className="text-xs text-gray-600 dark:text-gray-300">Bit će upisana kao: <b className="font-semibold">{nazivNoveSumarije(novaSumarija)}</b></p>}
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Nova šumarija počinje prazna: vodeće projektante i radnike dodaješ ispod, a odjele nakon što je izabereš u traci iznad.
         </p>

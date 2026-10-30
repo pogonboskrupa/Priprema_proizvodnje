@@ -28,18 +28,22 @@ export const ZADANE_POSTAVKE: IzvjestajPostavke = {
   projektanti: {},
 };
 
+/** "Pogon gospodarenja Cazin" / "Šumarija Cazin" / "PG Cazin" / "Cazin" → "Cazin" */
+export const mjestoIzNaziva = (naziv: string): string =>
+  naziv.trim().replace(/^(Pogon gospodarenja|Šumarija|PG)\s+/i, "").trim() || naziv.trim();
+
 /**
- * Zadano zaglavlje za šumariju s tim nazivom; bez naziva (zadana šumarija) ostaje tekst za Bosansku Krupu.
- * "Pogon gospodarenja Cazin" → firma CAZIN, "Pogon gospodarenja za općinu Cazin", "Sekcija Cazin"; primalac se upisuje ručno.
+ * Zadano zaglavlje za šumariju s tim nazivom; bez naziva (zadana šumarija) ostaje tekst za Bosansku Krupu,
+ * jedini "Pogon gospodarenja". Ostale općine su šumarije: "Cazin" → firma CAZIN, "Šumarija Cazin", "Sekcija Cazin";
+ * primalac se upisuje ručno.
  */
 export function zadanePostavke(naziv?: string | null): IzvjestajPostavke {
   const n = naziv?.trim();
   if (!n) return ZADANE_POSTAVKE;
-  const mjesto = n.replace(/^(Pogon gospodarenja|Šumarija)\s+/i, "").trim() || n;
-  const pogon = /^Pogon gospodarenja/i.test(n);
+  const mjesto = mjestoIzNaziva(n);
   return {
     ...ZADANE_POSTAVKE,
-    firma: [ZADANE_POSTAVKE.firma[0], mjesto.toUpperCase(), ZADANE_POSTAVKE.firma[2], pogon ? `Pogon gospodarenja za općinu ${mjesto}` : n],
+    firma: [ZADANE_POSTAVKE.firma[0], mjesto.toUpperCase(), ZADANE_POSTAVKE.firma[2], `Šumarija ${mjesto}`],
     primalac: "",
     sekcija: `Sekcija ${mjesto}`,
   };
