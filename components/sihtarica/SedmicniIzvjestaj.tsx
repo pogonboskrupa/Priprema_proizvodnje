@@ -24,7 +24,8 @@ function Celija({ grupe }: { grupe: string[][] }) {
   );
 }
 
-export function SedmicniIzvjestaj() {
+/** uloga: "radnici" = projektanti, "vodeci" = samo vodeći projektanti (zasebna tabela) */
+export function SedmicniIzvjestaj({ uloga = "radnici" }: { uloga?: "radnici" | "vodeci" }) {
   const [seg, setSeg] = useState(() => segmentSedmice(new Date()));
   const [orijentacija, setOrijentacija] = useState<Orijentacija>("portrait");
   const kraj = useMemo(() => {
@@ -37,8 +38,8 @@ export function SedmicniIzvjestaj() {
 
   const datumi = useMemo(() => datumiSegmenta(seg, podaci?.unosi ?? []), [seg, podaci]);
   const redovi = useMemo(
-    () => (podaci ? sedmicniRedovi(poredaj(podaci.korisnici, postavke.redoslijed), podaci.unosi, datumi) : []),
-    [podaci, datumi, postavke.redoslijed],
+    () => (podaci ? sedmicniRedovi(poredaj(podaci.korisnici.filter((k) => (uloga === "vodeci") === (k.role === "admin")), postavke.redoslijed), podaci.unosi, datumi) : []),
+    [podaci, datumi, postavke.redoslijed, uloga],
   );
 
   return (

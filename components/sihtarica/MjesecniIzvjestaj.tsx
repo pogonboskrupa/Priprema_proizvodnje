@@ -37,7 +37,8 @@ const KOLONE: readonly { naziv: string; sirina: string; normal?: boolean }[] = [
   { naziv: "VLAKA km", sirina: "7%" },
 ];
 
-export function MjesecniIzvjestaj() {
+/** uloga: "radnici" = projektanti, "vodeci" = samo vodeći projektanti (zasebna tabela) */
+export function MjesecniIzvjestaj({ uloga = "radnici" }: { uloga?: "radnici" | "vodeci" }) {
   const [mj, setMj] = useState<Mjesec>(tekuci);
   const [orijentacija, setOrijentacija] = useState<Orijentacija>("landscape");
   const od = useMemo(() => new Date(mj.year, mj.month - 1, 1), [mj]);
@@ -46,8 +47,8 @@ export function MjesecniIzvjestaj() {
   const { postavke } = useIzvjestajPostavke();
 
   const redovi = useMemo(
-    () => (podaci ? mjesecniRedovi(poredaj(podaci.korisnici, postavke.redoslijed), podaci.unosi, mj.year, mj.month) : []),
-    [podaci, mj, postavke.redoslijed],
+    () => (podaci ? mjesecniRedovi(poredaj(podaci.korisnici.filter((k) => (uloga === "vodeci") === (k.role === "admin")), postavke.redoslijed), podaci.unosi, mj.year, mj.month) : []),
+    [podaci, mj, postavke.redoslijed, uloga],
   );
   const t = tekuci();
 

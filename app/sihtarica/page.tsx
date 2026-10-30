@@ -47,7 +47,7 @@ export default function SihtaricaPage() {
   // tuđu šihtaricu vidi samo admin; operater i projektant vide samo svoju
   const canPick = session?.role === "admin";
 
-  const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
+  const [sviKorisnici, setKorisnici] = useState<Korisnik[]>([]);
   const [korisniciLoaded, setKorisniciLoaded] = useState(false);
   const [pickedId, setPickedId] = useState("");
   const [mjesec, setMjesec] = useState<Mjesec>(tekuciMjesec);
@@ -58,14 +58,20 @@ export default function SihtaricaPage() {
   const [openDay, setOpenDay] = useState<{ key: string; datum: string } | null>(null);
   const [showPopuni, setShowPopuni] = useState(false);
   const [confirm, setConfirm] = useState<UnosRada | null>(null);
-  const [tab, setTab] = useState<"sihtarica" | "sedmicni" | "mjesecni">("sihtarica");
+  const [tab, setTab] = useState<"sihtarica" | "sedmicni" | "mjesecni" | "vodeci">("sihtarica");
+  // u tabu "Vodeći projektant": šihtarica, sedmični ili mjesečni izvještaj samo za vodeće projektante
+  const [vodeciPogled, setVodeciPogled] = useState<"sihtarica" | "sedmicni" | "mjesecni">("sihtarica");
   const [msg, setMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const msgTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { zakljucan } = useZakljucavanje();
   const mjesecZakljucan = zakljucan(`${mjesec.year}-${String(mjesec.month).padStart(2, "0")}-01`);
 
-  // vodeći projektant po zadanom vidi vlastitu šihtaricu
-  const selectedId = canPick ? pickedId || (jeProjektant(session) ? session?.userId : "") || korisnici[0]?.id || "" : session?.userId ?? "";
+  // vodeći projektanti su u zasebnom tabu; ostali tabovi prikazuju samo projektante
+  const korisnici = useMemo(
+    () => (canPick ? sviKorisnici.filter((k) => (tab === "vodeci") === (k.role === "admin")) : sviKorisnici),
+    [canPick, sviKorisnici, tab],
+  );
+  const selectedId = canPick ? (korisnici.some((k) => k.id === pickedId) ? pickedId : korisnici[0]?.id ?? "") : session?.userId ?? "";
   const viewKey = `${selectedId}|${mjesec.year}-${mjesec.month}`;
   const loading = loadedKey !== viewKey;
 
@@ -244,9 +250,14 @@ export default function SihtaricaPage() {
 
   // sedmični i mjesečni izvještaj obuhvataju sve projektante — admin, šihter i korisnici kojima admin da pravo
   const mozeSedmicni = canPick || !!session.sihter || !!session.izvjestaji;
+  const sviTabovi: ReadonlyArray<readonly [typeof tab, string]> = [
+    ["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"], ["mjesecni", "Mjesečni izvještaj"],
+    ...(canPick ? [["vodeci", "Vodeći projektant"] as const] : []),
+  ];
   const tabovi = mozeSedmicni && (
-    <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800 print:hidden" role="tablist">
-      {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični izvještaj"], ["mjesecni", "Mjesečni izvještaj"]] as const).map(([id, label]) => (
+    <div className="space-y-2 print:hidden">
+    <div className="inline-flex flex-wrap gap-1 p-1 rounded-lg bg-gray-100 dark:bg-gray-800" role="tablist">
+      {sviTabovi.map(([id, label]) => (
         <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
           className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
             tab === id
@@ -257,13 +268,32 @@ export default function SihtaricaPage() {
         </button>
       ))}
     </div>
+    {tab === "vodeci" && (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">Tabela samo za vodeće projektante:</span>
+        <div className="inline-flex gap-1 p-0.5 rounded-lg bg-gray-100 dark:bg-gray-800" role="tablist" aria-label="Pogled vodećeg projektanta">
+          {([["sihtarica", "Šihtarica"], ["sedmicni", "Sedmični"], ["mjesecni", "Mjesečni"]] as const).map(([id, label]) => (
+            <button key={id} type="button" role="tab" aria-selected={vodeciPogled === id} onClick={() => setVodeciPogled(id)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                vodeciPogled === id ? "bg-white dark:bg-gray-900 text-green-800 dark:text-green-300 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    </div>
   );
 
-  if (mozeSedmicni && tab !== "sihtarica") {
+  // aktivni pogled: u tabu "Vodeći projektant" bira se unutarnjim prekidačem
+  const pogled = tab === "vodeci" ? vodeciPogled : tab;
+  if (mozeSedmicni && pogled !== "sihtarica") {
+    const uloga = tab === "vodeci" ? "vodeci" : "radnici";
     return (
       <div className="space-y-5">
         {tabovi}
-        {tab === "sedmicni" ? <SedmicniIzvjestaj /> : <MjesecniIzvjestaj />}
+        {pogled === "sedmicni" ? <SedmicniIzvjestaj uloga={uloga} /> : <MjesecniIzvjestaj uloga={uloga} />}
       </div>
     );
   }
