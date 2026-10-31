@@ -13,6 +13,18 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.3] — 2026-10-31
+
+### Sigurnost / zavisnosti
+- Next.js 16.3.5 → 16.4.3 (kritične ranjivosti), `eslint-config-next` usklađen
+- `xlsx` (high, bez popravka) zamijenjen vlastitim XLSX writerom na `jszip` (`lib/export.ts`)
+- `@grpc/grpc-js` ^1.14 preko `overrides`; `npm audit fix` za sharp/source-map-js/re2js
+- Preostaju samo moderate nalazi u dev alatu `@capacitor/cli`
+
+### Čišćenje
+- Uklonjeni: stari `docs/` build, placeholder `public/app-release.apk`, preusmjerenja `/inzinjeri` i `/plan-projektant`
+- `.claude/commands/posalji-apk.md` prilagođen GitHub Release workflowu
+
 ## [1.6.0] — 2026-10-30
 
 Nova numeracija: ranije verzije su prešle 9 u zadnjem broju (1.5.154); od ove verzije se strogo prati pravilo gore.

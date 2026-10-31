@@ -1,5 +1,7 @@
 # Priprema Proizvodnje — Razvojne Napomene
 
+> **Zastarjelo:** ovaj dokument opisuje staru vanilla-JS verziju (`docs/index.html`, uklonjena u v1.7.3). Aktualna aplikacija je Next.js (vidi `AGENTS.md`, `CLAUDE.md`, `CHANGELOG.md`). Zadržano samo kao historijska referenca.
+
 Ovaj fajl opisuje arhitekturu SPA-e, konvencije i kritične točke na koje treba
 obratiti pažnju pri svakom pregledu koda ili traženju bugova.
 
