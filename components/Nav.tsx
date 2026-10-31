@@ -362,6 +362,10 @@ function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; p
 function SumarijaTraka() {
   const { session, sumarijaId, setSumarija } = useAuth();
   const lista = useSumarije();
+  // izabrana šumarija je u međuvremenu arhivirana ili ne postoji: vrati se na "Sve šumarije" umjesto praznih lista
+  useEffect(() => {
+    if (lista.length > 0 && sumarijaId && !lista.some((s) => s.id === sumarijaId)) setSumarija(null);
+  }, [lista, sumarijaId, setSumarija]);
   if (!session || !jeSuperAdmin(session)) return null;
   return (
     <div className="border-t border-white/10 bg-green-900/60">
