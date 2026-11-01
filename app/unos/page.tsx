@@ -65,6 +65,15 @@ export default function UnosPage() {
   const [datumDo, setDatumDo] = useState("");
   const { zakljucan, minDatum } = useZakljucavanje();
   const minUnos = minDatum && minDatum > EVIDENCIJA_OD_DATUM ? minDatum : EVIDENCIJA_OD_DATUM;
+  // /unos?datum=YYYY-MM-DD (veza iz podsjetnika na Početnoj); samo prošli ili tekući datum
+  useEffect(() => {
+    const d = new URLSearchParams(window.location.search).get("datum");
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d <= today()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- jednokratno čitanje URL parametra
+      setForm((f) => ({ ...f, datum: d }));
+    }
+  }, []);
+
   const datumZakljucan = zakljucan(form.datum);
 
   // godišnji i bolovanje se mogu upisati unaprijed, do kraja tekućeg mjeseca

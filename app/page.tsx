@@ -15,6 +15,7 @@ import { prosliMjesecDoDanas } from "@/lib/usporedba";
 import { navFor } from "@/lib/nav";
 import { useSumarije } from "@/hooks/useSumarije";
 import { ulogaLabel, jeProjektant } from "@/lib/sumarija";
+import { nedostajuciRadniDani } from "@/lib/podsjetnik";
 import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
 import { useUnosiRefresh } from "@/hooks/useUnosiRefresh";
@@ -102,23 +103,23 @@ export default function Home() {
 
   const sekcijaRezime = (
     <section aria-labelledby="rezime-naslov">
-      <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Svi projektanti"} meta={mesec} />
+      <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Ukupni učinak — svi projektanti"} meta={mesec} />
       {rezime ? (
         <>
-          <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-3`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <Stat label="Doznaka" icon="tree" tint="bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400" value={fmtBroj(rezime.ha)} unit="ha" tone="text-green-700 dark:text-green-400"
               delta={prosli && <Delta cur={rezime.ha} prev={prosli.ha} />} />
             <Stat label="Stabala" icon="chart" tint="bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400" value={fmtBroj(rezime.stabala, 0)} unit="st." tone="text-emerald-700 dark:text-emerald-400"
               delta={prosli && <Delta cur={rezime.stabala} prev={prosli.stabala} dec={0} />} />
             <Stat label="Vlake" icon="map" tint="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" value={fmtBroj(rezime.km)} unit="km" tone="text-amber-600 dark:text-amber-400"
               delta={prosli && <Delta cur={rezime.km} prev={prosli.km} />} />
-            {isWorker && <>
+            <>
               <Stat label="Radni dani" icon="calendar" tint="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" value={String(rezime.radniDani)} unit="dana" tone="text-gray-900 dark:text-gray-50"
                 delta={prosli && <Delta cur={rezime.radniDani} prev={prosli.radniDani} dec={0} />} />
               <Stat label="Odsustva" icon="user" tint="bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-400" value={String(rezime.godisnji + rezime.bolovanje)} unit="dana"
                 tone="text-sky-700 dark:text-sky-400" note={`GO ${rezime.godisnji} · bol. ${rezime.bolovanje}`}
                 className="col-span-2 lg:col-span-1" />
-            </>}
+            </>
           </div>
           {prosli && (
             <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
@@ -127,8 +128,8 @@ export default function Home() {
           )}
         </>
       ) : (
-        <div className={`grid ${isWorker ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-3"} gap-3`} aria-hidden>
-          {Array.from({ length: isWorker ? 5 : 3 }, (_, i) => <div key={i} className="h-[120px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3" aria-hidden>
+          {Array.from({ length: 5 }, (_, i) => <div key={i} className="h-[120px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
         </div>
       )}
     </section>
@@ -207,6 +208,8 @@ export default function Home() {
           Dio podataka nije učitan — provjeri internet. Stranica se osvježava sama kad veza proradi.
         </div>
       )}
+
+      {isWorker && <PodsjetnikNeunesenih unosi={mjesecUnosi} danas={danasD} />}
 
       {isWorker && <ObavijestGO korisnik={korisnik} period={goPer} />}
 
@@ -509,7 +512,7 @@ function MojMjesec({ unosi, danas, href }: { unosi: UnosRada[] | null; danas: Da
   const brojDana = new Date(god, mj + 1, 0).getDate();
   const pomak = (new Date(god, mj, 1).getDay() + 6) % 7;
   const datumi = Array.from({ length: brojDana }, (_, i) => localDateStr(new Date(god, mj, i + 1)));
-  const propusteno = datumi.filter((d) => d < danasStr && jeRadniDan(d) && !poDanu.has(d)).length;
+  const propusteno = nedostajuciRadniDani(unosi ?? [], danas).length;
   const prisutne = [...new Set([...poDanu.values()].flat())];
 
   return (
@@ -574,6 +577,33 @@ function MojMjesec({ unosi, danas, href }: { unosi: UnosRada[] | null; danas: Da
             </div>
           </>
         )}
+      </div>
+    </section>
+  );
+}
+
+/** Konkretni datumi koji fale, s vezom na unos za taj dan; ne prikazuje se dok se podaci ne učitaju ili kad je sve upisano */
+function PodsjetnikNeunesenih({ unosi, danas }: { unosi: UnosRada[] | null; danas: Date }) {
+  if (!unosi) return null;
+  const fali = nedostajuciRadniDani(unosi, danas);
+  if (fali.length === 0) return null;
+  const PRIKAZ = 8;
+  // najnoviji prvi — najsvježije praznine se najlakše popune
+  const prikazani = fali.slice(-PRIKAZ).reverse();
+  return (
+    <section role="status" aria-label="Neupisani radni dani"
+      className="rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 px-4 py-3.5">
+      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+        {fali.length === 1 ? "Jedan radni dan nije upisan" : `${fali.length} radnih dana nije upisano`} ovog mjeseca
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {prikazani.map((d) => (
+          <Link key={d} href={`/unos?datum=${d}`}
+            className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-gray-900 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:text-amber-200 tabular-nums hover:bg-amber-100 dark:hover:bg-amber-900/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600">
+            {DANI_KRATKO[uDatum(d).getDay()]} {Number(d.slice(8, 10))}.{Number(d.slice(5, 7))}.
+          </Link>
+        ))}
+        {fali.length > PRIKAZ && <span className="self-center text-xs text-amber-800 dark:text-amber-300">+ još {fali.length - PRIKAZ} ranijih</span>}
       </div>
     </section>
   );

@@ -6,6 +6,8 @@ import type { IzvjestajPostavke } from "@/lib/izvjestaj-postavke";
 import { imeUIzvjestaju, zvanjeUIzvjestaju } from "@/lib/izvjestaj-postavke";
 import type { MjesecniRed } from "@/lib/mjesecni";
 import type { SedmicniRed } from "@/lib/sedmicni";
+import { saberi, type RedSumarije, type Zbir } from "@/lib/po-sumarijama";
+import { kratkiNaziv } from "@/lib/sumarija";
 import { fmtBroj } from "@/lib/sihtarica";
 
 export type WordOrijentacija = "portrait" | "landscape";
@@ -23,10 +25,12 @@ const linija = { style: BorderStyle.SINGLE, size: 6, color: "000000" };
 const okvir = { top: linija, bottom: linija, left: linija, right: linija };
 
 /** Ćelija s jednim ili više redova teksta; prvi red može biti podebljan */
-function celija(linije: readonly string[], opts: { rowSpan?: number; bold?: boolean; boldPrvi?: boolean; lijevo?: boolean; vel?: number } = {}) {
+function celija(linije: readonly string[], opts: { rowSpan?: number; colSpan?: number; shade?: string; bold?: boolean; boldPrvi?: boolean; lijevo?: boolean; vel?: number } = {}) {
   const vel = opts.vel ?? 18;
   return new TableCell({
     rowSpan: opts.rowSpan,
+    columnSpan: opts.colSpan,
+    shading: opts.shade ? { fill: opts.shade } : undefined,
     borders: okvir,
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 40, bottom: 40, left: 60, right: 60 },
@@ -165,6 +169,61 @@ export async function sedmicniDocx(args: {
             ],
           }),
         ];
+      }),
+    ],
+  });
+  return Packer.toBlob(dokument(o, [...zaglavlje(p, naslov), tabela, potpis(p, o)]));
+}
+
+/** Zbirni izvještaj po šumarijama: odjeljak po šumariji (vodeći projektant prvi), zbir šumarije i ukupno za sektor */
+export async function poSumarijamaDocx(args: {
+  redovi: readonly RedSumarije[];
+  naslov: readonly string[];
+  postavke: IzvjestajPostavke;
+  orijentacija: WordOrijentacija;
+}): Promise<Blob> {
+  const { redovi, naslov, postavke: p, orijentacija: o } = args;
+  const NASLOVI = ["RB", "ŠUMARIJA / PROJEKTANT", "RADNI DANI", "TEREN", "KANC.", "GO", "BOLOV.", "BROJ STABALA", "POV ha", "VLAKA km"];
+  const sirine = kolone(o, [4, null, 8, 7, 7, 6, 7, 10, 8, 8]);
+  const brojevi = (z: Zbir, bold: boolean, shade?: string) => [
+    z.radniDani, z.teren, z.kancelarija, z.godisnji, z.bolovanje,
+  ].map((n) => celija([broj(n, 0)], { bold, shade }))
+    .concat([celija([broj(z.stabala, 0)], { bold, shade }), celija([broj(z.ha)], { bold, shade }), celija([broj(z.km)], { bold, shade })]);
+  const SIVO = "E5E7EB";
+
+  const tabela = new Table({
+    width: { size: SIRINA_SADRZAJA[o], type: WidthType.DXA },
+    columnWidths: sirine,
+    layout: TableLayoutType.FIXED,
+    rows: [
+      new TableRow({ tableHeader: true, children: NASLOVI.map((t) => celija([t], { bold: true, vel: 16 })) }),
+      ...redovi.flatMap((r) => [
+        new TableRow({
+          cantSplit: true,
+          children: [
+            celija([r.sumarija.naziv.toUpperCase()], { bold: true, lijevo: true, colSpan: NASLOVI.length, shade: SIVO }),
+          ],
+        }),
+        ...r.projektanti.map((pr, i) => new TableRow({
+          cantSplit: true,
+          children: [
+            celija([String(i + 1)]),
+            celija([imeUIzvjestaju(pr.korisnik, p), pr.korisnik.role === "admin" ? "vodeći projektant" : ""].filter(Boolean), { lijevo: true, boldPrvi: p.imeBold }),
+            ...brojevi(pr.zbir, false),
+          ],
+        })),
+        new TableRow({
+          cantSplit: true,
+          children: [celija([""]), celija([`Ukupno ${kratkiNaziv(r.sumarija.naziv)}`], { bold: true, lijevo: true }), ...brojevi(r.zbir, true)],
+        }),
+      ]),
+      new TableRow({
+        cantSplit: true,
+        children: [
+          celija([""], { shade: SIVO }),
+          celija(["UKUPNO – SVE ŠUMARIJE"], { bold: true, lijevo: true, shade: SIVO }),
+          ...brojevi(saberi(redovi.map((r) => r.zbir)), true, SIVO),
+        ],
       }),
     ],
   });

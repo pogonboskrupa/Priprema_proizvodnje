@@ -15,6 +15,8 @@ import { godineEvidencije, mjeseciEvidencije, EVIDENCIJA_OD_DATUM } from "@/lib/
 import { prethodniRef, NAZIV_PRETHODNOG, type Period } from "@/lib/usporedba";
 import { Delta } from "@/components/Delta";
 import { Icon, type IconName } from "@/components/Icon";
+import { PoSumarijama } from "@/components/PoSumarijama";
+import { jeSuperAdmin } from "@/lib/sumarija";
 
 const pak = (st: number) => (st / 30).toFixed(1);
 
@@ -114,7 +116,7 @@ export default function IzvjestajiPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
   const isWorker = session?.role === "worker";
-  const [mainTab, setMainTab] = useState<"statistike" | "odjeli">("statistike");
+  const [mainTab, setMainTab] = useState<"statistike" | "odjeli" | "sumarije">("statistike");
   const [odjeliYear, setOdjeliYear] = useState(() => new Date().getFullYear());
   const [odjeliData, setOdjeliData] = useState<DetaljanOdjelRed[]>([]);
   const [odjeliLoading, setOdjeliLoading] = useState(false);
@@ -246,12 +248,15 @@ export default function IzvjestajiPage() {
         {([
           ["statistike", "chart", "Učinak"],
           ["odjeli", "map", "Pregled odjela"],
+          ...(jeSuperAdmin(session) ? [["sumarije", "users", "Po šumarijama"] as const] : []),
         ] as const).map(([id, icon, label]) => (
           <button key={id} role="tab" aria-selected={mainTab === id} onClick={() => setMainTab(id)} className={segCls(mainTab === id)}>
             <Icon name={icon} className="w-4 h-4" />{label}
           </button>
         ))}
       </div>
+
+      {mainTab === "sumarije" && jeSuperAdmin(session) && <PoSumarijama />}
 
       {mainTab === "odjeli" && (
         <DetaljOdjeli

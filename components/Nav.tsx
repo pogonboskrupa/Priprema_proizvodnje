@@ -51,9 +51,6 @@ function useNewEntryNotifier() {
 
   useEffect(() => {
     if (session?.role !== "admin") return;
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
     // dijeli sync listener iz lib/firebase — nema zasebnog čitanja cijele kolekcije
     const unsub = onUnosiChanges(async (changes, meta) => {
       // dolazak na mrežu donese sve propušteno odjednom — to nije "novi unos"

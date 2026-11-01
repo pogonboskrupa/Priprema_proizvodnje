@@ -1,6 +1,6 @@
 "use client";
 import { jeProjektant } from "@/lib/sumarija";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useId } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -68,6 +68,7 @@ function RosterNewRow({
   saving: boolean;
 }) {
   const { recent: recentOdjeli, rest: sortedOdjeli } = splitOdjeliByRecent(odjeli, recentOdjelIds);
+  const uid = useId();
 
   const noOdjelNeeded = pending.vrsta ? NO_ODJEL_VRSTE.has(pending.vrsta) : false;
   const parsed = pendingToPayload(pending);
@@ -103,6 +104,7 @@ function RosterNewRow({
         {!noOdjelNeeded && (
           <div className="shrink-0" style={{ minWidth: 200 }}>
             <select
+              aria-label={`Odjel — ${displayKorisnik(korisnik)}`}
               className={inputSmCls}
               value={pending.odjelId}
               onChange={(e) => onUpdate({ odjelId: e.target.value })}
@@ -150,14 +152,14 @@ function RosterNewRow({
           {pending.vrsta === "DOZNAKA" && (
             <>
               <div className="w-24">
-                <label className={labelCls}>Stabala</label>
-                <input type="text" inputMode="numeric" className={inputSmCls}
+                <label htmlFor={`${uid}-stabala`} className={labelCls}>Stabala</label>
+                <input id={`${uid}-stabala`} type="text" inputMode="numeric" className={inputSmCls}
                   value={pending.brojStabala} placeholder="0"
                   onChange={(e) => onUpdate({ brojStabala: e.target.value })} />
               </div>
               <div className="w-28">
-                <label className={labelCls}>Hektari (ha)</label>
-                <input type="text" inputMode="decimal" className={inputSmCls}
+                <label htmlFor={`${uid}-ha`} className={labelCls}>Hektari (ha)</label>
+                <input id={`${uid}-ha`} type="text" inputMode="decimal" className={inputSmCls}
                   value={pending.hektari} placeholder="0.00"
                   onChange={(e) => onUpdate({ hektari: e.target.value })} />
               </div>
@@ -165,15 +167,15 @@ function RosterNewRow({
           )}
           {pending.vrsta === "VLAKA" && (
             <div className="w-28">
-              <label className={labelCls}>Kilometri (km)</label>
-              <input type="text" inputMode="decimal" className={inputSmCls}
+              <label htmlFor={`${uid}-km`} className={labelCls}>Kilometri (km)</label>
+              <input id={`${uid}-km`} type="text" inputMode="decimal" className={inputSmCls}
                 value={pending.kilometri} placeholder="0.00"
                 onChange={(e) => onUpdate({ kilometri: e.target.value })} />
             </div>
           )}
           <div className="flex-1 min-w-[130px]">
-            <label className={labelCls}>Napomena</label>
-            <input type="text" maxLength={200} className={inputSmCls}
+            <label htmlFor={`${uid}-napomena`} className={labelCls}>Napomena</label>
+            <input id={`${uid}-napomena`} type="text" maxLength={200} className={inputSmCls}
               value={pending.napomena} placeholder="(opcionalno)"
               onChange={(e) => onUpdate({ napomena: e.target.value })} />
           </div>
@@ -442,7 +444,7 @@ export default function UnosUcinkaPage() {
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >‹</button>
           <input
-            type="date" value={datum}
+            type="date" value={datum} aria-label="Datum unosa"
             min={minDan}
             max={krajTekucegMjeseca()}
             onChange={(e) => {

@@ -13,6 +13,18 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.4] — 2026-11-01
+
+### Novo
+- **Izvještaji → Po šumarijama (Šef sektora):** zbirovi po šumarijama za mjesec ili godinu (projektanti, radni dani, teren, kancelarija, GO, bolovanje, stabala, ha, km), raširivanje po projektantima (vodeći prvi), izvoz u Excel i Word
+- **Početna (radnik):** podsjetnik s konkretnim neupisanim radnim danima i vezom na `/unos?datum=…`
+- **Početna (admin / vodeći projektant):** "Ukupni učinak" s radnim danima i odsustvima, kao i kod radnika
+- **Postavke → Aplikacija:** dugme "Uključi obavijesti" (admin); dozvola se više ne traži automatski pri učitavanju
+
+### Ispravke
+- Labele povezane s poljima (Unos učinka, Odjeli) radi čitača ekrana i klika na labelu
+- `manifest.json`: tačan opis, orijentacija `any`, zasebne maskable ikone
+
 ## [1.7.3] — 2026-10-31
 
 ### Sigurnost / zavisnosti

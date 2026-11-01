@@ -383,8 +383,9 @@ export default function OdjeliPage() {
           className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 grid grid-cols-1 sm:grid-cols-4 gap-3 print:hidden"
         >
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Gospodarska jedinica</label>
+            <label htmlFor="odjel-gj" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Gospodarska jedinica</label>
             <input
+              id="odjel-gj"
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.gj}
               onChange={(e) => setForm({ ...form, gj: e.target.value })}
@@ -392,8 +393,9 @@ export default function OdjeliPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Broj odjela</label>
+            <label htmlFor="odjel-broj" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Broj odjela</label>
             <input
+              id="odjel-broj"
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={form.broj}
               onChange={(e) => setForm({ ...form, broj: e.target.value })}
@@ -401,8 +403,9 @@ export default function OdjeliPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Površina (ha)</label>
+            <label htmlFor="odjel-povrsina" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Površina (ha)</label>
             <input
+              id="odjel-povrsina"
               type="text"
               inputMode="decimal"
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
@@ -439,10 +442,11 @@ export default function OdjeliPage() {
           className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 mb-6 space-y-4 print:hidden"
         >
           <div className="max-w-xs">
-            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="odjel-bulk-gj" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
               Gospodarska jedinica (zajednička za sve)
             </label>
             <input
+              id="odjel-bulk-gj"
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               value={bulkGj}
               onChange={(e) => setBulkGj(e.target.value)}
@@ -460,12 +464,14 @@ export default function OdjeliPage() {
             {bulkRows.map((row, idx) => (
               <div key={idx} className="grid grid-cols-[1fr_1fr_32px] gap-2 items-center">
                 <input
+                  aria-label={`Broj odjela, red ${idx + 1}`}
                   className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   value={row.broj}
                   onChange={(e) => updateBulkRow(idx, "broj", e.target.value)}
                   placeholder=""
                 />
                 <input
+                  aria-label={`Površina (ha), red ${idx + 1}`}
                   type="text"
                   inputMode="decimal"
                   className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
@@ -630,6 +636,7 @@ export default function OdjeliPage() {
                               )}
                               {editId === o.id ? (
                                 <input
+                                  aria-label={`Broj odjela ${o.gj} / ${o.broj}`}
                                   type="text"
                                   value={form.broj}
                                   onChange={(e) => setForm((f) => ({ ...f, broj: e.target.value }))}
@@ -640,6 +647,7 @@ export default function OdjeliPage() {
                             <td className="px-3 py-2.5 text-right tabular-nums text-gray-800 dark:text-gray-200">
                               {editId === o.id ? (
                                 <input
+                                  aria-label={`Površina (ha) odjela ${o.gj} / ${o.broj}`}
                                   type="text"
                                   inputMode="decimal"
                                   value={form.povrsina}

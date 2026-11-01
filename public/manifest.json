@@ -1,25 +1,37 @@
 {
   "name": "Priprema Proizvodnje",
   "short_name": "PRIPREMA",
-  "description": "Evidencija učinka inžinjera šumarstva",
+  "description": "Evidencija učinka, planiranje i izvještaji pripreme proizvodnje – ŠPD Unsko-sanske šume",
   "start_url": "/Priprema_proizvodnje/",
   "scope": "/Priprema_proizvodnje/",
   "display": "standalone",
   "background_color": "#f9fafb",
   "theme_color": "#15803d",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/Priprema_proizvodnje/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/Priprema_proizvodnje/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/Priprema_proizvodnje/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/Priprema_proizvodnje/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

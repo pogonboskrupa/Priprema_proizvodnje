@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/components/Icon";
 import { VERSION } from "@/lib/version";
+import { useAuth } from "@/context/AuthContext";
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const REPO = "pogonboskrupa/Priprema_proizvodnje";
@@ -61,10 +62,50 @@ async function azurirajAplikaciju() {
   window.location.reload();
 }
 
+type DozvolaObavijesti = NotificationPermission | "nepodrzano";
+
+function citajDozvolu(): DozvolaObavijesti {
+  return typeof Notification === "undefined" ? "nepodrzano" : Notification.permission;
+}
+
+/** Dozvola se traži tek na klik — automatski upit pri učitavanju preglednici često automatski blokiraju */
+function ObavijestiRed() {
+  const [, osvjezi] = useState(0);
+  // snapshot čita stvarno stanje preglednika (korisnik ga može promijeniti i izvana); server renderira "default"
+  const dozvola = useSyncExternalStore(() => () => {}, citajDozvolu, (): DozvolaObavijesti => "default");
+
+  async function ukljuci() {
+    try { await Notification.requestPermission(); } catch { /* ostaje stara dozvola */ }
+    osvjezi((n) => n + 1);
+  }
+
+  const opis: Record<DozvolaObavijesti, string> = {
+    default: "Dobij obavijest čim projektant doda novi unos.",
+    granted: "✓ Obavijesti su uključene na ovom uređaju.",
+    denied: "Obavijesti su blokirane — dozvoli ih u postavkama preglednika za ovu stranicu.",
+    nepodrzano: "Ovaj preglednik ne podržava obavijesti.",
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-center gap-4">
+      <div className="min-w-0 flex-1">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Obavijesti o novim unosima</h3>
+        <p role="status" className={`mt-0.5 text-sm ${dozvola === "granted" ? "text-green-700 dark:text-green-400" : dozvola === "denied" ? "text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}>
+          {opis[dozvola]}
+        </p>
+      </div>
+      {dozvola === "default" && (
+        <button onClick={ukljuci} className={`${dugme} bg-green-700 text-white hover:bg-green-800`}>Uključi obavijesti</button>
+      )}
+    </div>
+  );
+}
+
 const dugme = "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2";
 
 /** Verzija, ažuriranje i preuzimanje APK-a — vide svi korisnici */
 export function AplikacijaKartica() {
+  const { session } = useAuth();
   const [provjera, setProvjera] = useState<Provjera>({ stanje: "provjera" });
   const [apk, setApk] = useState<ApkInfo | null>(null);
   const [ponovi, setPonovi] = useState(0);
@@ -147,6 +188,8 @@ export function AplikacijaKartica() {
           Preuzmi APK
         </a>
       </div>
+
+      {session?.role === "admin" && <ObavijestiRed />}
     </section>
   );
 }

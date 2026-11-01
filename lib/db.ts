@@ -25,6 +25,7 @@ import {
 import type { Odjel, OdjelGodina, Inzinjer, UnosRada, UnosRadaForm, Korisnik, PomocniRadnik, VrstaPomocnog, VrstaRada } from './types';
 import { localDateStr, cmpOdjel } from './format';
 import { ODSUSTVA } from './vrste';
+import { agregirajPoSumarijama, type RedSumarije, type UnosZaZbir } from './po-sumarijama';
 import { saZadanim, zadanePostavke, ZADANE_POSTAVKE, type IzvjestajPostavke } from './izvjestaj-postavke';
 import { jeZakljucan, jeAdminSesija, ZakljucanMjesecError, type ZakljucanoDo } from './zakljucavanje';
 import { aktivniOpseg, uOpsegu, sumarijaOd, jeProjektant, postavkeDocId, DEFAULT_SUMARIJA_ID, DEFAULT_SUMARIJA_NAZIV, type Sumarija } from './sumarija';
@@ -798,6 +799,25 @@ export async function getRadPoProjektantima(od: Date, do_: Date): Promise<{ kori
     .filter((k) => isReportWorker(k, saPodacima.has(k.id)))
     .sort((a, b) => (a.fullName || a.ime).localeCompare(b.fullName || b.ime, 'bs'));
   return { korisnici, unosi };
+}
+
+/**
+ * Zbirovi po šumarijama za Šefa sektora: namjerno mimo aktivnog opsega (pregled svih šumarija odjednom).
+ * Server-first, jer cache šihtera/projektanta ne sadrži tuđe unose.
+ */
+export async function getRadSvihSumarija(od: Date, do_: Date): Promise<RedSumarije[]> {
+  if (!jeAdminSesija()) throw new Error('Pregled po šumarijama je dostupan samo administratoru');
+  const [raw, korisnici, sumarije, inzinjeri] = await Promise.all([
+    queryColFresh('unosi', rasponDatuma(od, do_)),
+    getSviKorisnici(),
+    getSumarije(),
+    getAll('inzinjeri'),
+  ]);
+  // stariji unosi su vezani za inzinjeri.id — svodi se na korisnika
+  const vlasnik = new Map<string, string>();
+  for (const i of inzinjeri) if (i.korisnikId) vlasnik.set(i.id as string, i.korisnikId as string);
+  const unosi = (raw as unknown as UnosZaZbir[]).map((u) => ({ ...u, inzinjerId: vlasnik.get(u.inzinjerId) ?? u.inzinjerId }));
+  return agregirajPoSumarijama(unosi, korisnici, sumarije);
 }
 
 // ── Izvještaji ────────────────────────────────────────────────────────────────
