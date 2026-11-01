@@ -5,16 +5,17 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   getRezimeZaPeriod, getRezimePoOdjelima, getInzinjeriByKorisnikId, getGodisnjePlanPoProjektantu,
-  getZadnjiDanPoProjektantu, getKorisnici, getKorisnik, getUnosiZaMjesec, getGodisnjiUnosi, tekuciMjesec,
+  getZadnjiDanPoProjektantu, getKorisnici, getKorisnik, getUnosiZaMjesec, getGodisnjiUnosi, tekuciMjesec, getRadSvihSumarija,
   type OdjelMjesecRezime, type MjesecniRezime, type PlanProjektantRed, type ZadnjiDan,
 } from "@/lib/db";
 import type { Korisnik, UnosRada } from "@/lib/types";
 import { mesecLabel, fmtDateLong, fmtDateShort, localDateStr } from "@/lib/format";
 import { fmtBroj, ucinakLabel } from "@/lib/sihtarica";
 import { prosliMjesecDoDanas } from "@/lib/usporedba";
-import { navFor } from "@/lib/nav";
+import { navFor, type NavItem } from "@/lib/nav";
 import { useSumarije } from "@/hooks/useSumarije";
-import { ulogaLabel, jeProjektant } from "@/lib/sumarija";
+import { ulogaLabel, jeProjektant, jeSuperAdmin, kratkiNaziv, sumarijaOd, type Sumarija } from "@/lib/sumarija";
+import type { RedSumarije } from "@/lib/po-sumarijama";
 import { nedostajuciRadniDani } from "@/lib/podsjetnik";
 import { Icon, type IconName } from "@/components/Icon";
 import { Delta } from "@/components/Delta";
@@ -24,8 +25,11 @@ import { jeRadniDan, praznik } from "@/lib/praznici";
 import { goPeriod, iskoristenoDanaGO, type GoPeriod } from "@/lib/godisnji";
 
 export default function Home() {
-  const { session, loading } = useAuth();
+  const { session, loading, sumarijaId, setSumarija } = useAuth();
   const router = useRouter();
+  // Šef sektora bez odabrane šumarije: početna je pregled sektora po šumarijama
+  const sektor = jeSuperAdmin(session) && sumarijaId === null;
+  const [poSumarijama, setPoSumarijama] = useState<RedSumarije[] | null>(null);
   const [rezime, setRezime] = useState<MjesecniRezime | null>(null);
   const [prosli, setProsli] = useState<MjesecniRezime | null>(null);
   const [odjeliRezime, setOdjeliRezime] = useState<OdjelMjesecRezime[]>([]);
@@ -78,16 +82,29 @@ export default function Home() {
     if (!isWorker) {
       getKorisnici().then((k) => kad(setProjektanti)(k.filter(jeProjektant))).catch(pad);
     }
+    if (sektor) getRadSvihSumarija(mj.od, mj.do_).then(kad(setPoSumarijama)).catch(pad);
     return () => { cancelled = true; };
-  }, [session, isWorker, refreshTick]);
+  }, [session, isWorker, sektor, refreshTick]);
 
   if (loading || !session) return null;
 
   const danasD = new Date();
   const mesec = mesecLabel(danasD);
   const nav = navFor(session);
-  const uloga = ulogaLabel(session, sumarije);
-  const linkovi = nav.all.filter((l) => l.href !== "/");
+  // pun naziv šumarije već stoji u opisu opsega ispod imena
+  const uloga = ulogaLabel(session, sumarije, true);
+  const cta: NavItem = jeSuperAdmin(session)
+    ? { href: "/izvjestaji?tab=sumarije", label: "Pregled po šumarijama", desc: "", icon: "chart" }
+    : nav.cta;
+  // na mobitelu donja traka već ima glavne stranice; ovdje samo ono što je skriveno pod "Više"
+  const primarne = new Set(nav.primary.map((l) => l.href));
+  const linkovi = nav.all.filter((l) => l.href !== "/" && !primarne.has(l.href));
+  const nazivOpsega = sumarije.find((x) => x.id === sumarijaId)?.naziv;
+  const opsegOpis = isWorker
+    ? "Vidiš samo svoje unose i izvještaje"
+    : sektor
+      ? `Pregled cijelog sektora · ${sumarije.length} ${sumarije.length === 1 ? "šumarija" : "šumarije"} · ${brojProjektanata(projektanti.length)}`
+      : `${jeSuperAdmin(session) ? "Pregled" : "Tvoj tim"}: ${nazivOpsega ? kratkiNaziv(nazivOpsega) : "šumarija"} · ${brojProjektanata(projektanti.length)}`;
   const { doDana } = prosliMjesecDoDanas(danasD);
   const mojPlan = plan?.find((r) => r.korisnikId === session.userId);
   const danasStr = localDateStr(danasD);
@@ -103,7 +120,7 @@ export default function Home() {
 
   const sekcijaRezime = (
     <section aria-labelledby="rezime-naslov">
-      <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : "Ukupni učinak — svi projektanti"} meta={mesec} />
+      <SectionTitle id="rezime-naslov" title={isWorker ? "Moj učinak" : sektor ? "Ukupni učinak — cijeli sektor" : `Ukupni učinak — ${nazivOpsega ? kratkiNaziv(nazivOpsega) : "svi projektanti"}`} meta={mesec} />
       {rezime ? (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -151,8 +168,8 @@ export default function Home() {
     )
   );
   const sekcijaBrzi = (
-    <section aria-labelledby="stranice-naslov">
-      <SectionTitle id="stranice-naslov" title="Brzi pristup" />
+    linkovi.length > 0 && <section aria-labelledby="stranice-naslov" className="md:hidden">
+      <SectionTitle id="stranice-naslov" title="Ostale stranice" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
         {linkovi.map((l) => (
           <Link key={l.href + l.label} href={l.href}
@@ -180,8 +197,15 @@ export default function Home() {
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-green-200/90">{fmtDateLong(localDateStr(danasD))}</p>
             <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{session.fullName || session.ime}</h1>
+            <p className="mt-1 text-sm text-green-100/90">{opsegOpis}</p>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium text-green-50 ring-1 ring-white/15">{uloga}</span>
+              {isWorker && PRAVA.filter((pr) => session[pr.kljuc]).map((pr) => (
+                <Link key={pr.kljuc} href={pr.href} title={pr.opis}
+                  className="inline-flex items-center gap-1 rounded-full bg-sky-300/20 px-2.5 py-1 text-xs font-medium text-sky-50 ring-1 ring-sky-200/30 hover:bg-sky-300/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white">
+                  {pr.naziv}<Icon name="arrow" className="h-3 w-3" />
+                </Link>
+              ))}
               {isWorker && danasUpisan !== null && jeRadniDan(danasStr) && (
                 danasUpisan
                   ? <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/20 px-2.5 py-1 text-xs font-medium text-emerald-50 ring-1 ring-emerald-300/30">✓ Današnji dan je upisan</span>
@@ -194,10 +218,10 @@ export default function Home() {
               )}
             </div>
           </div>
-          <Link href={nav.cta.href}
+          <Link href={cta.href}
             className="ml-auto inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-green-800 shadow-sm transition hover:bg-green-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-green-800">
-            <Icon name={nav.cta.icon} className="h-4 w-4" />
-            {nav.cta.label}
+            <Icon name={cta.icon} className="h-4 w-4" />
+            {cta.label}
             <Icon name="arrow" className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -213,9 +237,13 @@ export default function Home() {
 
       {isWorker && <ObavijestGO korisnik={korisnik} period={goPer} />}
 
+      {sektor && (
+        <SumarijeKartice redovi={poSumarijama} zadnji={zadnji} onOtvori={setSumarija} />
+      )}
+
       {isWorker
         ? <MojZadnjiDan zadnji={zadnji} />
-        : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} />}
+        : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} sumarije={sektor ? sumarije : undefined} />}
 
       {isWorker && (
         <div className={`grid gap-6 ${imaGoUgovor ? "lg:grid-cols-[3fr_2fr]" : ""} items-start`}>
@@ -228,7 +256,8 @@ export default function Home() {
         <>{sekcijaRezime}{sekcijaPlan}{sekcijaOdjeli}{sekcijaBrzi}</>
       ) : (
         // admin: aktivnost po odjelima odmah ispod zadnjih dana, plan doznake na kraju
-        <>{sekcijaOdjeli}{sekcijaRezime}{sekcijaBrzi}{sekcijaPlan}</>
+        // sektor: odjeli i plan svih šumarija u jednoj listi nisu pregledni — dostupni su po odabiru šumarije
+        sektor ? <>{sekcijaRezime}{sekcijaBrzi}</> : <>{sekcijaOdjeli}{sekcijaRezime}{sekcijaBrzi}{sekcijaPlan}</>
       )}
     </div>
   );
@@ -314,50 +343,55 @@ const DANA_UNAZAD = 60;
 
 const inicijali = (k: Korisnik) => (k.fullName || k.ime).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-function ZadnjiDanTim({ zadnji, projektanti }: { zadnji: Record<string, ZadnjiDan> | null; projektanti: Korisnik[] }) {
+function ZadnjiDanTim({ zadnji, projektanti, sumarije }: {
+  zadnji: Record<string, ZadnjiDan> | null;
+  projektanti: Korisnik[];
+  /** Ako je zadano, kartice se dijele po šumarijama (pregled sektora) */
+  sumarije?: readonly Sumarija[];
+}) {
   if (!zadnji || projektanti.length === 0) return null;
   const danas = new Date();
   const granica = prethodniRadniDan(danas);
   const kasni = (k: Korisnik) => (zadnji[k.id]?.datum ?? "") < granica;
   // najstariji zadnji unos prvi — to su oni koje treba provjeriti
-  const redovi = [...projektanti].sort((a, b) => (zadnji[a.id]?.datum ?? "").localeCompare(zadnji[b.id]?.datum ?? ""));
+  const poredaj = (lista: readonly Korisnik[]) =>
+    [...lista].sort((a, b) => (zadnji[a.id]?.datum ?? "").localeCompare(zadnji[b.id]?.datum ?? ""));
   const brojKasni = projektanti.filter(kasni).length;
+  const grupe = sumarije
+    ? sumarije
+        .map((sm) => ({ sm, clanovi: poredaj(projektanti.filter((k) => sumarijaOd(k) === sm.id)) }))
+        .filter((g) => g.clanovi.length > 0)
+    : null;
+
+  const mreza = (lista: readonly Korisnik[]) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      {lista.map((k) => <ZadnjiKartica key={k.id} k={k} z={zadnji[k.id]} zakasnio={kasni(k)} danas={danas} />)}
+    </div>
+  );
 
   return (
     <section aria-labelledby="zadnji-naslov">
       <SectionTitle id="zadnji-naslov" title="Zadnji uneseni dan"
         meta={brojKasni > 0 ? `${brojKasni} od ${projektanti.length} kasni s unosom` : "svi ažurni"}
         action={<DetaljnoLink href="/unos-ucinka">Unos učinka</DetaljnoLink>} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {redovi.map((k) => {
-          const z = zadnji[k.id];
-          const zakasnio = kasni(k);
-          return (
-            <div key={k.id} className={`rounded-2xl border px-3 py-3 flex flex-col gap-2 shadow-sm ${
-              zakasnio
-                ? "border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
-                : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
-            }`}>
-              <div className="flex items-center gap-2.5 min-w-0">
-                <span aria-hidden className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                  zakasnio ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200" : "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
-                }`}>{inicijali(k)}</span>
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</span>
-                {z && (
-                  <span className={`ml-auto flex-shrink-0 text-xs tabular-nums ${
-                    zakasnio ? "font-semibold text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"
-                  }`}>{zakasnio && "⏱ "}{danLabel(z.datum, danas)}</span>
-                )}
+      {grupe ? (
+        <div className="space-y-4">
+          {grupe.map(({ sm, clanovi }) => {
+            const k = clanovi.filter(kasni).length;
+            return (
+              <div key={sm.id}>
+                <h3 className="mb-1.5 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  {kratkiNaziv(sm.naziv)}
+                  <span className={`normal-case tracking-normal font-medium ${k ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400"}`}>
+                    {k ? `${k} kasni` : "✓ ažurni"}
+                  </span>
+                </h3>
+                {mreza(clanovi)}
               </div>
-              {z ? (
-                <div className="flex flex-wrap gap-1">{z.unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
-              ) : (
-                <div className="text-xs text-amber-700 dark:text-amber-400">Nema unosa u zadnjih {DANA_UNAZAD} dana</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : mreza(poredaj(projektanti))}
       {brojKasni > 0 && (
         <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
           Kasni: zadnji unos je stariji od prethodnog radnog dana ({fmtDateShort(granica)}).
@@ -366,6 +400,121 @@ function ZadnjiDanTim({ zadnji, projektanti }: { zadnji: Record<string, ZadnjiDa
     </section>
   );
 }
+
+function ZadnjiKartica({ k, z, zakasnio, danas }: { k: Korisnik; z?: ZadnjiDan; zakasnio: boolean; danas: Date }) {
+  return (
+    <div className={`rounded-2xl border px-3 py-3 flex flex-col gap-2 shadow-sm ${
+      zakasnio
+        ? "border-dashed border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20"
+        : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+    }`}>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span aria-hidden className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+          zakasnio ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200" : "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200"
+        }`}>{inicijali(k)}</span>
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{k.fullName || k.ime}</span>
+          {k.role === "admin" && <span className="block text-[11px] font-medium text-green-700 dark:text-green-400">Vodeći projektant</span>}
+        </span>
+        {z && (
+          <span className={`ml-auto flex-shrink-0 text-xs tabular-nums ${
+            zakasnio ? "font-semibold text-amber-700 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"
+          }`}>{zakasnio && "⏱ "}{danLabel(z.datum, danas)}</span>
+        )}
+      </div>
+      {z ? (
+        <div className="flex flex-wrap gap-1">{z.unosi.map((u) => <VrstaBadge key={u.id} u={u} />)}</div>
+      ) : (
+        <div className="text-xs text-amber-700 dark:text-amber-400">Nema unosa u zadnjih {DANA_UNAZAD} dana</div>
+      )}
+    </div>
+  );
+}
+
+/** Pregled sektora: po jedna kartica za svaku šumariju; klik otvara šumariju (isti efekat kao izbornik u meniju) */
+function SumarijeKartice({ redovi, zadnji, onOtvori }: {
+  redovi: RedSumarije[] | null;
+  zadnji: Record<string, ZadnjiDan> | null;
+  onOtvori: (id: string) => void;
+}) {
+  const granica = prethodniRadniDan(new Date());
+  return (
+    <section aria-labelledby="sumarije-naslov">
+      <SectionTitle id="sumarije-naslov" title="Šumarije" meta={mesecLabel(new Date())}
+        action={<DetaljnoLink href="/izvjestaji?tab=sumarije">Izvještaj po šumarijama</DetaljnoLink>} />
+      {!redovi ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3" aria-hidden>
+          {[0, 1, 2].map((i) => <div key={i} className="h-[188px] rounded-2xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {redovi.map((r) => {
+            const vodeci = r.projektanti.filter((p) => p.korisnik.role === "admin").map((p) => p.korisnik.fullName || p.korisnik.ime);
+            const aktivni = r.projektanti.filter((p) => !p.korisnik.arhiviran);
+            const kasni = zadnji ? aktivni.filter((p) => (zadnji[p.korisnik.id]?.datum ?? "") < granica).length : null;
+            const kpi: [string, string, string][] = [
+              ["Doznaka", fmtBroj(r.zbir.ha), "ha"],
+              ["Stabala", fmtBroj(r.zbir.stabala, 0), "st."],
+              ["Vlake", fmtBroj(r.zbir.km), "km"],
+              ["Radni dani", String(r.zbir.radniDani), ""],
+            ];
+            return (
+              <article key={r.sumarija.id} className="flex flex-col rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+                <div className="px-4 pt-4">
+                  <div className="flex items-start gap-3">
+                    <span aria-hidden className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-green-50 dark:bg-green-950/60 text-green-800 dark:text-green-300">
+                      <Icon name="tree" className="h-[18px] w-[18px]" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-50 truncate" title={r.sumarija.naziv}>{kratkiNaziv(r.sumarija.naziv)}</h3>
+                      <p className={`text-xs truncate ${vodeci.length ? "text-gray-500 dark:text-gray-400" : "text-amber-700 dark:text-amber-400"}`}>
+                        {vodeci.length ? `Vodeći: ${vodeci.join(", ")}` : "Vodeći projektant nije postavljen"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] font-medium">
+                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-gray-600 dark:text-gray-300">{brojProjektanata(aktivni.length)}</span>
+                    {kasni !== null && (kasni > 0
+                      ? <span className="rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-amber-800 dark:text-amber-200">{kasni} kasni s unosom</span>
+                      : <span className="rounded-full bg-green-100 dark:bg-green-900/50 px-2 py-0.5 text-green-800 dark:text-green-200">✓ svi ažurni</span>)}
+                  </div>
+                </div>
+                <dl className="mt-3 grid grid-cols-4 border-y border-gray-100 dark:border-gray-800 divide-x divide-gray-100 dark:divide-gray-800">
+                  {kpi.map(([l, v, u]) => (
+                    <div key={l} className="px-2 py-2.5 text-center">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 truncate">{l}</dt>
+                      <dd className="mt-0.5 text-sm font-bold tabular-nums text-gray-900 dark:text-gray-50">
+                        {v}{u && <span className="ml-0.5 text-[10px] font-medium text-gray-400">{u}</span>}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <button type="button" onClick={() => onOtvori(r.sumarija.id)}
+                  className="mt-auto flex items-center justify-between gap-2 rounded-b-2xl px-4 py-2.5 text-sm font-medium text-green-800 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-950/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-green-600">
+                  Otvori šumariju
+                  <Icon name="arrow" className="h-3.5 w-3.5" />
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** 1 projektant, 2–4 projektanta, 5+ projektanata (11–14 → projektanata) */
+function brojProjektanata(n: number): string {
+  const d = n % 10, s = n % 100;
+  const rijec = d === 1 && s !== 11 ? "projektant" : d >= 2 && d <= 4 && (s < 12 || s > 14) ? "projektanta" : "projektanata";
+  return `${n} ${rijec}`;
+}
+
+const PRAVA = [
+  { kljuc: "operater", naziv: "Operater", href: "/unos-ucinka", opis: "Unosi učinak za sve projektante" },
+  { kljuc: "sihter", naziv: "Šihter", href: "/kalendar", opis: "Vodi evidenciju rada svih" },
+  { kljuc: "izvjestaji", naziv: "Izvještaji svih", href: "/sihtarica", opis: "Vidi sedmični i mjesečni izvještaj svih projektanata" },
+] as const;
 
 function MojZadnjiDan({ zadnji }: { zadnji: Record<string, ZadnjiDan> | null }) {
   if (!zadnji) return null;

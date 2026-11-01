@@ -141,6 +141,14 @@ export default function IzvjestajiPage() {
     if (!authLoading && !session) router.replace("/login/");
   }, [session, authLoading, router]);
 
+  // /izvjestaji?tab=sumarije (veza s Početne za Šefa sektora)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("tab") === "sumarije" && jeSuperAdmin(session)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- jednokratno čitanje URL parametra
+      setMainTab("sumarije");
+    }
+  }, [session]);
+
   useEffect(() => {
     if (!session) return;
     const initialTip: Tip = session.role === "worker" ? "inzinjer" : "odjel";

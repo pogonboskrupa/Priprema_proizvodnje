@@ -13,6 +13,15 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.5] — 2026-11-01
+
+### Pregled po ulogama (Početna)
+- **Šef sektora (sve šumarije):** kartice po šumarijama (vodeći projektant, broj projektanata, ko kasni, doznaka/stabala/vlake/radni dani) s "Otvori šumariju"; zadnji uneseni dan podijeljen po šumarijama; glavno dugme vodi na izvještaj po šumarijama (`/izvjestaji?tab=sumarije`)
+- **Vodeći projektant:** opis tima ("Tvoj tim: PG … · N projektanata"), ukupni učinak naslovljen šumarijom, vodeći projektant označen u karticama
+- **Projektant:** "Vidiš samo svoje unose i izvještaje" + oznake dodatnih prava (Operater, Šihter, Izvještaji svih) kao prečice
+- "Brzi pristup" → "Ostale stranice": samo na mobitelu i samo stranice koje nisu u donjoj traci
+- Pravilna množina (1 projektant, 3 projektanta, 6 projektanata)
+
 ## [1.7.4] — 2026-11-01
 
 ### Novo
