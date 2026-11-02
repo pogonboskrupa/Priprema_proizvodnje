@@ -6,13 +6,14 @@ import type { Korisnik } from "@/lib/types";
 
 const polje = "w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100";
 
-/** Admin mijenja korisničko ime i/ili postavlja novi PIN; prazan PIN znači "ne mijenjaj" */
+/** Admin mijenja ime i prezime, korisničko ime i/ili postavlja novi PIN; prazan PIN znači "ne mijenjaj" */
 export function UrediKorisnika({ korisnik, onZatvori, onSnimljeno }: {
   korisnik: Korisnik;
   onZatvori: () => void;
-  /** Poruka za prikaz nakon snimanja i (novo) korisničko ime */
-  onSnimljeno: (poruka: string, novoIme: string) => void;
+  /** Poruka za prikaz nakon snimanja te nova vrijednosti korisničkog imena i punog imena */
+  onSnimljeno: (poruka: string, novoIme: string, noviPuniNaziv: string) => void;
 }) {
+  const [puno, setPuno] = useState(korisnik.fullName ?? "");
   const [ime, setIme] = useState(korisnik.ime);
   const [pin, setPin] = useState("");
   const [greska, setGreska] = useState("");
@@ -31,11 +32,14 @@ export function UrediKorisnika({ korisnik, onZatvori, onSnimljeno }: {
   }, [onZatvori]);
 
   const novoIme = ime.trim().toUpperCase();
+  const novoPuno = puno.trim();
   const imePromijenjeno = novoIme !== korisnik.ime;
+  const punoPromijenjeno = novoPuno !== (korisnik.fullName ?? "");
   const pinPromijenjen = pin !== "";
-  const nistaNovo = !imePromijenjeno && !pinPromijenjen;
+  const nistaNovo = !imePromijenjeno && !punoPromijenjeno && !pinPromijenjen;
 
   async function snimi() {
+    if (punoPromijenjeno && !novoPuno) { setGreska("Ime i prezime ne smiju biti prazni."); return; }
     if (!novoIme) { setGreska("Korisničko ime ne smije biti prazno."); return; }
     if (pinPromijenjen && !/^\d{4}$/.test(pin)) { setGreska("PIN mora imati tačno 4 cifre."); return; }
     setSnima(true);
@@ -46,9 +50,9 @@ export function UrediKorisnika({ korisnik, onZatvori, onSnimljeno }: {
         const zauzeto = await getKorisnikByIme(novoIme);
         if (zauzeto && zauzeto.id !== korisnik.id) { setGreska("Korisničko ime je već zauzeto (možda u arhivi)."); setSnima(false); return; }
       }
-      await updateKorisnik(korisnik.id, { ...(imePromijenjeno && { ime: novoIme }), ...(pinPromijenjen && { pin }) });
-      const sta = [imePromijenjeno && "korisničko ime", pinPromijenjen && "PIN"].filter(Boolean).join(" i ");
-      onSnimljeno(`Promijenjeno: ${sta} (${novoIme}) ✓`, novoIme);
+      await updateKorisnik(korisnik.id, { ...(punoPromijenjeno && { fullName: novoPuno }), ...(imePromijenjeno && { ime: novoIme }), ...(pinPromijenjen && { pin }) });
+      const sta = [punoPromijenjeno && "ime i prezime", imePromijenjeno && "korisničko ime", pinPromijenjen && "PIN"].filter(Boolean).join(", ");
+      onSnimljeno(`Promijenjeno: ${sta} (${novoPuno}) ✓`, novoIme, novoPuno);
       onZatvori();
     } catch {
       setGreska("Greška pri snimanju. Provjeri internet i pokušaj ponovo.");
@@ -62,12 +66,19 @@ export function UrediKorisnika({ korisnik, onZatvori, onSnimljeno }: {
         className="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}>
         <h2 id="uredi-naslov" className="text-lg font-bold text-gray-800 dark:text-gray-100">Uredi korisnika</h2>
-        <p className="mt-0.5 mb-4 text-sm text-gray-500 dark:text-gray-400">{korisnik.fullName || korisnik.ime}</p>
+        <p className="mt-0.5 mb-4 text-sm text-gray-500 dark:text-gray-400">{korisnik.fullName || korisnik.ime}{korisnik.fullName && korisnik.fullName.toUpperCase() !== korisnik.ime && <span className="font-mono"> · {korisnik.ime}</span>}</p>
 
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); snimi(); }}>
           <div>
+            <label htmlFor="uredi-puno" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Ime i prezime</label>
+            <input id="uredi-puno" ref={imeRef} className={polje} value={puno} maxLength={60} autoComplete="off"
+              onChange={(e) => { setPuno(e.target.value); setGreska(""); }} />
+            <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Prikazuje se u izvještajima i listama.</p>
+          </div>
+
+          <div>
             <label htmlFor="uredi-ime" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Korisničko ime</label>
-            <input id="uredi-ime" ref={imeRef} className={`${polje} font-mono uppercase`} value={ime} maxLength={30} autoComplete="off"
+            <input id="uredi-ime" className={`${polje} font-mono uppercase`} value={ime} maxLength={30} autoComplete="off"
               onChange={(e) => { setIme(e.target.value); setGreska(""); }} />
             <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Unosi i izvještaji ostaju vezani za korisnika; mijenja se samo ime za prijavu.</p>
           </div>
@@ -76,7 +87,7 @@ export function UrediKorisnika({ korisnik, onZatvori, onSnimljeno }: {
             <label htmlFor="uredi-pin" className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Novi PIN (4 cifre)</label>
             <div className="flex gap-2">
               {/* tekstualno polje (ne type=password): preglednik ne nudi spremanje lozinke, a admin vidi šta javlja korisniku */}
-              <input id="uredi-pin" className={`${polje} font-mono tracking-[0.3em]`} value={pin} inputMode="numeric" maxLength={4} autoComplete="off"
+              <input id="uredi-pin" className={`${polje} font-mono tracking-[0.3em] placeholder:font-sans placeholder:text-xs placeholder:tracking-normal`} value={pin} inputMode="numeric" maxLength={4} autoComplete="off"
                 data-lpignore="true" data-1p-ignore="true" placeholder="ostavi prazno = bez promjene"
                 onChange={(e) => { setPin(e.target.value.replace(/\D/g, "")); setGreska(""); }} />
               <button type="button" onClick={() => { setPin(generatePin()); setGreska(""); }}

@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.9] — 2026-11-02
+
+- **Uredi korisnika:** uz korisničko ime i PIN, admin (za sve) i vodeći projektant (za svoju šumariju) sada mogu mijenjati i ime i prezime; vlastita promjena odmah osvježava sesiju
+
 ## [1.7.8] — 2026-11-02
 
 - **Šef sektora:** uklonjeni Unos učinka, Šihtarica i Pomoćni radnici iz menija (i Unos rada, koji već nije bio); direktno otvaranje tih stranica vraća na Početnu; prečica "Unos učinka" uklonjena s Početne. Meni: Početna, Izvještaji, Statistika, Kalendar, Plan doznake, Elaborat, Postavke.

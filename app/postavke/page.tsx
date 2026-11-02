@@ -645,11 +645,11 @@ export default function PostavkePage() {
 
       {uredi && (
         <UrediKorisnika korisnik={uredi} onZatvori={() => setUredi(null)}
-          onSnimljeno={(poruka, novoIme) => {
+          onSnimljeno={(poruka, novoIme, noviPuniNaziv) => {
             toast(poruka);
             loadKorisnici();
             // admin je promijenio vlastito ime: osvježi sesiju da se odmah vidi
-            if (uredi.id === session.userId) { saveSession({ ...session, ime: novoIme }, isRemembered()); refresh(); }
+            if (uredi.id === session.userId) { saveSession({ ...session, ime: novoIme, fullName: noviPuniNaziv }, isRemembered()); refresh(); }
           }} />
       )}
 
