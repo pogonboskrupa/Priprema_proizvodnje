@@ -8,6 +8,8 @@ export interface NavItem {
   short?: string;
   desc: string;
   icon: IconName;
+  /** Dodatne putanje koje označavaju ovu stavku kao aktivnu (npr. podstranice) */
+  match?: readonly string[];
 }
 
 const I = {
@@ -18,9 +20,7 @@ const I = {
   kalendar: { href: "/kalendar", label: "Kalendar", desc: "Aktivnosti po danima", icon: "calendar" },
   evidencijaRada: { href: "/kalendar", label: "Evidencija rada", short: "Evidencija", desc: "Kalendar i pomoćni radnici", icon: "calendar" },
   sihtarica: { href: "/sihtarica", label: "Šihtarica", desc: "Dani u mjesecu i godišnji odmor", icon: "sheet" },
-  odjeli: { href: "/odjeli", label: "Odjeli", desc: "Odjeli i površine", icon: "map" },
-  plan: { href: "/plan", label: "Plan sječe", desc: "Plan i realizacija po odjelima", icon: "tree" },
-  realizacija: { href: "/realizacija", label: "Realizacija", desc: "Napredak realizacije plana i plan po projektantima", icon: "trend" },
+  planDoznake: { href: "/odjeli", label: "Plan doznake", desc: "Odjeli, plan sječe i realizacija", icon: "tree", match: ["/plan", "/realizacija", "/odjel"] },
   elaborat: { href: "/elaborat", label: "Elaborat", desc: "Drvna masa i prirast po odsjecima", icon: "book" },
   statistika: { href: "/statistika", label: "Statistika", desc: "Prisutnost, učinak, usporedba", icon: "pie" },
   mojiOdjeli: { href: "/moji-odjeli", label: "Moji odjeli", desc: "Moji odjeli i rješenja", icon: "map" },
@@ -41,14 +41,14 @@ export function navFor(ses: Pick<Session, "role" | "operater" | "sihter" | "suma
   // vodeći projektant šumarije (admin s šumarijom) vodi i vlastitu evidenciju rada
   if (ses?.role === "admin" && ses.sumarijaId) {
     return {
-      all: [I.pocetna, I.unos, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],
+      all: [I.pocetna, I.unos, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.planDoznake, I.elaborat, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unos, I.unosUcinka, I.sihtarica],
       cta: I.unos,
     };
   }
   if (ses?.role === "admin") {
     return {
-      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.odjeli, I.plan, I.realizacija, I.elaborat, I.pomocniRadnici, I.postavke],
+      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.planDoznake, I.elaborat, I.pomocniRadnici, I.postavke],
       primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
       cta: I.unosUcinka,
     };
@@ -73,3 +73,7 @@ export function isActive(path: string, href: string): boolean {
   const p = path.replace(/\/$/, "") || "/";
   return href === "/" ? p === "/" : p === href || p.startsWith(href + "/");
 }
+
+/** Stavka menija je aktivna na svojoj putanji i na putanjama iz `match` */
+export const jeAktivna = (path: string, item: NavItem): boolean =>
+  isActive(path, item.href) || !!item.match?.some((m) => isActive(path, m));

@@ -13,6 +13,11 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.7] — 2026-11-02
+
+- **Meni:** Odjeli, Plan sječe i Realizacija spojeni u jedan tab "Plan doznake" s podtabovima Odjeli (zadani), Plan doznake (ranije Plan sječe) i Realizacija; tab ostaje aktivan i na pregledu pojedinog odjela. URL-ovi stranica su isti.
+- Gornji meni se na širim ekranima (od ~1400 px) sada u cijelosti stavlja u jedan red
+
 ## [1.7.6] — 2026-11-02
 
 - **Unos učinka:** vodeći projektanti se više ne pojavljuju u zajedničkoj listi; svoju evidenciju vode sami kroz Unos rada

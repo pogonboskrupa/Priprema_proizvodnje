@@ -6,7 +6,7 @@ import { db, collection, query, onUnosiChanges } from "@/lib/firebase";
 import { getDocs, limit } from "firebase/firestore";
 import { VERSION } from "@/lib/version";
 import { useAuth } from "@/context/AuthContext";
-import { navFor, isActive, type NavItem } from "@/lib/nav";
+import { navFor, jeAktivna, type NavItem } from "@/lib/nav";
 import { korisniciOpseg } from "@/lib/db";
 import { useSumarije } from "@/hooks/useSumarije";
 import { aktivniOpseg, jeSuperAdmin, kratkiNaziv, ulogaLabel } from "@/lib/sumarija";
@@ -222,7 +222,7 @@ function Logo() {
 }
 
 function TopLink({ item, path }: { item: NavItem; path: string }) {
-  const active = isActive(path, item.href);
+  const active = jeAktivna(path, item);
   return (
     <Link
       href={item.href}
@@ -240,7 +240,7 @@ function TopLink({ item, path }: { item: NavItem; path: string }) {
 function TopMore({ items, path }: { items: NavItem[]; path: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const active = items.some((i) => isActive(path, i.href));
+  const active = items.some((i) => jeAktivna(path, i));
 
   useEffect(() => {
     if (!open) return;
@@ -265,7 +265,7 @@ function TopMore({ items, path }: { items: NavItem[]; path: string }) {
       {open && (
         <div className="absolute left-0 top-[calc(100%+8px)] w-64 rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-100 dark:border-gray-700 p-1.5 z-[100]">
           {items.map((i) => {
-            const on = isActive(path, i.href);
+            const on = jeAktivna(path, i);
             return (
               <Link key={i.href} href={i.href} onClick={() => setOpen(false)}
                 className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors ${
@@ -284,7 +284,7 @@ function TopMore({ items, path }: { items: NavItem[]; path: string }) {
 
 function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; path: string }) {
   const [open, setOpen] = useState(false);
-  const moreActive = more.some((m) => isActive(path, m.href));
+  const moreActive = more.some((m) => jeAktivna(path, m));
 
   useEffect(() => {
     if (!open) return;
@@ -308,7 +308,7 @@ function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; p
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" aria-hidden />
             <nav className="grid grid-cols-2 gap-2">
               {more.map((m) => {
-                const active = isActive(path, m.href);
+                const active = jeAktivna(path, m);
                 return (
                   <Link key={m.href} href={m.href} onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 rounded-2xl px-3 py-3 border transition-colors ${
@@ -334,7 +334,7 @@ function BottomBar({ items, more, path }: { items: NavItem[]; more: NavItem[]; p
         className="md:hidden fixed inset-x-0 bottom-0 z-[70] bg-white/95 dark:bg-gray-950/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 flex print:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         {items.map((it) => {
-          const active = isActive(path, it.href) && !open;
+          const active = jeAktivna(path, it) && !open;
           return (
             <Link key={it.href} href={it.href} className={cell(active)} aria-current={active ? "page" : undefined}>
               {active && indicator}
@@ -426,7 +426,7 @@ export default function Nav() {
 
   const nav = navFor(session);
   const more = nav.all.filter((l) => !nav.primary.includes(l));
-  const current = nav.all.find((l) => isActive(path, l.href));
+  const current = nav.all.find((l) => jeAktivna(path, l));
   const desktopAll = nav.all;
   const vidljivo = koliko(desktopAll, sirina, session.fullName || session.ime);
   const uTrakli = desktopAll.slice(0, vidljivo);
