@@ -243,7 +243,7 @@ export default function Home() {
 
       {isWorker
         ? <MojZadnjiDan zadnji={zadnji} />
-        : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} sumarije={sektor ? sumarije : undefined} />}
+        : <ZadnjiDanTim zadnji={zadnji} projektanti={projektanti} sumarije={sektor ? sumarije : undefined} bezAkcije={jeSuperAdmin(session)} />}
 
       {isWorker && (
         <div className={`grid gap-6 ${imaGoUgovor ? "lg:grid-cols-[3fr_2fr]" : ""} items-start`}>
@@ -343,11 +343,13 @@ const DANA_UNAZAD = 60;
 
 const inicijali = (k: Korisnik) => (k.fullName || k.ime).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
-function ZadnjiDanTim({ zadnji, projektanti, sumarije }: {
+function ZadnjiDanTim({ zadnji, projektanti, sumarije, bezAkcije }: {
   zadnji: Record<string, ZadnjiDan> | null;
   projektanti: Korisnik[];
   /** Ako je zadano, kartice se dijele po šumarijama (pregled sektora) */
   sumarije?: readonly Sumarija[];
+  /** Šef sektora ne unosi učinak, pa nema ni prečice */
+  bezAkcije?: boolean;
 }) {
   if (!zadnji || projektanti.length === 0) return null;
   const danas = new Date();
@@ -373,7 +375,7 @@ function ZadnjiDanTim({ zadnji, projektanti, sumarije }: {
     <section aria-labelledby="zadnji-naslov">
       <SectionTitle id="zadnji-naslov" title="Zadnji uneseni dan"
         meta={brojKasni > 0 ? `${brojKasni} od ${projektanti.length} kasni s unosom` : "svi ažurni"}
-        action={<DetaljnoLink href="/unos-ucinka">Unos učinka</DetaljnoLink>} />
+        action={bezAkcije ? undefined : <DetaljnoLink href="/unos-ucinka">Unos učinka</DetaljnoLink>} />
       {grupe ? (
         <div className="space-y-4">
           {grupe.map(({ sm, clanovi }) => {

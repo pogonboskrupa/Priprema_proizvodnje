@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.8] — 2026-11-02
+
+- **Šef sektora:** uklonjeni Unos učinka, Šihtarica i Pomoćni radnici iz menija (i Unos rada, koji već nije bio); direktno otvaranje tih stranica vraća na Početnu; prečica "Unos učinka" uklonjena s Početne. Meni: Početna, Izvještaji, Statistika, Kalendar, Plan doznake, Elaborat, Postavke.
+
 ## [1.7.7] — 2026-11-02
 
 - **Meni:** Odjeli, Plan sječe i Realizacija spojeni u jedan tab "Plan doznake" s podtabovima Odjeli (zadani), Plan doznake (ranije Plan sječe) i Realizacija; tab ostaje aktivan i na pregledu pojedinog odjela. URL-ovi stranica su isti.

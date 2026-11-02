@@ -1,5 +1,5 @@
 "use client";
-import { jeProjektant } from "@/lib/sumarija";
+import { jeProjektant, jeSuperAdmin } from "@/lib/sumarija";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -77,6 +77,7 @@ export default function SihtaricaPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
+    else if (!authLoading && jeSuperAdmin(session)) router.replace("/");
   }, [session, authLoading]);
 
   function toast(text: string, error = false) {

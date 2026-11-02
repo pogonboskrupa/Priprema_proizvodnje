@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, useRef, useId } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
+import { jeSuperAdmin } from "@/lib/sumarija";
 import { useRouter } from "next/navigation";
 import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -189,7 +190,8 @@ function RosterNewRow({
 export default function UnosUcinkaPage() {
   const { session, loading: authLoading } = useAuth();
   const router = useRouter();
-  const canAccess = session?.role === "admin" || session?.operater === true;
+  // Šef sektora ne unosi učinak; vodeći projektanti i operateri da
+  const canAccess = (session?.role === "admin" && !jeSuperAdmin(session)) || session?.operater === true;
 
   const [datum, setDatum] = useState(today());
   const [unosi, setUnosi] = useState<UnosRada[]>([]);

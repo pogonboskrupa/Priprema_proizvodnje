@@ -1,5 +1,5 @@
 "use client";
-import { jeProjektant } from "@/lib/sumarija";
+import { jeProjektant, jeSuperAdmin } from "@/lib/sumarija";
 import { UnioOtkrij } from "@/components/UnioOtkrij";
 import { useEffect, useState } from "react";
 import { getOdjeli, getKorisnici, getUnosi, createUnos, deleteUnos } from "@/lib/db";
@@ -102,6 +102,7 @@ export default function UnosPage() {
 
   useEffect(() => {
     if (!authLoading && !session) router.replace("/login/");
+    else if (!authLoading && jeSuperAdmin(session)) router.replace("/");
   }, [session, authLoading]);
 
   useEffect(() => {

@@ -48,9 +48,10 @@ export function navFor(ses: Pick<Session, "role" | "operater" | "sihter" | "suma
   }
   if (ses?.role === "admin") {
     return {
-      all: [I.pocetna, I.unosUcinka, I.izvjestaji, I.statistika, I.kalendar, I.sihtarica, I.planDoznake, I.elaborat, I.pomocniRadnici, I.postavke],
-      primary: [I.pocetna, I.unosUcinka, I.sihtarica, I.izvjestaji],
-      cta: I.unosUcinka,
+      // Šef sektora samo pregleda: nema vlastitu evidenciju ni unos za druge
+      all: [I.pocetna, I.izvjestaji, I.statistika, I.kalendar, I.planDoznake, I.elaborat, I.postavke],
+      primary: [I.pocetna, I.izvjestaji, I.statistika, I.planDoznake],
+      cta: I.izvjestaji,
     };
   }
   if (ses?.sihter) {
