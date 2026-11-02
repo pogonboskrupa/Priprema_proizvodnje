@@ -1,5 +1,4 @@
 "use client";
-import { jeProjektant } from "@/lib/sumarija";
 import { useEffect, useState, useMemo, useRef, useId } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
@@ -226,7 +225,8 @@ export default function UnosUcinkaPage() {
     Promise.all([getOdjeli(), getKorisnici(), getUnosi()]).then(([od, kor, allUn]) => {
       setAllUnosi(allUn);
       const workers = kor
-        .filter(jeProjektant)
+        // vodeći projektanti vode vlastitu evidenciju kroz Unos rada, ne kroz zajedničku listu
+        .filter((k) => k.role === "worker")
         .sort((a, b) => displayKorisnik(a).localeCompare(displayKorisnik(b)));
       setOdjeli(od);
       setKorisnici(workers);

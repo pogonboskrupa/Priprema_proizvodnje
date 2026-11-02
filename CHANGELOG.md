@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.7.6] — 2026-11-02
+
+- **Unos učinka:** vodeći projektanti se više ne pojavljuju u zajedničkoj listi; svoju evidenciju vode sami kroz Unos rada
+
 ## [1.7.5] — 2026-11-01
 
 ### Pregled po ulogama (Početna)
