@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useRef, useId } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { jeSuperAdmin } from "@/lib/sumarija";
+import { jeVikend } from "@/lib/praznici";
 import { useRouter } from "next/navigation";
 import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -47,8 +48,14 @@ function shiftDay(d: string, delta: number) {
   const [y, m, day] = d.split("-").map(Number);
   return localDateStr(new Date(y, m - 1, day + delta));
 }
-const prevDay = (d: string) => shiftDay(d, -1);
-const nextDay = (d: string) => shiftDay(d, 1);
+// subota i nedjelja se zadano ne prikazuju: pomak ih preskače dok se ne uključi "Vikend"
+function preskociVikend(d: string, smjer: 1 | -1, vikend: boolean) {
+  let x = d;
+  while (!vikend && jeVikend(x)) x = shiftDay(x, smjer);
+  return x;
+}
+const prevDay = (d: string, vikend: boolean) => preskociVikend(shiftDay(d, -1), -1, vikend);
+const nextDay = (d: string, vikend: boolean) => preskociVikend(shiftDay(d, 1), 1, vikend);
 
 function displayKorisnik(k: Korisnik) {
   return k.fullName || k.ime;
@@ -193,7 +200,8 @@ export default function UnosUcinkaPage() {
   // Šef sektora ne unosi učinak; vodeći projektanti i operateri da
   const canAccess = (session?.role === "admin" && !jeSuperAdmin(session)) || session?.operater === true;
 
-  const [datum, setDatum] = useState(today());
+  const [vikend, setVikend] = useState(false);
+  const [datum, setDatum] = useState(() => preskociVikend(today(), -1, false));
   const [unosi, setUnosi] = useState<UnosRada[]>([]);
   const [odjeli, setOdjeli] = useState<Odjel[]>([]);
   const [korisnici, setKorisnici] = useState<Korisnik[]>([]);
@@ -441,8 +449,8 @@ export default function UnosUcinkaPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mr-auto">Unos učinka</h1>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setDatum(prevDay(datum))}
-            disabled={datum <= minDan}
+            onClick={() => setDatum(prevDay(datum, vikend))}
+            disabled={prevDay(datum, vikend) < minDan}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >‹</button>
           <input
@@ -451,16 +459,29 @@ export default function UnosUcinkaPage() {
             max={krajTekucegMjeseca()}
             onChange={(e) => {
               const v = e.target.value;
-              if (v && v >= minDan && v <= krajTekucegMjeseca()) setDatum(v);
+              if (!v) return;
+              if (v < minDan || v > krajTekucegMjeseca()) return;
+              // ručno odabran vikend ga uključuje, da dan ostane vidljiv i da se može kretati
+              if (jeVikend(v)) setVikend(true);
+              setDatum(v);
             }}
             className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <button
-            onClick={() => setDatum(nextDay(datum))}
-            disabled={datum >= krajTekucegMjeseca()}
+            onClick={() => setDatum(nextDay(datum, vikend))}
+            disabled={nextDay(datum, vikend) > krajTekucegMjeseca()}
             className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40"
           >›</button>
         </div>
+        <label className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+          <input type="checkbox" checked={vikend} className="h-4 w-4 accent-green-700"
+            onChange={(e) => {
+              setVikend(e.target.checked);
+              // isključen vikend ne smije ostati prikazan: vrati na zadnji radni dan prije
+              if (!e.target.checked) setDatum((d) => preskociVikend(d, -1, false));
+            }} />
+          Prikaži vikend
+        </label>
         {readyCount > 0 && !danZakljucan && (
           <button
             onClick={saveAllReady}

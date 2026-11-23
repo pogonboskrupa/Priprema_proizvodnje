@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.0] — 2026-11-23
+
+- **Unos učinka:** subota i nedjelja se zadano ne prikazuju (strelice ‹ › ih preskaču, a ako je danas vikend otvara se petak). Uključivanjem "Prikaži vikend" vide se oba dana; ručni odabir subote ili nedjelje u kalendaru ga uključuje sam.
+
 ## [1.7.9] — 2026-11-02
 
 - **Uredi korisnika:** uz korisničko ime i PIN, admin (za sve) i vodeći projektant (za svoju šumariju) sada mogu mijenjati i ime i prezime; vlastita promjena odmah osvježava sesiju

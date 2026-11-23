@@ -20,6 +20,7 @@ function weekday(datum: string): number {
 }
 
 export const jeNedjelja = (datum: string) => weekday(datum) === 0;
+export const jeVikend = (datum: string) => [0, 6].includes(weekday(datum));
 
 /** Ponedjeljak–petak, osim praznika — samo ti dani se troše iz godišnjeg odmora */
 export function jeRadniDan(datum: string): boolean {
