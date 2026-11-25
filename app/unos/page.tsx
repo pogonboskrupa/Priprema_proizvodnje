@@ -82,6 +82,7 @@ export default function UnosPage() {
   const dayOfWeek = getDayOfWeek(form.datum);
   const isSunday = dayOfWeek === 0;
   const isSaturday = dayOfWeek === 6;
+  const praznikNaDan = praznik(form.datum);
 
   function getWorkDays(od: string, do_: string): string[] {
     const days: string[] = [];
@@ -277,6 +278,11 @@ export default function UnosPage() {
               {isSunday && (
                 <div className="mt-1.5 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-xs font-medium text-red-700 dark:text-red-300">
                   ⛔ Nedjelja je neradni dan — unos nije moguć.
+                </div>
+              )}
+              {praznikNaDan && (
+                <div className="mt-1.5 bg-rose-50 dark:bg-rose-950 border border-rose-200 dark:border-rose-800 rounded-lg px-3 py-2 text-xs font-medium text-rose-700 dark:text-rose-300">
+                  🎉 Praznik — {praznikNaDan}. Neradni dan; upiši samo ako je rađeno.
                 </div>
               )}
               {isSaturday && (

@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo, useRef, useId } from "react";
 import { getOdjeli, getKorisnici, getUnosiZaDan, getUnosi, createUnos, updateUnos, deleteUnos } from "@/lib/db";
 import { useAuth } from "@/context/AuthContext";
 import { jeSuperAdmin } from "@/lib/sumarija";
-import { jeVikend } from "@/lib/praznici";
+import { jeVikend, praznik } from "@/lib/praznici";
 import { useRouter } from "next/navigation";
 import type { Odjel, UnosRada, VrstaRada, Korisnik } from "@/lib/types";
 import { ConfirmModal } from "@/components/ConfirmModal";
@@ -493,7 +493,14 @@ export default function UnosUcinkaPage() {
         )}
       </div>
 
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 capitalize">{fmtDateLong(datum)}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 flex flex-wrap items-center gap-2">
+        <span className="capitalize">{fmtDateLong(datum)}</span>
+        {praznik(datum) && (
+          <span className="rounded-full bg-rose-100 dark:bg-rose-950 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-300">
+            Praznik — {praznik(datum)}
+          </span>
+        )}
+      </p>
 
       {msg && (
         <div className={`mb-4 rounded-lg px-4 py-2.5 text-sm border ${

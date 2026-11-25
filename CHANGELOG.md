@@ -13,6 +13,11 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.1] — 2026-11-25
+
+- **Praznici:** dodani Ramazanski bajram i Kurban-bajram (prvi dan, 2026–2030; datumi su proračun i treba ih svake godine provjeriti u `lib/praznici.ts`); 25.11. i 1. maj već su bili u popisu
+- **Unos učinka i Unos rada:** oznaka "Praznik — …" uz datum; bajrami se računaju kao praznik i u šihtarici, mjesečnom izvještaju (kolona PRAZ.) i višednevnom unosu
+
 ## [1.8.0] — 2026-11-23
 
 - **Unos učinka:** subota i nedjelja se zadano ne prikazuju (strelice ‹ › ih preskaču, a ako je danas vikend otvara se petak). Uključivanjem "Prikaži vikend" vide se oba dana; ručni odabir subote ili nedjelje u kalendaru ga uključuje sam.
