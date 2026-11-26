@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.4] — 2026-11-26
+
+- **Next.js** 16.4.3 → 16.4.6 (ispravke sigurnosnih ranjivosti u 16.0–16.4.4), `eslint-config-next` usklađen. `npm audit` za Next više ne prijavljuje ništa; ostaju 3 moderate nalaza u razvojnom alatu `@capacitor/cli`.
+
 ## [1.8.3] — 2026-11-26
 
 - **Nova vrsta rada "Praznik"** u izboru uz Teren, Kancelariju, Godišnji... (Unos rada, Unos učinka, Šihtarica — dnevni unos i popunjavanje perioda). Cjelodnevno je odsustvo: ne ulazi u radne dane, može se upisati unaprijed do kraja mjeseca, a u mjesečnom izvještaju se broji u koloni PRAZ. (zajedno s državnim praznicima bez unosa)
