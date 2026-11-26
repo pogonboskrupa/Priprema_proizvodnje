@@ -88,12 +88,21 @@ export const VRSTA: Record<VrstaRada, VrstaStyle> = {
     borderL: "border-l-pink-500",
     heat: ["bg-pink-50 dark:bg-pink-950/40", "bg-pink-100 dark:bg-pink-900/60", "bg-pink-200 dark:bg-pink-800/80"],
   },
+  PRAZNIK: {
+    label: "Praznik", short: "Pra", abbr: "PRA", emoji: "🎉",
+    dot: "bg-rose-500",
+    badge: "bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200",
+    btnActive: "bg-rose-500 text-white border-rose-500",
+    text: "text-rose-700 dark:text-rose-300",
+    borderL: "border-l-rose-500",
+    heat: ["bg-rose-50 dark:bg-rose-950/40", "bg-rose-100 dark:bg-rose-900/60", "bg-rose-200 dark:bg-rose-800/80"],
+  },
 };
 
-export const VRSTE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"];
+export const VRSTE: readonly VrstaRada[] = ["DOZNAKA", "VLAKA", "TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO", "PRAZNIK"];
 
 /** Cjelodnevna odsustva — isključuju svaku drugu aktivnost istog dana i ne ulaze u radne dane */
-export const ODSUSTVA: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO"]);
+export const ODSUSTVA: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE", "CLAN76", "PLACENO", "PRAZNIK"]);
 
 const FALLBACK: VrstaStyle = {
   label: "–", short: "?", abbr: "?", emoji: "",

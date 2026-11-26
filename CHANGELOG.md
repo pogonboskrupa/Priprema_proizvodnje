@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.3] — 2026-11-26
+
+- **Nova vrsta rada "Praznik"** u izboru uz Teren, Kancelariju, Godišnji... (Unos rada, Unos učinka, Šihtarica — dnevni unos i popunjavanje perioda). Cjelodnevno je odsustvo: ne ulazi u radne dane, može se upisati unaprijed do kraja mjeseca, a u mjesečnom izvještaju se broji u koloni PRAZ. (zajedno s državnim praznicima bez unosa)
+
 ## [1.8.2] — 2026-11-26
 
 - **Praznici:** bajrami uklonjeni iz popisa praznika (korisnik ih sam upisuje); ostaju državni praznici (1. i 2. 1., 1. 3., 1. i 2. 5., 25. 11.) i oznaka "Praznik — …" u Unosu učinka i Unosu rada

@@ -772,6 +772,8 @@ function formatAktivnost(a: DnevnaAktivnost): string {
       return "Čl. 76";
     case "PLACENO":
       return "Plaćeno odsustvo";
+    case "PRAZNIK":
+      return "Praznik";
     default:
       return prefix || a.vrsta;
   }

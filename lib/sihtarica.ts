@@ -57,7 +57,7 @@ export function daniMjeseca(year: number, month: number, unosi: readonly UnosRad
 }
 
 /** Unaprijed (poslije danas, samo do kraja tekućeg mjeseca) upisuju se samo ova odsustva */
-export const VRSTE_UNAPRIJED: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE"]);
+export const VRSTE_UNAPRIJED: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["GODISNJI", "BOLOVANJE", "PRAZNIK"]);
 
 /** Zadnji dan tekućeg mjeseca, "YYYY-MM-DD" */
 export function krajTekucegMjeseca(danas = localDateStr()): string {
@@ -86,7 +86,7 @@ export function zabranaUpisa(datum: string, postojeci: readonly { vrsta: VrstaRa
   const danas = localDateStr();
   if (datum.slice(0, 10) > danas) {
     if (!jeUnaprijedDozvoljen(datum, danas)) return "Unaprijed se upisuje samo do kraja tekućeg mjeseca.";
-    if (!VRSTE_UNAPRIJED.has(vrsta)) return "Unaprijed se mogu upisati samo godišnji odmor i bolovanje.";
+    if (!VRSTE_UNAPRIJED.has(vrsta)) return "Unaprijed se mogu upisati samo godišnji odmor, bolovanje i praznik.";
   }
   // doznaka/vlaka mogu biti u više odjela istog dana
   const visestruko = vrsta === "DOZNAKA" || vrsta === "VLAKA";
@@ -135,7 +135,7 @@ export interface SihtaricaRezime {
 export function rezime(dani: readonly DanSihtarice[]): SihtaricaRezime {
   const r: SihtaricaRezime = {
     radnihDana: 0, popunjeno: 0, ha: 0, stabala: 0, km: 0, konflikti: 0,
-    daniPoVrsti: { DOZNAKA: 0, VLAKA: 0, TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, CLAN76: 0, PLACENO: 0 },
+    daniPoVrsti: { DOZNAKA: 0, VLAKA: 0, TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, CLAN76: 0, PLACENO: 0, PRAZNIK: 0 },
   };
   for (const d of dani) {
     if (!d.neradni && !d.buduci) {

@@ -9,7 +9,7 @@ export interface MjesecniRed {
   go: number;
   clan76: number;
   placeno: number;
-  /** Praznici na radne dane u koje radnik nema unos */
+  /** Praznici na radne dane bez unosa + dani upisani kao "Praznik" (npr. bajram) */
   praznici: number;
   bolovanje: number;
   teren: number;
@@ -19,7 +19,7 @@ export interface MjesecniRed {
   km: number;
 }
 
-type TipDana = "go" | "clan76" | "placeno" | "bolovanje" | "teren" | "kancelarija";
+type TipDana = "go" | "clan76" | "placeno" | "praznik" | "bolovanje" | "teren" | "kancelarija";
 
 const TERENSKE: ReadonlySet<VrstaRada> = new Set<VrstaRada>(["TEREN", "DOZNAKA", "VLAKA"]);
 
@@ -29,6 +29,7 @@ function tipDana(vrste: ReadonlySet<VrstaRada>): TipDana | null {
   if (vrste.has("GODISNJI")) return "go";
   if (vrste.has("CLAN76")) return "clan76";
   if (vrste.has("PLACENO")) return "placeno";
+  if (vrste.has("PRAZNIK")) return "praznik";
   if ([...vrste].some((v) => TERENSKE.has(v))) return "teren";
   if (vrste.has("KANCELARIJA")) return "kancelarija";
   return null;
@@ -64,7 +65,8 @@ export function mjesecniRedovi(korisnici: readonly Korisnik[], unosi: readonly U
     };
     for (const lista of dani.values()) {
       const tip = tipDana(new Set(lista.map((u) => u.vrsta)));
-      if (tip) red[tip]++;
+      if (tip === "praznik") red.praznici++;
+      else if (tip) red[tip]++;
       for (const u of lista) {
         if (u.vrsta === "DOZNAKA") {
           red.stabala += Number(u.brojStabala) || 0;

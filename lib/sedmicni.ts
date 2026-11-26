@@ -9,6 +9,7 @@ const ODSUSTVO_SIFRA: Partial<Record<VrstaRada, string>> = {
   BOLOVANJE: "B",
   CLAN76: "ČL.76",
   PLACENO: "PO",
+  PRAZNIK: "PR",
   GODISNJI: "GO",
   TEREN: "T",
 };
