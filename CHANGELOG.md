@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.2] — 2026-11-26
+
+- **Praznici:** bajrami uklonjeni iz popisa praznika (korisnik ih sam upisuje); ostaju državni praznici (1. i 2. 1., 1. 3., 1. i 2. 5., 25. 11.) i oznaka "Praznik — …" u Unosu učinka i Unosu rada
+
 ## [1.8.1] — 2026-11-25
 
 - **Praznici:** dodani Ramazanski bajram i Kurban-bajram (prvi dan, 2026–2030; datumi su proračun i treba ih svake godine provjeriti u `lib/praznici.ts`); 25.11. i 1. maj već su bili u popisu
