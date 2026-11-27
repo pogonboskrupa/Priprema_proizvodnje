@@ -13,6 +13,10 @@ Gdje promijeniti verziju: `lib/version.ts`, konstanta `VERSION`.
 
 ---
 
+## [1.8.5] — 2026-11-27
+
+- **Pomoćni radnici:** nova vrsta dana "Neopravdan" (oznaka N, tipka `n`, fuksija) uz Teren, Kancelariju, Godišnji, Bolovanje i Ostalo — u šihtarici pomoćnih radnika (Pomoćni radnici i Kalendar), matrici pregleda, spisku radnika i izvozu. Računa se kao popunjen dan.
+
 ## [1.8.4] — 2026-11-26
 
 - **Next.js** 16.4.3 → 16.4.6 (ispravke sigurnosnih ranjivosti u 16.0–16.4.4), `eslint-config-next` usklađen. `npm audit` za Next više ne prijavljuje ništa; ostaju 3 moderate nalaza u razvojnom alatu `@capacitor/cli`.

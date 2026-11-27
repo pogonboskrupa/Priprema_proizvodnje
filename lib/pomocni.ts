@@ -18,6 +18,11 @@ export const POMOCNI: Record<VrstaPomocnog, PomocniStil> = {
   KANCELARIJA: { label: VRSTA.KANCELARIJA.label, kod: "K",  dot: VRSTA.KANCELARIJA.dot, badge: VRSTA.KANCELARIJA.badge, text: VRSTA.KANCELARIJA.text },
   GODISNJI:    { label: VRSTA.GODISNJI.label,    kod: "GO", dot: VRSTA.GODISNJI.dot,    badge: VRSTA.GODISNJI.badge,    text: VRSTA.GODISNJI.text },
   BOLOVANJE:   { label: VRSTA.BOLOVANJE.label,   kod: "B",  dot: VRSTA.BOLOVANJE.dot,   badge: VRSTA.BOLOVANJE.badge,   text: VRSTA.BOLOVANJE.text },
+  NEOPRAVDANO: {
+    label: "Neopravdan", kod: "N", dot: "bg-fuchsia-500",
+    badge: "bg-fuchsia-100 dark:bg-fuchsia-900/60 text-fuchsia-800 dark:text-fuchsia-200",
+    text: "text-fuchsia-700 dark:text-fuchsia-300",
+  },
   OSTALO: {
     label: "Ostalo", kod: "O", dot: "bg-slate-400",
     badge: "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-100",
@@ -25,7 +30,7 @@ export const POMOCNI: Record<VrstaPomocnog, PomocniStil> = {
   },
 };
 
-export const VRSTE_POMOCNI: readonly VrstaPomocnog[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "OSTALO"];
+export const VRSTE_POMOCNI: readonly VrstaPomocnog[] = ["TEREN", "KANCELARIJA", "GODISNJI", "BOLOVANJE", "NEOPRAVDANO", "OSTALO"];
 
 export type DaniSihte = Record<string, VrstaPomocnog>;
 
@@ -59,7 +64,7 @@ export interface RezimeSihte {
 }
 
 export function rezimeSihte(dani: DaniSihte, kalendar: readonly DanMjeseca[], danas: string): RezimeSihte {
-  const po = { TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, OSTALO: 0 } satisfies Record<VrstaPomocnog, number>;
+  const po = { TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, NEOPRAVDANO: 0, OSTALO: 0 } satisfies Record<VrstaPomocnog, number>;
   let nepopunjeno = 0;
   for (const d of kalendar) {
     const v = dani[String(d.dan)];

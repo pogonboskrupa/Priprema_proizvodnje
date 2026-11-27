@@ -180,6 +180,7 @@ export function Evidencija({ radnici, projektanti, sihte, kalendar, danas, onRef
                             <span className={`px-1.5 py-0.5 rounded ${POMOCNI.TEREN.badge}`}>Teren {rez.po.TEREN}</span>
                             {rez.po.KANCELARIJA > 0 && <span className={`px-1.5 py-0.5 rounded ${POMOCNI.KANCELARIJA.badge}`}>Kanc. {rez.po.KANCELARIJA}</span>}
                             {odsustva > 0 && <span className={`px-1.5 py-0.5 rounded ${POMOCNI.GODISNJI.badge}`}>Odsustvo {odsustva}</span>}
+                            {rez.po.NEOPRAVDANO > 0 && <span className={`px-1.5 py-0.5 rounded ${POMOCNI.NEOPRAVDANO.badge}`}>Neopravdano {rez.po.NEOPRAVDANO}</span>}
                             {rez.nepopunjeno > 0 && <span className="px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40">{rez.nepopunjeno} praznih</span>}
                           </div>
                         </div>

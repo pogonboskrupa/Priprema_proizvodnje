@@ -23,7 +23,7 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "evidencija", label: "Radnici" },
 ];
 
-const TIPKE: Record<string, Cetka> = { t: "TEREN", k: "KANCELARIJA", g: "GODISNJI", b: "BOLOVANJE", o: "OSTALO", Delete: "BRISI", Backspace: "BRISI" };
+const TIPKE: Record<string, Cetka> = { t: "TEREN", k: "KANCELARIJA", g: "GODISNJI", b: "BOLOVANJE", n: "NEOPRAVDANO", o: "OSTALO", Delete: "BRISI", Backspace: "BRISI" };
 
 interface Mjesec { year: number; month: number }
 
@@ -110,7 +110,7 @@ export default function PomocniRadniciPage() {
   const odabrani = aktivni.find((r) => r.id === odabraniId) ?? aktivni[0];
 
   const ukupno = useMemo(() => {
-    const t = { TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, OSTALO: 0, nepopunjeno: 0 };
+    const t = { TEREN: 0, KANCELARIJA: 0, GODISNJI: 0, BOLOVANJE: 0, NEOPRAVDANO: 0, OSTALO: 0, nepopunjeno: 0 };
     for (const r of aktivni) {
       const rez = rezimeSihte(sihte[r.id] ?? {}, kalendar, danas);
       for (const v of VRSTE_POMOCNI) t[v] += rez.po[v];
@@ -228,7 +228,8 @@ export default function PomocniRadniciPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-700">
           <Kpi label="Aktivnih radnika" value={aktivni.length} />
           <Kpi label="Teren" value={ukupno.TEREN} suffix="dana" tone={POMOCNI.TEREN.text} />
-          <Kpi label="Godišnji · bolovanje" value={ukupno.GODISNJI + ukupno.BOLOVANJE} suffix="dana" tone={POMOCNI.GODISNJI.text} />
+          <Kpi label="Godišnji · bolovanje" value={ukupno.GODISNJI + ukupno.BOLOVANJE} suffix="dana" tone={POMOCNI.GODISNJI.text}
+            hint={ukupno.NEOPRAVDANO ? `+ ${ukupno.NEOPRAVDANO} neopravdano` : undefined} />
           <Kpi label="Prazni radni dani" value={ukupno.nepopunjeno}
             tone={ukupno.nepopunjeno ? "text-amber-600 dark:text-amber-400" : "text-green-700 dark:text-green-400"}
             hint={ukupno.nepopunjeno ? "označeni isprekidano" : "sve popunjeno"} />

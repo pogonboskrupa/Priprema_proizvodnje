@@ -259,7 +259,7 @@ const POMOCNI_VIEWS: { id: PomocniView; label: string }[] = [
   { id: "sihtarica", label: "Šihtarica" },
   { id: "evidencija", label: "Radnici" },
 ];
-const TIPKE_CETKA: Record<string, Cetka> = { t: "TEREN", k: "KANCELARIJA", g: "GODISNJI", b: "BOLOVANJE", o: "OSTALO", Delete: "BRISI", Backspace: "BRISI" };
+const TIPKE_CETKA: Record<string, Cetka> = { t: "TEREN", k: "KANCELARIJA", g: "GODISNJI", b: "BOLOVANJE", n: "NEOPRAVDANO", o: "OSTALO", Delete: "BRISI", Backspace: "BRISI" };
 
 export default function KalendarPage() {
   const { session, loading: authLoading } = useAuth();
